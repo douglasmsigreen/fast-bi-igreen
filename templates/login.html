@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-br">
+    <html lang="pt-br">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Login - Fast BI</title>
+            <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+            <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+            </head>
+<body class="login-page-body"> {# Adiciona uma classe ao body para estilos específicos #}
+
+    <div class="login-wrapper">
+
+        {# Coluna da Esquerda (Imagem) #}
+        <div class="login-image-column">
+            {# A imagem será definida via CSS background-image #}
+        </div>
+
+        {# Coluna da Direita (Formulário) #}
+        <div class="login-form-column">
+            <div class="login-form-container">
+
+                {# Logo (ajuste caminho e estilo) #}
+                <div class="login-logo">
+                    <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="iGreen Energy Logo">
+                </div>
+
+                {# Título #}
+                <h2 class="login-title">Bem-vindo ao Fast BI <span class="crm-icon">📊</span></h2>
+
+                {# Formulário de Login #}
+                <form method="POST" action="{{ url_for('login') }}" novalidate class="login-form">
+                    {{ form.hidden_tag() }} {# CSRF Token #}
+
+                    <div class="form-group">
+                        {{ form.email.label }} {# Label acima #}
+                        {{ form.email(class="form-control", placeholder="seuemail@exemplo.com") }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.password.label }} {# Label acima #}
+                        {# Adicionar um wrapper para o ícone do olho (requer JS para funcionar) #}
+                        <div class="password-wrapper">
+                             {{ form.password(class="form-control", placeholder="********") }}
+                             {# <span class="password-toggle-icon">👁️</span> #} {# Ícone - JS necessário #}
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group form-check-group">
+                        {{ form.remember_me(class="form-check-input") }}
+                        {{ form.remember_me.label(class="form-check-label") }}
+                    </div>
+
+                    {{ form.submit(class="btn btn-login-submit", value="Entrar") }} {# Texto do botão no 'value' #}
+                </form>
+
+            </div> {# Fim login-form-container #}
+        </div> {# Fim login-form-column #}
+
+    </div> {# Fim login-wrapper #}
+
+{# Scripts JS no final, se necessário (ex: para toggle de senha) #}
+{# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Ambientes Virtuais
+venv/
+*.venv/
+env/
+ENV/
+
+# Ficheiros Python compilados e caches
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Ficheiros de configuração sensíveis
+.env
+
+# Logs
+*.log
+
+# Ficheiros de IDEs (exemplos)
+.idea/
+.vscode/
+*.swp
+
+# Ficheiros específicos do Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Outros ficheiros temporários ou específicos de build/distribuição
+dist/
+build/
+*.egg-info/

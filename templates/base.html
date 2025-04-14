@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Exportador Web{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+      <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="Logo iGreen" height="40">
+      <span class="navbar-title">Exportador de Dados Web</span>
+      <div style="margin-left: auto;"> {# Empurra para a direita #}
+          {% if current_user.is_authenticated %}
+              {# --- MUDANÇA AQUI --- #}
+              {# Exibe o atributo 'nome' do utilizador em vez do 'email' #}
+              <span style="margin-right: 15px;">Olá, {{ current_user.nome | default('Utilizador', true) }}!</span> {# Adicionado filtro default #}
+              {# --- FIM DA MUDANÇA --- #}
+              <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Logout</a>
+          {% endif %}
+      </div>
+  </nav>
+
+    <div class="container">
+
+      {% block content %}
+      {% endblock %}
+    </div>
+
+    <footer>
+        © {{ now().year }} - Todos direitos reservados
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block scripts_extra %}{% endblock %}
+  </body>
+</html>
