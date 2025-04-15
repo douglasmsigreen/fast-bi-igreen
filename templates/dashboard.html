@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Fast BI{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <h2>Bem-vindo ao Fast BI!</h2>
+</div>
+
+<div class="dashboard-container">
+    {# Item Relatórios #}
+    <a href="{{ url_for('relatorios') }}" class="dashboard-item"> {# <<< Link para a nova rota #}
+        <div class="dashboard-item-icon">
+            {# Use <img>, <i> (Font Awesome) ou <svg> #}
+            <img src="{{ url_for('static', filename='img/icon_relatorios.png') }}" alt="Relatórios"> {# <<< AJUSTE O ÍCONE #}
+        </div>
+        <span class="dashboard-item-label">Relatórios</span>
+    </a>
+
+    {# Item Dashboards #}
+    <a href="#" class="dashboard-item disabled"> {# Link desabilitado por enquanto #}
+        <div class="dashboard-item-icon">
+            <img src="{{ url_for('static', filename='img/icon_dashboards.png') }}" alt="Dashboards"> {# <<< AJUSTE O ÍCONE #}
+        </div>
+        <span class="dashboard-item-label">Dashboards</span>
+    </a>
+
+    {# Item Upload #}
+    <a href="#" class="dashboard-item disabled"> {# Link desabilitado por enquanto #}
+        <div class="dashboard-item-icon">
+            <img src="{{ url_for('static', filename='img/icon_upload.png') }}" alt="Upload"> {# <<< AJUSTE O ÍCONE #}
+        </div>
+        <span class="dashboard-item-label">Upload</span>
+    </a>
+</div>
+{% endblock %}

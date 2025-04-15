@@ -6,10 +6,10 @@
 <h1>Dados de Clientes</h1>
 
 {# Formulário de Filtros #}
-    <form method="GET" action="{{ url_for('index') }}" class="filter-form">
+    <form method="GET" action="{{ url_for('relatorios') }}" class="filter-form"> {# <<< MUDANÇA AQUI #}
         <div class="form-group">
             <label for="report_type">Tipo Relatório:</label>
-            <select name="report_type" id="report_type" onchange="this.form.submit()"> {# Adicionado onchange para submeter ao mudar tipo #}
+            <select name="report_type" id="report_type" onchange="this.form.submit()">
                 <option value="base_clientes" {% if selected_report_type == 'base_clientes' %}selected{% endif %}>Base Clientes</option>
                 <option value="rateio" {% if selected_report_type == 'rateio' %}selected{% endif %}>Rateio</option>
             </select>
@@ -26,8 +26,7 @@
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Buscar</button>
-         {# Link para Exportar - SEM a contagem de registros #}
-         {# Condição para mostrar o botão ajustada: mostra se há dados na tela OU se for rateio #}
+         {# Link para Exportar #}
          {% if dados or selected_report_type == 'rateio' %}
          <a href="{{ url_for('exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" target="_blank">
              Exportar Excel
@@ -75,7 +74,8 @@
     <ul>
         {# Botão Anterior #}
         {% if page > 1 %}
-        <li><a href="{{ url_for('index', page=page-1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">&laquo; Anterior</a></li>
+        {# --- MUDANÇA AQUI --- #}
+        <li><a href="{{ url_for('relatorios', page=page-1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">&laquo; Anterior</a></li>
         {% else %}
         <li class="disabled"><span>&laquo; Anterior</span></li>
         {% endif %}
@@ -83,25 +83,33 @@
         {# Números das Páginas (simplificado) #}
         {% set start_page = [1, page-2]|max %}
         {% set end_page = [total_pages, page+2]|min %}
+
         {% if start_page > 1 %}
-          <li><a href="{{ url_for('index', page=1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">1</a></li>
+          {# --- MUDANÇA AQUI --- #}
+          <li><a href="{{ url_for('relatorios', page=1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">1</a></li>
           {% if start_page > 2 %}<li><span>...</span></li>{% endif %}
         {% endif %}
+
         {% for p in range(start_page, end_page + 1) %}
           {% if p == page %}
             <li class="active"><span>{{ p }}</span></li>
           {% else %}
-            <li><a href="{{ url_for('index', page=p, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">{{ p }}</a></li>
+            {# --- MUDANÇA AQUI --- #}
+            <li><a href="{{ url_for('relatorios', page=p, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">{{ p }}</a></li>
           {% endif %}
         {% endfor %}
+
          {% if end_page < total_pages %}
            {% if end_page < total_pages - 1 %}<li><span>...</span></li>{% endif %}
-           <li><a href="{{ url_for('index', page=total_pages, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">{{ total_pages }}</a></li>
+           {# --- MUDANÇA AQUI --- #}
+           <li><a href="{{ url_for('relatorios', page=total_pages, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">{{ total_pages }}</a></li>
          {% endif %}
+
 
         {# Botão Próximo #}
         {% if page < total_pages %}
-        <li><a href="{{ url_for('index', page=page+1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">Próximo &raquo;</a></li>
+        {# --- MUDANÇA AQUI --- #}
+        <li><a href="{{ url_for('relatorios', page=page+1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">Próximo &raquo;</a></li>
         {% else %}
         <li class="disabled"><span>Próximo &raquo;</span></li>
         {% endif %}
