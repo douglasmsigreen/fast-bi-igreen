@@ -3,37 +3,55 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Exportador Web{% endblock %}</title>
+    {# O título da página agora é definido pelo bloco 'title' ou usa um padrão #}
+    <title>{% block title %}Fast BI{% endblock %}</title>
+    {# Link para o CSS principal #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {# Link para o Favicon #}
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    {# Bloco para adicionar CSS ou JS específico da página #}
     {% block head_extra %}{% endblock %}
-</head>
-<body>
+  </head>
+  <body>
+
+    {# Barra de Navegação Superior #}
     <nav class="navbar">
-      <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="Logo iGreen" height="40">
-      <span class="navbar-title">Exportador de Dados Web</span>
-      <div style="margin-left: auto;"> {# Empurra para a direita #}
-          {% if current_user.is_authenticated %}
-              {# --- MUDANÇA AQUI --- #}
-              {# Exibe o atributo 'nome' do utilizador em vez do 'email' #}
-              <span style="margin-right: 15px;">Olá, {{ current_user.nome | default('Utilizador', true) }}!</span> {# Adicionado filtro default #}
-              {# --- FIM DA MUDANÇA --- #}
-              <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Logout</a>
-          {% endif %}
-      </div>
-  </nav>
+        {# --- Logo Clicável --- #}
+        <a href="{{ url_for('dashboard') }}" title="Ir para o Dashboard" style="line-height: 0; display: inline-block;">
+            <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="Logo iGreen - Ir para Dashboard" height="40">
+        </a>
+        {# --- Fim do Logo Clicável --- #}
 
+        {# Título Principal na Navbar #}
+        <span class="navbar-title">Fast BI</span>
+
+        {# Conteúdo à Direita da Navbar (Saudação e Logout) #}
+        <div style="margin-left: auto;">
+            {% if current_user.is_authenticated %}
+                {# Exibe o nome do utilizador logado #}
+                <span style="margin-right: 15px;">Olá, {{ current_user.nome | default('Utilizador', true) }}!</span>
+                {# Botão/Link de Logout #}
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Logout</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    {# Container Principal para o Conteúdo das Páginas Internas #}
+    {# Mensagens Flash foram removidas daqui conforme solicitado anteriormente #}
     <div class="container">
-
-      {% block content %}
-      {% endblock %}
+        {% block content %}
+        {% endblock %}
     </div>
 
+    {# Rodapé #}
     <footer>
         © {{ now().year }} - Todos direitos reservados
     </footer>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {# Scripts JavaScript Globais (se houver) #}
+    {# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
+    {# Bloco para adicionar scripts JS específicos da página #}
     {% block scripts_extra %}{% endblock %}
+
   </body>
 </html>

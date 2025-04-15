@@ -209,7 +209,7 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
 .dashboard-item.disabled { opacity: 0.6; cursor: not-allowed; background-color: #f0f0f0; border-color: #dcdcdc; }
 .dashboard-item.disabled:hover { transform: none; box-shadow: none; color: #333; }
 .dashboard-item-icon { margin-bottom: 15px; }
-.dashboard-item-icon img { max-width: 64px; max-height: 64px; }
+.dashboard-item-icon img { max-width: 450px; max-height: 450px; }
 /* Se usar Font Awesome: */
 /* .dashboard-item-icon i { font-size: 48px; color: #008001; } */
 .dashboard-item-label { font-size: 1.1em; font-weight: bold; }
