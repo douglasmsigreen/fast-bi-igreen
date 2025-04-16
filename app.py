@@ -65,7 +65,7 @@ def inject_now():
 
 # --- Rotas da Aplicação ---
 
-# --- Rota de Login (já ajustada) ---
+# --- Rota de Login ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -91,15 +91,13 @@ def login():
     return render_template('login.html', title='Login', form=form)
 
 
-# --- Rota de Logout (já ajustada) ---
+# --- Rota de Logout ---
 @app.route('/logout')
 @login_required
 def logout():
     user_email = current_user.email if hasattr(current_user, 'email') else 'desconhecido'
     logger.info(f"Utilizador '{user_email}' a fazer logout.")
     logout_user()
-    # Removido o flash message daqui para não aparecer na tela de login
-    # flash('Logout realizado com sucesso.', 'success')
     return redirect(url_for('login'))
 
 # --- Rota Principal NOVA (Dashboard) ---
@@ -109,7 +107,6 @@ def dashboard():
     """Rota para a página inicial do dashboard."""
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Utilizador'
     logger.info(f"Acesso ao dashboard por '{user_nome}'.")
-    # Pode passar dados adicionais para o template dashboard.html se necessário
     return render_template('dashboard.html', title="Dashboard - Fast BI")
 
 
@@ -117,22 +114,20 @@ def dashboard():
 @app.route('/relatorios')
 @login_required
 def relatorios():
-    """Rota para exibir a tabela de dados (antiga página inicial)."""
+    """Rota para exibir a tabela de dados."""
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Utilizador'
     logger.info(f"Requisição GET para /relatorios por '{user_nome}' - Args: {request.args}")
     try:
         page = request.args.get('page', 1, type=int)
-        if page < 1: page = 1 # Garante que a página não seja menor que 1
+        if page < 1: page = 1
         selected_report_type = request.args.get('report_type', 'base_clientes')
+        # O filtro de fornecedora é sempre lido, mas só usado quando relevante
         selected_fornecedora = request.args.get('fornecedora', 'Consolidado')
 
-        # Buscar fornecedoras sempre, mas a lista exibida pode variar
+        # Buscar fornecedoras sempre
         fornecedoras_db = database.get_fornecedoras()
-        # Define quais fornecedoras mostrar no dropdown baseado no tipo de relatório
-        if selected_report_type == 'rateio':
-            fornecedoras_list = fornecedoras_db
-        else: # base_clientes e clientes_por_licenciado
-            fornecedoras_list = ['Consolidado'] + fornecedoras_db
+        # A lista para o dropdown inclui 'Consolidado' para tipos que não filtram
+        fornecedoras_list = ['Consolidado'] + fornecedoras_db
 
         items_per_page = app.config.get('ITEMS_PER_PAGE', 50)
         offset = (page - 1) * items_per_page
@@ -145,7 +140,7 @@ def relatorios():
         # --- LÓGICA PARA CARREGAR DADOS BASEADO NO TIPO ---
         if selected_report_type == 'base_clientes' or selected_report_type == 'rateio':
              # Lógica existente para 'base_clientes' e 'rateio'
-             # Nota: build_query/count_query lançarão erro se chamados com tipo errado
+             logger.info(f"Carregando dados para o relatório: {selected_report_type} (Forn: {selected_fornecedora})")
              data_query, data_params = database.build_query(selected_report_type, selected_fornecedora, offset, items_per_page)
              dados = database.execute_query(data_query, data_params) or []
              count_q, count_p = database.count_query(selected_report_type, selected_fornecedora)
@@ -153,31 +148,36 @@ def relatorios():
              total_items = total_items_result[0] if total_items_result else 0
              headers = database.get_headers(selected_report_type)
 
-        # --- NOVO TIPO DE RELATÓRIO ---
         elif selected_report_type == 'clientes_por_licenciado':
              logger.info(f"Carregando dados para o relatório: {selected_report_type}")
-             # Usa as novas funções específicas criadas em database.py
              total_items = database.count_clientes_por_licenciado()
              dados = database.get_clientes_por_licenciado_data(offset=offset, limit=items_per_page)
              headers = database.get_headers(selected_report_type)
-             # Nota: selected_fornecedora é ignorado pelas funções de banco para este tipo.
+             # Ignora selected_fornecedora
+
+        # --- NOVO TIPO DE RELATÓRIO ---
+        elif selected_report_type == 'boletos_por_cliente': # <<<<<<<<<<<<<<<<<<<<< ALTERADO
+             logger.info(f"Carregando dados para o relatório: {selected_report_type}")
+             # Usa as novas funções específicas criadas em database.py
+             total_items = database.count_boletos_por_cliente() # <<<<<<<<<<<<<<<<<<<<< ALTERADO
+             dados = database.get_boletos_por_cliente_data(offset=offset, limit=items_per_page) # <<<<<<<<<<<<<< ALTERADO
+             headers = database.get_headers(selected_report_type)
+             # Ignora selected_fornecedora para este relatório específico
         # --- FIM NOVO TIPO ---
 
         else:
             logger.warning(f"Tipo de relatório desconhecido solicitado: '{selected_report_type}'. Retornando vazio.")
             flash(f"Tipo de relatório desconhecido: '{selected_report_type}'.", "warning")
-            headers = database.get_headers('base_clientes') # Usa cabeçalhos padrão em caso de erro
-            # dados, total_items, total_pages já são [] ou 0
+            headers = database.get_headers('base_clientes')
 
         # Calcula total_pages após ter total_items
         total_pages = math.ceil(total_items / items_per_page) if items_per_page > 0 and total_items > 0 else 0
-        # Garante que page não seja maior que total_pages (após o cálculo)
         if total_pages > 0 and page > total_pages:
-             page = total_pages # Ajusta para a última página válida
+             page = total_pages
 
         # Renderiza o template
         return render_template(
-            'relatorios.html', # Template de relatórios
+            'relatorios.html',
             fornecedoras=fornecedoras_list,
             selected_fornecedora=selected_fornecedora,
             selected_report_type=selected_report_type,
@@ -187,16 +187,15 @@ def relatorios():
             total_pages=total_pages,
             total_items=total_items,
             items_per_page=items_per_page,
-            title="Relatórios - Fast BI" # Título da página
+            title="Relatórios - Fast BI"
         )
-    # --- Bloco except (sem alterações significativas necessárias aqui) ---
+    # --- Blocos except (sem alterações) ---
     except (ConnectionError, RuntimeError) as e:
         logger.error(f"Erro ao carregar dados para /relatorios por '{user_nome}': {e}", exc_info=False)
         flash(f"Erro ao conectar ou buscar dados no banco: {e}", "error")
-        # Passa defaults seguros para o template em caso de erro
         return render_template('relatorios.html', title="Erro - Relatórios", fornecedoras=['Consolidado'], error=str(e), dados=[], headers=database.get_headers('base_clientes'), page=1, total_pages=0, total_items=0, selected_report_type='base_clientes', selected_fornecedora='Consolidado')
-    except ValueError as e: # Captura erro de build_query/count_query com tipo inválido
-        logger.error(f"Erro de valor (possível tipo inválido para build/count_query) em /relatorios: {e}", exc_info=True)
+    except ValueError as e:
+        logger.error(f"Erro de valor em /relatorios: {e}", exc_info=True)
         flash(f"Erro ao processar o tipo de relatório: {e}", "error")
         return render_template('relatorios.html', title="Erro - Relatórios", fornecedoras=['Consolidado'], error=str(e), dados=[], headers=database.get_headers('base_clientes'), page=1, total_pages=0, total_items=0, selected_report_type='base_clientes', selected_fornecedora='Consolidado')
     except Exception as e:
@@ -209,20 +208,18 @@ def relatorios():
 @app.route('/export', methods=['GET'])
 @login_required
 def exportar_excel_route():
-    """Rota para gerar e baixar o ficheiro Excel (protegida)."""
+    """Rota para gerar e baixar o ficheiro Excel."""
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Utilizador'
     logger.info(f"Requisição GET para /export por '{user_nome}' - Args: {request.args}")
     try:
-        # Pega os mesmos parâmetros da requisição que gerou a página
         selected_fornecedora = request.args.get('fornecedora', 'Consolidado')
         selected_report_type = request.args.get('report_type', 'base_clientes')
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         excel_exp = ExcelExporter()
-        # Usa secure_filename para garantir nome de arquivo seguro
         forn_fn = 'Consolidado' if selected_fornecedora.lower() == "consolidado" else secure_filename(selected_fornecedora)
 
         excel_bytes = None
-        filename = f"Relatorio_{secure_filename(selected_report_type)}_{forn_fn}_{timestamp}.xlsx" # Nome padrão seguro
+        filename = f"Relatorio_{secure_filename(selected_report_type)}_{forn_fn}_{timestamp}.xlsx"
 
         # --- LÓGICA DE EXPORTAÇÃO BASEADA NO TIPO ---
         if selected_report_type == 'rateio':
@@ -230,7 +227,6 @@ def exportar_excel_route():
             logger.info(f"Iniciando exportação Excel MULTI-ABAS para: tipo='rateio', fornecedora='{selected_fornecedora}'")
             nova_ids = database.get_base_nova_ids(fornecedora=selected_fornecedora)
             enviada_ids = database.get_base_enviada_ids(fornecedora=selected_fornecedora)
-            logger.info(f"IDs encontrados (Forn: {selected_fornecedora}) - Base Nova: {len(nova_ids)}, Base Enviada: {len(enviada_ids)}")
             if not nova_ids and not enviada_ids:
                 logger.warning(f"Nenhum ID encontrado para 'Base Nova' ou 'Base Enviada' (Forn: {selected_fornecedora}). Exportação cancelada.")
                 flash(f"Nenhum dado encontrado para as bases 'Nova' ou 'Enviada' com a fornecedora '{selected_fornecedora}'.", "warning")
@@ -238,31 +234,41 @@ def exportar_excel_route():
             rateio_headers = database.get_headers('rateio')
             nova_data = database.get_client_details_by_ids('rateio', nova_ids) if nova_ids else []
             enviada_data = database.get_client_details_by_ids('rateio', enviada_ids) if enviada_ids else []
-            logger.info(f"Dados detalhados buscados (Forn: {selected_fornecedora}) - Base Nova: {len(nova_data)}, Base Enviada: {len(enviada_data)}")
             sheets_to_export = [{'name': 'Base Nova', 'headers': rateio_headers, 'data': nova_data}, {'name': 'Base Enviada', 'headers': rateio_headers, 'data': enviada_data}]
             excel_bytes = excel_exp.export_multi_sheet_excel_bytes(sheets_to_export)
 
-        # --- NOVO TIPO DE RELATÓRIO (EXPORTAÇÃO) ---
         elif selected_report_type == 'clientes_por_licenciado':
-            filename = f"Quantidade_Clientes_Por_Licenciado_{timestamp}.xlsx" # Nome específico
+            filename = f"Quantidade_Clientes_Por_Licenciado_{timestamp}.xlsx"
             logger.info(f"Iniciando exportação Excel ABA ÚNICA para: tipo='{selected_report_type}'")
-             # Busca TODOS os dados (sem limit/offset) usando a função específica
-            dados_completos = database.get_clientes_por_licenciado_data(limit=None)
+            dados_completos = database.get_clientes_por_licenciado_data(limit=None) # Busca todos os dados
             if not dados_completos:
                 logger.warning(f"Nenhum dado encontrado para exportar (tipo: {selected_report_type}).")
                 flash(f"Nenhum dado encontrado para exportar (tipo: {selected_report_type}).", "warning")
-                # Redireciona passando os parâmetros corretos
-                return redirect(url_for('relatorios', report_type=selected_report_type))
+                return redirect(url_for('relatorios', report_type=selected_report_type)) # Passa report_type
             headers = database.get_headers(selected_report_type)
             sheet_title = "Clientes por Licenciado"
             excel_bytes = excel_exp.export_to_excel_bytes(dados_completos, headers, sheet_name=sheet_title)
+
+        # --- NOVO TIPO DE RELATÓRIO (EXPORTAÇÃO) ---
+        elif selected_report_type == 'boletos_por_cliente': # <<<<<<<<<<<<<<<<<<<<< ALTERADO
+            filename = f"Quantidade_Boletos_por_Cliente_{timestamp}.xlsx" # Nome específico
+            logger.info(f"Iniciando exportação Excel ABA ÚNICA para: tipo='{selected_report_type}'")
+             # Busca TODOS os dados (sem limit/offset) usando a função específica
+            dados_completos = database.get_boletos_por_cliente_data(limit=None) # <<<<<<<<<<<<<< ALTERADO
+            if not dados_completos:
+                logger.warning(f"Nenhum dado encontrado para exportar (tipo: {selected_report_type}).")
+                flash(f"Nenhum dado encontrado para exportar (tipo: {selected_report_type}).", "warning")
+                # Redireciona passando o tipo de relatório correto
+                return redirect(url_for('relatorios', report_type=selected_report_type))
+            headers = database.get_headers(selected_report_type)
+            sheet_title = "Boletos por Cliente" # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ALTERADO
+            excel_bytes = excel_exp.export_to_excel_bytes(dados_completos, headers, sheet_name=sheet_title)
         # --- FIM NOVO TIPO (EXPORTAÇÃO) ---
 
-        elif selected_report_type == 'base_clientes': # Exportação padrão 'base_clientes'
+        elif selected_report_type == 'base_clientes':
             filename = f"Clientes_Base_{forn_fn}_{timestamp}.xlsx"
             logger.info(f"Iniciando exportação Excel ABA ÚNICA para: tipo='{selected_report_type}', fornecedora='{selected_fornecedora}'")
-             # Usa build_query para pegar todos os dados (limit=None)
-            data_query, data_params = database.build_query(selected_report_type, selected_fornecedora, 0, None)
+            data_query, data_params = database.build_query(selected_report_type, selected_fornecedora, 0, None) # limit=None
             dados_completos = database.execute_query(data_query, data_params) or []
             if not dados_completos:
                  logger.warning(f"Nenhum dado encontrado para exportar (tipo: {selected_report_type}, forn: {selected_fornecedora}).")
@@ -274,7 +280,7 @@ def exportar_excel_route():
         else:
              logger.error(f"Tipo de relatório desconhecido para exportação: {selected_report_type}")
              flash(f"Tipo de relatório desconhecido para exportação: '{selected_report_type}'.", "error")
-             return redirect(url_for('relatorios'))
+             return redirect(url_for('relatorios')) # Redireciona para a página de relatórios
 
 
         # --- Retornar Resposta (somente se excel_bytes foi gerado) ---
@@ -289,16 +295,16 @@ def exportar_excel_route():
             # Se chegou aqui sem gerar bytes (e não redirecionou antes), algo deu errado.
             logger.error(f"Falha ao gerar bytes do Excel para o tipo '{selected_report_type}'.")
             flash("Falha interna ao gerar o arquivo Excel.", "error")
+            # Passa os parâmetros corretos no redirect de erro
             return redirect(url_for('relatorios', fornecedora=selected_fornecedora, report_type=selected_report_type))
 
-    # --- Tratamento de Erros da Rota Export ---
+    # --- Tratamento de Erros da Rota Export (sem alterações) ---
     except (ConnectionError, RuntimeError) as e:
         logger.error(f"Erro de banco de dados ou runtime ao gerar exportação Excel: {e}", exc_info=False)
         flash(f"Erro ao gerar o ficheiro Excel: {e}", "error")
-        # Garante que os parâmetros são passados no redirect
         return redirect(url_for('relatorios', fornecedora=request.args.get('fornecedora', 'Consolidado'), report_type=request.args.get('report_type', 'base_clientes')))
-    except ValueError as e: # Captura erro de build_query/count_query com tipo inválido na exportação
-        logger.error(f"Erro de valor (possível tipo inválido para build/count_query) em /export: {e}", exc_info=True)
+    except ValueError as e:
+        logger.error(f"Erro de valor em /export: {e}", exc_info=True)
         flash(f"Erro ao processar o tipo de relatório para exportação: {e}", "error")
         return redirect(url_for('relatorios', fornecedora=request.args.get('fornecedora', 'Consolidado'), report_type=request.args.get('report_type', 'base_clientes')))
     except Exception as e:
@@ -310,12 +316,8 @@ def exportar_excel_route():
 # --- Execução da Aplicação ---
 if __name__ == '__main__':
     # Lê configurações do ambiente ou usa defaults
-    # '0.0.0.0' permite acesso de outras máquinas na rede
     app_host = os.environ.get('FLASK_RUN_HOST', '0.0.0.0')
-    # Porta padrão 5000, mas pode ser configurada via variável de ambiente
     app_port = int(os.environ.get('FLASK_RUN_PORT', 5000))
-    # Ativa/desativa modo debug (recarrega automaticamente, mostra erros detalhados)
-    # IMPORTANTE: NUNCA use debug=True em produção!
     app_debug = os.environ.get('FLASK_DEBUG', 'True').lower() in ['true', '1', 't']
 
     logger.info(f"Iniciando servidor Flask em {app_host}:{app_port} com debug={app_debug}")

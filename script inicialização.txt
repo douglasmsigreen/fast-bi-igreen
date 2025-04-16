@@ -3,3 +3,15 @@ python -m venv venv
 source venv/bin/activate  # No Windows: venv\Scripts\activate
 
 python app.py
+
+# 1. Verificar o que mudou (opcional)
+git status
+
+# 2. Adicionar as alterações desejadas
+git add .
+
+# 3. Salvar as alterações localmente com uma mensagem
+git commit -m "Descrição das alterações"
+
+# 4. Enviar as alterações salvas para o GitHub
+git push origin main

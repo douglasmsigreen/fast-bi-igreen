@@ -341,7 +341,96 @@ def count_clientes_por_licenciado() -> int:
         logger.error(f"Erro inesperado em count_clientes_por_licenciado: {e}", exc_info=True)
         return 0
 
-# --- FIM DAS FUNÇÕES PARA RELATÓRIO ---
+# --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' --- <<<<<<<<<<< NOVO BLOCO
+
+def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
+    """Busca os dados para o relatório 'Quantidade de Boletos por Cliente', com paginação."""
+    logger.info(f"Buscando dados para 'Quantidade de Boletos por Cliente' - Offset: {offset}, Limit: {limit}")
+    # Usamos a query fornecida pelo usuário
+    base_query = """
+        SELECT
+            c.idcliente,
+            c.nome,
+            c.numinstalacao,
+            c.celular,
+            c.cidade,
+            CASE
+                WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN ''
+                ELSE (c.uf || '-' || c.concessionaria)
+            END AS regiao,
+            TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo,
+            COUNT(rcb.numinstalacao) AS quantidade_registros_rcb
+        FROM
+            public."CLIENTES" c
+        LEFT JOIN
+            public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao
+        GROUP BY
+            c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, data_ativo
+        ORDER BY
+            c.idcliente -- A ordenação principal é feita aqui
+    """
+    params = []
+    limit_clause = ""
+    offset_clause = ""
+
+    if limit is not None:
+        limit_clause = "LIMIT %s"
+        params.append(limit)
+    if offset > 0:
+        offset_clause = "OFFSET %s"
+        params.append(offset)
+
+    # Adiciona paginação à query base
+    paginated_query = f"{base_query} {limit_clause} {offset_clause};"
+    params_t = tuple(params)
+
+    try:
+        results = execute_query(paginated_query, params_t)
+        logger.info(f"Retornados {len(results) if results else 0} registros para 'Boletos por Cliente'.")
+        return results if results else []
+    except (RuntimeError, ConnectionError) as e:
+        logger.error(f"Erro ao buscar dados para 'Boletos por Cliente': {e}")
+        return [] # Retorna lista vazia em caso de erro
+    except Exception as e:
+        logger.error(f"Erro inesperado em get_boletos_por_cliente_data: {e}", exc_info=True)
+        return []
+
+
+def count_boletos_por_cliente() -> int:
+    """Conta o número total de clientes (linhas) que seriam retornados pela query principal."""
+    logger.info("Contando total de registros para 'Quantidade de Boletos por Cliente'...")
+    # Usa uma subquery para contar as linhas *após* o GROUP BY da query original
+    count_query_sql = """
+        SELECT COUNT(*)
+        FROM (
+            SELECT
+                c.idcliente -- Seleciona apenas uma coluna do GROUP BY para a contagem
+            FROM
+                public."CLIENTES" c
+            LEFT JOIN
+                public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao
+            GROUP BY
+                c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade,
+                CASE
+                    WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN ''
+                    ELSE (c.uf || '-' || c.concessionaria)
+                END,
+                c.data_ativo -- Não precisa do TO_CHAR aqui, só a coluna original
+        ) AS subquery_count;
+    """
+    try:
+        result = execute_query(count_query_sql, fetch_one=True)
+        count = result[0] if result else 0
+        logger.info(f"Contagem total para 'Boletos por Cliente': {count}")
+        return count
+    except (RuntimeError, ConnectionError) as e:
+        logger.error(f"Erro ao contar registros para 'Boletos por Cliente': {e}")
+        return 0 # Retorna 0 em caso de erro
+    except Exception as e:
+        logger.error(f"Erro inesperado em count_boletos_por_cliente: {e}", exc_info=True)
+        return 0
+
+# --- FIM DAS FUNÇÕES PARA RELATÓRIO 'Boletos por Cliente' --- <<<<<<<<<<<<<<<<<<<<<<<<<<
 
 # --- Funções para Estrutura de Query e Cabeçalhos ---
 
@@ -377,8 +466,8 @@ def _get_query_fields(report_type: str) -> List[str]:
         "c.nacionalidade", "c.nome", "co.nome AS consultor_nome", "c.profissao", "c.estadocivil"
      ]
 
-     # Não definimos campos aqui para 'clientes_por_licenciado', pois a query é customizada.
-     # Retornamos os campos apropriados para 'rateio' ou 'base_clientes'.
+     # Não definimos campos aqui para 'clientes_por_licenciado' nem 'boletos_por_cliente',
+     # pois as queries são customizadas e não usam esta função.
      if report_type == "rateio":
           logger.debug(f"Selecionando campos SQL para o tipo: {report_type}")
           return rateio_fields
@@ -386,23 +475,21 @@ def _get_query_fields(report_type: str) -> List[str]:
           logger.debug(f"Selecionando campos SQL para o tipo: {report_type}")
           return base_clientes_fields
      else:
-          # Se um tipo desconhecido for passado (ex: 'clientes_por_licenciado'),
-          # retornamos vazio, pois esta função não é usada para ele.
-          logger.debug(f"Tipo '{report_type}' não mapeado em _get_query_fields. Retornando lista vazia.")
+          # Se um tipo desconhecido for passado, retorna vazio.
+          logger.debug(f"Tipo '{report_type}' não mapeado em _get_query_fields ou possui query customizada. Retornando lista vazia.")
           return []
 
 
 def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int = 0, limit: Optional[int] = None) -> Tuple[str, tuple]:
     """Constrói a query principal para buscar dados para exibição na tela (paginada).
-       NÃO USAR para 'clientes_por_licenciado' que tem query própria."""
+       NÃO USAR para tipos com query customizada ('clientes_por_licenciado', 'boletos_por_cliente')."""
     campos = _get_query_fields(report_type)
     if not campos:
         # Levanta erro se for um tipo que deveria ter campos definidos aqui
         if report_type in ["base_clientes", "rateio"]:
              raise ValueError(f"Campos não definidos para report_type '{report_type}' em _get_query_fields")
         else:
-             # Para tipos com query customizada (como clientes_por_licenciado), isso não deve ser chamado.
-             # Mas se for, retorna erro para indicar uso incorreto.
+             # Para tipos com query customizada, isso não deve ser chamado.
              raise ValueError(f"build_query não deve ser chamado para report_type '{report_type}' com query customizada.")
 
     select = f"SELECT {', '.join(campos)}"
@@ -414,7 +501,6 @@ def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int
     where_clauses = []
     params = []
     # Adiciona filtro de fornecedora (usa 'consolidado' internamente para "todos")
-    # Relevante apenas para 'base_clientes' e 'rateio' aqui
     if fornecedora and fornecedora.lower() != "consolidado":
          where_clauses.append("c.fornecedora = %s")
          params.append(fornecedora)
@@ -434,9 +520,9 @@ def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int
 
 def count_query(report_type: str, fornecedora: Optional[str] = None) -> Tuple[str, tuple]:
     """Constrói uma query para contar o total de registros com os mesmos filtros da exibição na tela.
-       NÃO USAR para 'clientes_por_licenciado' que tem query de contagem própria."""
-    if report_type == 'clientes_por_licenciado':
-        raise ValueError("count_query não deve ser chamado para 'clientes_por_licenciado'. Use count_clientes_por_licenciado().")
+       NÃO USAR para tipos com query de contagem própria."""
+    if report_type in ['clientes_por_licenciado', 'boletos_por_cliente']:
+        raise ValueError(f"count_query não deve ser chamado para '{report_type}'. Use a função de contagem específica.")
 
     from_ = 'FROM public."CLIENTES" c'
     where_clauses = []
@@ -468,10 +554,9 @@ def get_headers(report_type: str) -> List[str]:
     report_type = report_type.lower()
 
     column_headers = {
-         # Chave 'base_clientes' corresponde aos campos em base_clientes_fields
+         # Chave 'base_clientes'
          "base_clientes": [
-            "Código", # Assume que refere-se a c.idcliente (ou c.codigo?)
-            "Nome", "Instalação", "Celular", "Cidade", "Região", "Data Ativo",
+            "Código", "Nome", "Instalação", "Celular", "Cidade", "Região", "Data Ativo",
             "Assinaturas", "Consumo Médio", "Status", "Data Cadastro", "CPF/CNPJ",
             "Número Cliente", "Última Alteração", "Celular 2", "Email", "RG", "Emissor",
             "Data Injeção", "ID Consultor", "Nome Consultor", "Celular Consultor", "CEP",
@@ -482,17 +567,14 @@ def get_headers(report_type: str) -> List[str]:
             "Documentos Enviados", "Link Documento", "Link Conta Energia", "Link Cartão CNPJ",
             "Caminho Documento 1", "Caminho Documento 2", "Caminho Energia 2", "Caminho Contrato Social",
             "Caminho Comprovante", "Caminho Estatuto/Convenção", "Senha PDF",
-            "Código", # <<< CUIDADO: Header "Código" aparece duas vezes. Qual campo é este? c.codigo?
-            "Elegibilidade",
-            "ID Plano PJ", "Data Cancelamento", "Data Ativo Original", "Fornecedora", "Desconto Cliente",
-            "Data Nasc.", "Origem", "Tipo Pagamento", "Status Financeiro", "Login Distribuidora",
-            "Senha Distribuidora", "Nacionalidade", "Profissão", "Estado Civil", "Observação Compartilhada",
-            "Link Assinatura"
+            "Código", "Elegibilidade", "ID Plano PJ", "Data Cancelamento", "Data Ativo Original",
+            "Fornecedora", "Desconto Cliente", "Data Nasc.", "Origem", "Tipo Pagamento",
+            "Status Financeiro", "Login Distribuidora", "Senha Distribuidora", "Nacionalidade",
+            "Profissão", "Estado Civil", "Observação Compartilhada", "Link Assinatura"
          ],
-         # Chave 'rateio' corresponde aos campos em rateio_fields
+         # Chave 'rateio'
          "rateio": [
-            "Código", # Assume que refere-se a c.idcliente (ou c.codigo?)
-            "Nome", "Instalação", "Celular", "Cidade", "Região", "Data Ativo", "Consumo Médio",
+            "Código", "Nome", "Instalação", "Celular", "Cidade", "Região", "Data Ativo", "Consumo Médio",
             "Data Cadastro", "CPF/CNPJ", "Número Cliente", "Email", "RG", "Emissor", "CEP", "Endereço", "Número",
             "Bairro", "Complemento", "CNPJ", "Razão Social", "Nome Fantasia", "UF Consumo", "Classificação",
             "Link Documento", "Link Conta Energia", "Link Cartão CNPJ", "Link Documento Frente", "Link Documento Verso",
@@ -500,24 +582,27 @@ def get_headers(report_type: str) -> List[str]:
             "Senha PDF", "Fornecedora", "Desconto Cliente", "Data Nascimento", "Login Distribuidora", "Senha Distribuidora",
             "Nacionalidade", "Cliente", "Representante", "Profissão", "Estado Civil"
          ],
-         # --- NOVO TIPO DE RELATÓRIO ---
+         # Chave 'clientes_por_licenciado'
          "clientes_por_licenciado": [
-            "ID Consultor",
-            "Nome Consultor",
-            "CPF",
-            "Email",
-            "UF",
-            "Qtd. Clientes Ativos"
+            "ID Consultor", "Nome Consultor", "CPF", "Email", "UF", "Qtd. Clientes Ativos"
+         ],
+         # --- NOVO TIPO DE RELATÓRIO ---
+         "boletos_por_cliente": [
+            "ID Cliente",        # c.idcliente
+            "Nome Cliente",      # c.nome
+            "Nº Instalação",     # c.numinstalacao
+            "Celular",           # c.celular
+            "Cidade",            # c.cidade
+            "Região",            # regiao (calculado)
+            "Data Ativo",        # data_ativo (formatado)
+            "Qtd. Boletos (RCB)" # quantidade_registros_rcb
          ]
          # --- FIM NOVO TIPO ---
      }
-    # Retorna a lista de headers para o tipo solicitado, ou a de 'base_clientes' como padrão
-    headers_list = column_headers.get(report_type, column_headers.get("base_clientes", [])) # Default para base_clientes se report_type inválido
-    if not headers_list and report_type not in column_headers:
-        logger.warning(f"Tipo de relatório desconhecido '{report_type}' e 'base_clientes' não encontrado em get_headers. Retornando lista vazia.")
-        return []
-    elif not headers_list:
-         logger.error(f"Lista de cabeçalhos vazia para o tipo de relatório: {report_type}")
-         # Retorna uma lista vazia para evitar erros posteriores
-         return []
+    headers_list = column_headers.get(report_type, []) # Default para lista vazia se tipo inválido
+    if not headers_list and report_type in column_headers:
+        logger.error(f"Lista de cabeçalhos vazia para o tipo de relatório conhecido: {report_type}")
+    elif report_type not in column_headers:
+        logger.warning(f"Tipo de relatório desconhecido '{report_type}' em get_headers. Retornando lista vazia.")
+
     return headers_list

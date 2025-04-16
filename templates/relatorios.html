@@ -8,7 +8,6 @@
 <h1>Relatórios</h1>
 
 {# Formulário de Filtros #}
-    {# O action aponta para a própria rota 'relatorios' para recarregar com os filtros GET #}
     <form method="GET" action="{{ url_for('relatorios') }}" class="filter-form">
         <div class="form-group">
             <label for="report_type">Tipo Relatório:</label>
@@ -16,13 +15,13 @@
             <select name="report_type" id="report_type" onchange="this.form.submit()">
                 <option value="base_clientes" {% if selected_report_type == 'base_clientes' %}selected{% endif %}>Base Clientes</option>
                 <option value="rateio" {% if selected_report_type == 'rateio' %}selected{% endif %}>Rateio</option>
-                {# --- NOVA OPÇÃO ADICIONADA --- #}
                 <option value="clientes_por_licenciado" {% if selected_report_type == 'clientes_por_licenciado' %}selected{% endif %}>Quantidade de Clientes por Licenciado</option>
+                {# --- NOVA OPÇÃO ADICIONADA --- #}
+                <option value="boletos_por_cliente" {% if selected_report_type == 'boletos_por_cliente' %}selected{% endif %}>Quantidade de Boletos por Cliente</option>
                 {# --- FIM NOVA OPÇÃO --- #}
             </select>
         </div>
-        {# O filtro de Fornecedora continua aqui. A lógica no app.py decide se ele será usado ou não
-           dependendo do selected_report_type. Para 'clientes_por_licenciado', ele será ignorado no backend. #}
+        {# O filtro de Fornecedora continua aqui, mas será ignorado no backend para o novo relatório #}
         <div class="form-group">
             <label for="fornecedora">Fornecedora:</label>
             <select name="fornecedora" id="fornecedora">
@@ -37,10 +36,8 @@
             </select>
         </div>
         <button type="submit" class="btn btn-primary">Buscar</button>
-         {# Link para Exportar Excel #}
-         {# Condição para exibir o botão apenas se houver dados na tabela ('dados' não está vazio) #}
+         {# Link para Exportar Excel - A lógica agora verifica se a rota existe e se há dados #}
          {% if dados %}
-         {# O link chama a rota 'exportar_excel_route' passando os mesmos filtros da página atual #}
          <a href="{{ url_for('exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" target="_blank">
              Exportar Excel
          </a>
@@ -146,7 +143,7 @@
 
 {% endblock %}
 
-{# Bloco para scripts JS extras, se necessário (não usado neste caso) #}
+{# Bloco para scripts JS extras, se necessário #}
 {% block scripts_extra %}
     {# Adiciona o script JS principal da aplicação que contém o filtro da tabela #}
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
