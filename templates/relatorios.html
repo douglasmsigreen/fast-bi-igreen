@@ -12,6 +12,7 @@
             <select name="report_type" id="report_type" onchange="this.form.submit()">
                 <option value="base_clientes" {% if selected_report_type == 'base_clientes' %}selected{% endif %}>Base Clientes</option>
                 <option value="rateio" {% if selected_report_type == 'rateio' %}selected{% endif %}>Rateio</option>
+                <option value="boletos_clientes" {% if selected_report_type == 'boletos_clientes' %}selected{% endif %}>Boletos Clientes</option>
             </select>
         </div>
         <div class="form-group">

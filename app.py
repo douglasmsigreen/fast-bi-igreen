@@ -1,12 +1,12 @@
 # app.py
+REPORT_TYPE_BASE_CLIENTES = 'base_clientes'
+REPORT_TYPE_RATEIO = 'rateio'
+FORNECEDORA_CONSOLIDADO = 'Consolidado'
 import os
 import logging
-# from logging.handlers import RotatingFileHandler
 from flask import (Flask, render_template, request, Response, g,
                    flash, redirect, url_for, abort, session)
-# Importa secure_filename que estava faltando
 from werkzeug.utils import secure_filename
-# Importações para Login
 from flask_login import (LoginManager, login_user, logout_user, login_required,
                          current_user)
 # Importa modelos e formulários
@@ -17,8 +17,8 @@ from models import User # Modelo User adaptado
 from forms import LoginForm # Formulário de Login adaptado
 # Necessário para validação do 'next_page' e data/hora
 from urllib.parse import urlparse
-import math
 from datetime import datetime # Import para o inject_now
+from typing import Union
 
 # --- Configuração de Logging ---
 log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - [%(name)s] - %(message)s")
@@ -65,10 +65,10 @@ def inject_now():
 # --- Rota de Login (já ajustada) ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    form = LoginForm()
     if current_user.is_authenticated:
         return redirect(url_for('dashboard')) # Redireciona para o dashboard se já logado
 
-    form = LoginForm()
     if form.validate_on_submit():
         email_input = form.email.data
         password_input = form.password.data
@@ -101,11 +101,10 @@ def logout():
 # --- Rota Principal NOVA (Dashboard) ---
 @app.route('/')
 @login_required
-def dashboard():
+def dashboard() -> str:
     """Rota para a página inicial do dashboard."""
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Utilizador'
     logger.info(f"Acesso ao dashboard por '{user_nome}'.")
-    # Pode passar dados adicionais para o template dashboard.html se necessário
     return render_template('dashboard.html', title="Dashboard - Fast BI")
 
 
@@ -117,10 +116,9 @@ def relatorios():
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Utilizador' # Usa nome para log
     logger.info(f"Requisição GET para /relatorios por '{user_nome}' - Args: {request.args}")
     try:
-        # --- Lógica para buscar dados da tabela (igual à função index anterior) ---
         page = request.args.get('page', 1, type=int)
-        selected_report_type = request.args.get('report_type', 'base_clientes')
-        selected_fornecedora = request.args.get('fornecedora', 'Consolidado')
+        selected_report_type = request.args.get('report_type', REPORT_TYPE_BASE_CLIENTES)
+        selected_fornecedora = request.args.get('fornecedora', FORNECEDORA_CONSOLIDADO)
         fornecedoras_db = database.get_fornecedoras()
         if selected_report_type == 'rateio':
             fornecedoras_list = fornecedoras_db
@@ -132,11 +130,10 @@ def relatorios():
         dados = database.execute_query(data_query, data_params) or []
         count_q, count_p = database.count_query(selected_report_type, selected_fornecedora)
         total_items_result = database.execute_query(count_q, count_p, fetch_one=True)
-        total_items = total_items_result[0] if total_items_result else 0
-        total_pages = math.ceil(total_items / items_per_page) if items_per_page > 0 else 0
+        total_items = total_items_result[0] if total_items_result else 0        
         headers = database.get_headers(selected_report_type)
 
-        # Renderiza o template renomeado 'relatorios.html'
+        total_pages = (total_items + items_per_page - 1) // items_per_page if items_per_page > 0 else 0
         return render_template(
             'relatorios.html', # <<< TEMPLATE CORRETO
             fornecedoras=fornecedoras_list,
@@ -150,12 +147,11 @@ def relatorios():
             items_per_page=items_per_page,
             title="Relatórios - Fast BI" # Passa um título para a página
         )
-    # --- Bloco except (ajustado para renderizar relatorios.html) ---
     except (ConnectionError, RuntimeError) as e:
         logger.error(f"Erro ao carregar dados para /relatorios por '{user_nome}': {e}", exc_info=False)
         flash(f"Erro ao conectar ou buscar dados no banco: {e}", "error")
         return render_template('relatorios.html', title="Erro - Relatórios", fornecedoras=['Consolidado'], error=str(e), dados=[], headers=database.get_headers('base_clientes'), page=1, total_pages=0, selected_report_type='base_clientes', selected_fornecedora='Consolidado')
-    except Exception as e:
+    except Exception as e: # Captura outros erros inesperados
         logger.error(f"Erro inesperado em /relatorios por '{user_nome}': {e}", exc_info=True)
         flash(f"Ocorreu um erro inesperado ao carregar a página de relatórios.", "error")
         return render_template('relatorios.html', title="Erro - Relatórios", fornecedoras=['Consolidado'], error="Erro interno inesperado.", dados=[], headers=database.get_headers('base_clientes'), page=1, total_pages=0, selected_report_type='base_clientes', selected_fornecedora='Consolidado'), 500
@@ -164,12 +160,11 @@ def relatorios():
 # --- Rota de Exportação (protegida, redireciona para relatorios) ---
 @app.route('/export', methods=['GET'])
 @login_required
-def exportar_excel_route():
+def exportar_excel_route() -> Union[Response, 'werkzeug.wrappers.response.Response']: # Pode retornar Response ou um Redirect
     """Rota para gerar e baixar o ficheiro Excel (protegida)."""
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Utilizador' # Usa nome para log
     logger.info(f"Requisição GET para /export por '{user_nome}' - Args: {request.args}")
     try:
-        # --- Lógica de exportação (igual à versão anterior) ---
         selected_fornecedora = request.args.get('fornecedora', 'Consolidado')
         selected_report_type = request.args.get('report_type', 'base_clientes')
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -199,15 +194,23 @@ def exportar_excel_route():
                  logger.warning(f"Nenhum dado encontrado para exportar (tipo: {selected_report_type}, forn: {selected_fornecedora}).")
                  flash(f"Nenhum dado encontrado para exportar (tipo: {selected_report_type}, forn: {selected_fornecedora}).", "warning")
                  return redirect(url_for('relatorios', fornecedora=selected_fornecedora, report_type=selected_report_type)) # Redireciona para relatorios
-            headers = database.get_headers(selected_report_type); sheet_title = "Base Clientes" if selected_report_type == "base_clientes" else "Dados"
+            headers = database.get_headers(selected_report_type) # Pega os cabeçalhos corretos
+            if selected_report_type == "base_clientes":
+                sheet_title = "Base Clientes"
+            elif selected_report_type == "rateio":
+                sheet_title = "Rateio"
+            elif selected_report_type == "boletos_clientes":
+                sheet_title = "Boletos Clientes"
+            else:
+                sheet_title = "Dados"
+
             excel_bytes = excel_exp.export_to_excel_bytes(dados_completos, headers, sheet_name=sheet_title)
 
-        # --- Retornar Resposta ---
         logger.info(f"Exportação concluída. Enviando ficheiro: {filename}")
         return Response(excel_bytes, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers={'Content-Disposition': f'attachment;filename="{filename}"'})
 
     # --- Tratamento de Erros da Rota Export (redireciona para relatorios) ---
-    except (ConnectionError, RuntimeError) as e:
+    except (ConnectionError, RuntimeError) as e: # Captura erros de conexão ou runtime
         logger.error(f"Erro de banco de dados ou runtime ao gerar exportação Excel: {e}", exc_info=False)
         flash(f"Erro ao gerar o ficheiro Excel: {e}", "error")
         return redirect(url_for('relatorios', fornecedora=request.args.get('fornecedora'), report_type=request.args.get('report_type'))) # Redireciona para relatorios
