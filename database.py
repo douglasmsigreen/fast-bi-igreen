@@ -348,12 +348,12 @@ def count_clientes_por_licenciado() -> int:
         logger.error(f"Erro inesperado em count_clientes_por_licenciado: {e}", exc_info=True)
         return 0
 
-# --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' ---
+# --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' (MODIFICADAS) ---
 
 def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
     """Busca os dados para o relatório 'Quantidade de Boletos por Cliente', com paginação."""
     logger.info(f"Buscando dados para 'Quantidade de Boletos por Cliente' - Offset: {offset}, Limit: {limit}")
-    # Usamos a query fornecida pelo usuário
+    # --- Query Modificada ---
     base_query = """
         SELECT
             c.idcliente,
@@ -365,6 +365,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -
                 WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN ''
                 ELSE (c.uf || '-' || c.concessionaria)
             END AS regiao,
+            c.fornecedora,  -- <<< COLUNA ADICIONADA AO SELECT
             TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo,
             COUNT(rcb.numinstalacao) AS quantidade_registros_rcb -- Conta registros na tabela RCB
         FROM
@@ -372,10 +373,14 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -
         LEFT JOIN
             public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao -- JOIN por numinstalacao
         GROUP BY
-            c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, data_ativo
+            c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao,
+            c.fornecedora,  -- <<< COLUNA ADICIONADA AO GROUP BY
+            data_ativo
         ORDER BY
             c.idcliente -- A ordenação principal é feita aqui
     """
+    # --- Fim da Modificação da Query ---
+
     params = []
     limit_clause = ""
     offset_clause = ""
@@ -394,6 +399,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -
     try:
         results = execute_query(paginated_query, params_t)
         logger.info(f"Retornados {len(results) if results else 0} registros para 'Boletos por Cliente'.")
+        # A query agora retorna 9 colunas por linha
         return results if results else []
     except (RuntimeError, ConnectionError) as e:
         logger.error(f"Erro ao buscar dados para 'Boletos por Cliente': {e}")
@@ -647,7 +653,8 @@ def get_headers(report_type: str) -> List[str]:
         "c.senhapdf": "Senha PDF", "c.codigo": "Código Interno",
         "c.elegibilidade": "Elegibilidade", "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelamento", # Alias 'dtcancelado'
         "data_ativo_original": "Data Ativo Original", # Alias 'data_ativo_original'
-        "c.fornecedora": "Fornecedora", "c.desconto_cliente": "Desconto Cliente", "dtnasc": "Data Nasc.", # Alias 'dtnasc'
+        "c.fornecedora": "Fornecedora", # <<< Certifique-se que está mapeado
+        "c.desconto_cliente": "Desconto Cliente", "dtnasc": "Data Nasc.", # Alias 'dtnasc'
         "c.origem": "Origem", "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro",
         "c.logindistribuidora": "Login Distribuidora", "c.senhadistribuidora": "Senha Distribuidora",
         "c.nacionalidade": "Nacionalidade", "c.profissao": "Profissão", "c.estadocivil": "Estado Civil",
@@ -702,11 +709,20 @@ def get_headers(report_type: str) -> List[str]:
         # Note que aqui usamos 'c.nome', 'c.cpf', 'c.email', 'c.uf' que vêm da tabela CONSULTOR
     ]
 
+    # --- Lista Modificada ---
     boletos_por_cliente_keys = [
-        # Ordem conforme SELECT em get_boletos_por_cliente_data
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao",
-        "data_ativo", "quantidade_registros_rcb"
+        # Ordem conforme SELECT em get_boletos_por_cliente_data (AJUSTADA)
+        "c.idcliente",                  # 1
+        "c.nome",                       # 2
+        "c.numinstalacao",              # 3
+        "c.celular",                    # 4
+        "c.cidade",                     # 5
+        "regiao",                       # 6
+        "c.fornecedora",                # 7 <<< ADICIONADO AQUI (índice 6)
+        "data_ativo",                   # 8
+        "quantidade_registros_rcb"      # 9
     ]
+    # --- Fim da Modificação ---
 
     # Seleciona a lista de chaves correta para o tipo de relatório
     keys_for_report = []
@@ -717,7 +733,7 @@ def get_headers(report_type: str) -> List[str]:
     elif report_type == "clientes_por_licenciado":
         keys_for_report = clientes_por_licenciado_keys
     elif report_type == "boletos_por_cliente":
-        keys_for_report = boletos_por_cliente_keys
+        keys_for_report = boletos_por_cliente_keys # Usa a lista modificada
     else:
         logger.warning(f"Tipo de relatório desconhecido '{report_type}' em get_headers. Retornando lista vazia.")
         return [] # Retorna vazio se o tipo for inválido
