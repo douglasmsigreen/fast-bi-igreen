@@ -1,36 +1,45 @@
-{% extends "base.html" %}
+{# templates/dashboard.html #}
+{% extends "base.html" %} {# Herda a estrutura base #}
 
-{% block title %}Dashboard - Fast BI{% endblock %}
+{% block title %}Dashboard - Fast BI{% endblock %} {# Título da página do dashboard #}
 
 {% block content %}
+{# Mensagem de boas-vindas no dashboard #}
 <div class="dashboard-welcome">
     <h2>Bem-vindo ao Fast BI!</h2>
+    <p>Selecione uma das opções abaixo para começar.</p> {# Mensagem de orientação #}
 </div>
 
+{# Container para os itens/links de navegação do dashboard #}
 <div class="dashboard-container">
-    {# Item Relatórios #}
-    <a href="{{ url_for('relatorios') }}" class="dashboard-item"> {# <<< Link para a nova rota #}
+
+    {# Item/Link para a página de Relatórios #}
+    <a href="{{ url_for('relatorios') }}" class="dashboard-item"> {# Link ativo #}
         <div class="dashboard-item-icon">
-            {# Use <img>, <i> (Font Awesome) ou <svg> #}
-            <img src="{{ url_for('static', filename='img/icon_relatorios.png') }}" alt="Relatórios"> {# <<< AJUSTE O ÍCONE #}
+            <img src="{{ url_for('static', filename='img/icon_relatorios.png') }}" alt="Relatórios">
         </div>
         <span class="dashboard-item-label">Relatórios</span>
     </a>
 
-    {# Item Dashboards #}
-    <a href="#" class="dashboard-item disabled"> {# Link desabilitado por enquanto #}
+    {# Item/Link para a nova página do Mapa de Clientes #}
+    <a href="{{ url_for('mapa_clientes') }}" class="dashboard-item"> {# <<<<<<<<<<<<<<<<<<<<<<<< LINK ATIVO #}
         <div class="dashboard-item-icon">
-            <img src="{{ url_for('static', filename='img/icon_dashboards.png') }}" alt="Dashboards"> {# <<< AJUSTE O ÍCONE #}
+            {# Você pode usar o ícone 'icon_dashboards.png' ou criar um novo para mapa #}
+            <img src="{{ url_for('static', filename='img/icon_dashboards.png') }}" alt="Mapas e Gráficos"> {# Ícone reutilizado #}
         </div>
-        <span class="dashboard-item-label">Dashboards</span>
+        <span class="dashboard-item-label">Mapas e Gráficos</span> {# <<<<<<<<<<<<<<<<<<<<<<<< TEXTO ATUALIZADO #}
     </a>
 
-    {# Item Upload #}
-    <a href="#" class="dashboard-item disabled"> {# Link desabilitado por enquanto #}
+    {# Item/Link para Upload (mantido desabilitado como exemplo) #}
+    <a href="#" class="dashboard-item disabled">
         <div class="dashboard-item-icon">
-            <img src="{{ url_for('static', filename='img/icon_upload.png') }}" alt="Upload"> {# <<< AJUSTE O ÍCONE #}
+            <img src="{{ url_for('static', filename='img/icon_upload.png') }}" alt="Upload">
         </div>
         <span class="dashboard-item-label">Upload</span>
     </a>
+
 </div>
-{% endblock %}
+{% endblock %} {# Fim do bloco de conteúdo #}
+
+{# O bloco scripts_extra não é necessário aqui, pois não há JS específico do mapa nesta página #}
+{# {% block scripts_extra %}{% endblock %} #}

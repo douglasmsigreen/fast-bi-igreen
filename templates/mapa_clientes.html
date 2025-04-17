@@ -1,0 +1,162 @@
+{# templates/mapa_clientes.html #}
+{% extends "base.html" %} {# Herda a estrutura base (navbar, rodapé, etc.) de base.html #}
+
+{# Define o título específico desta página, que aparecerá na aba do navegador #}
+{% block title %}Mapa de Clientes - Fast BI{% endblock %}
+
+{# Bloco principal de conteúdo da página #}
+{% block content %}
+{# Usa o container principal para manter o layout consistente com outras páginas #}
+<div class="container">
+    {# Título principal da página #}
+    <h1>Mapa de Clientes por Estado</h1>
+    {# Texto descritivo opcional abaixo do título #}
+    <p style="text-align: center; margin-bottom: 20px;">Visualização da distribuição de clientes ativos por estado.</p>
+
+    {# O elemento DIV onde o gráfico Plotly será renderizado. #}
+    {# O ID 'brazil-map-div' é usado pelo JavaScript para encontrar este container. #}
+    {# Estilos inline definem tamanho e aparência inicial. Podem ser movidos para o CSS. #}
+    <div id="brazil-map-div" style="width: 100%; max-width: 1000px; height: 650px; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: #f9f9f9;">
+        {# Mensagem exibida enquanto os dados e o mapa estão sendo carregados #}
+        <p style="text-align: center; padding-top: 50px; color: #666;">Carregando mapa...</p>
+    </div>
+</div>
+{% endblock %} {# Fim do bloco de conteúdo #}
+
+{# Bloco para adicionar JavaScript específico desta página #}
+{% block scripts_extra %}
+    {# 1. Inclui a biblioteca Plotly.js a partir de um CDN (recomendado para facilidade) #}
+    {# Alternativa: baixar Plotly.js e servir de /static/js/plotly.min.js #}
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+
+    {# 2. Script customizado para: #}
+    {#    a) Buscar os dados da API backend #}
+    {#    b) Configurar e renderizar o mapa Plotly #}
+    <script>
+        // Garante que o script só roda após o HTML da página estar completamente carregado
+        document.addEventListener('DOMContentLoaded', function() {
+            // Referência ao DIV onde o mapa será desenhado
+            const mapDiv = document.getElementById('brazil-map-div');
+
+            // 3. Faz a requisição (fetch) para a API que retorna os dados agregados por estado
+            //    Usa url_for para garantir que a URL da API está correta, mesmo se a estrutura do site mudar
+            fetch("{{ url_for('api_client_count_by_state') }}")
+                .then(response => {
+                    // Tratamento inicial da resposta HTTP
+                    if (!response.ok) {
+                        // Se houver erro na resposta (ex: 404, 500), tenta pegar a mensagem de erro do corpo JSON
+                        return response.json().then(err => { throw new Error(err.error || `Erro HTTP: ${response.status}`) });
+                    }
+                    // Se a resposta for OK, converte para JSON
+                    return response.json();
+                })
+                .then(apiData => {
+                    // 4. Processa os dados JSON recebidos da API
+                    if (apiData.error) { // Verifica se a API retornou uma chave 'error'
+                        throw new Error(apiData.error);
+                    }
+                    // Verifica se há dados válidos para plotar
+                    if (!apiData.locations || apiData.locations.length === 0) {
+                        mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de estado disponível para exibir no mapa.</p>';
+                        console.warn("Dados de localização (UFs) vazios recebidos da API.");
+                        return; // Aborta a renderização do mapa
+                    }
+
+                    const zValues = apiData.z; // Pega o array de valores
+
+                    // ----- CÁLCULO DO zmax (Ex: 95º Percentil) PARA LIMITAR A ESCALA -----
+                    let zmax_cap = Math.max(...zValues); // Valor padrão é o máximo absoluto
+                    if (zValues.length > 1) {
+                        // Cria uma cópia e ordena os valores numericamente (ascendente)
+                        const sortedZ = [...zValues].sort((a, b) => a - b);
+                        // Calcula o índice para o 95º percentil
+                        // Math.ceil garante que pegamos um índice válido mesmo para arrays pequenos
+                        const percentileIndex = Math.ceil(sortedZ.length * 0.95) - 1;
+                        // Define o zmax_cap como o valor naquele percentil
+                        // Garante que o índice não seja negativo
+                        zmax_cap = sortedZ[Math.max(0, percentileIndex)];
+
+                        // Se o 95º percentil for 0 (ou muito baixo), use o máximo para evitar problemas
+                        if (zmax_cap <= 0) {
+                            zmax_cap = Math.max(...zValues);
+                            console.warn("95º Percentil resultou em valor baixo ou zero. Usando máximo absoluto para zmax.");
+                        } else {
+                             console.log(`Valor máximo original: ${Math.max(...zValues)}`);
+                             console.log(`Definindo zmax (95º Percentil) como: ${zmax_cap}`);
+                        }
+                    }
+                     // Você pode descomentar a linha abaixo para testar um valor fixo:
+                     zmax_cap = 15000; // Exemplo de valor fixo, ajuste conforme seus dados!
+                    // -------------------------------------------------------------------------
+
+                    // 5. Define a configuração do 'trace' (a camada de dados) para o Plotly
+                    const mapTrace = [{
+                        type: 'choropleth',              // Tipo de gráfico
+                        locationmode: 'geojson-id',      // Usa IDs do GeoJSON para mapear localizações
+
+                        // --- Caminho para o arquivo GeoJSON LOCAL ---
+                        // Usa url_for para gerar o caminho correto dentro da pasta /static
+                        // Garanta que o arquivo 'brasil-estados.geojson' está em 'static/geojson/'
+                        geojson: "{{ url_for('static', filename='geojson/brasil-estados.geojson') }}",
+
+                        // --- Chave de Identificação no GeoJSON ---
+                        // ESSENCIAL: Verifique no SEU arquivo 'brasil-estados.geojson' qual a chave
+                        // dentro de 'properties' que contém a sigla UF (ex: 'SP', 'MG').
+                        // Substitua 'properties.sigla' se necessário.
+                        featureidkey: 'properties.sigla', // Exemplo: pode ser 'properties.UF' ou outra
+
+                        locations: apiData.locations,     // Array de UFs vindo da API ['SP', 'MG', ...]
+                        z: zValues,                       // Array de valores numéricos vindo da API [150, 120, ...]
+                        zmin: 0,                          // Valor mínimo para a escala de cores
+                        zmax: zmax_cap,                   // <<< Valor máximo para a escala de cores (limitador)
+
+                        colorscale: 'Greens',             // Escala de cores em tons de verde
+                        reversescale: true,               // Inverte a escala (escuro = baixo, claro = alto)
+                        colorbar: {                       // Configurações da barra de legenda
+                            title: 'Qtd. Clientes',
+                            thickness: 15
+                        },
+                        hoverinfo: 'location+z',          // O que mostrar no tooltip padrão
+                        hovertemplate: '<b>%{location}</b><br>Clientes: %{z}<extra></extra>', // Tooltip customizado
+                        marker: {                         // Linhas entre os estados
+                            line:{
+                                color: 'rgb(180,180,180)', // Cor das linhas (cinza claro)
+                                width: 0.5                // Espessura das linhas
+                            }
+                        }
+                    }];
+
+                    // 6. Define a configuração do 'layout' (aparência geral do gráfico)
+                    const mapLayout = {
+                        geo:{                             // Configurações geográficas
+                            scope: 'south america',         // Foco na América do Sul
+                            center: { lon: -54, lat: -15 }, // Centro aproximado do Brasil
+                            projection: { type: 'mercator' }, // Tipo de projeção
+                            lataxis: { range: [-35, 6] },   // Limites de latitude
+                            lonaxis: { range: [-75, -32] }, // Limites de longitude
+                            showland: true,                 // Mostrar terra
+                            landcolor: 'rgb(230, 230, 230)',// Cor da terra
+                            subunitcolor: 'rgb(255, 255, 255)' // Cor das linhas internas (se houver)
+                        },
+                        margin: { t: 10, b: 10, l: 10, r: 10 }, // Margens do gráfico
+                        paper_bgcolor: 'rgba(0,0,0,0)',     // Fundo da área total transparente
+                        plot_bgcolor: 'rgba(0,0,0,0)'       // Fundo da área de plotagem transparente
+                    };
+
+                    // 7. Renderiza o gráfico Plotly no DIV 'mapDiv'
+                    Plotly.newPlot(mapDiv, mapTrace, mapLayout, {
+                        responsive: true,  // Torna o gráfico responsivo
+                        displaylogo: false // Oculta o logo do Plotly
+                    });
+                    console.log(`Mapa do Brasil (Plotly) renderizado com GeoJSON local e zmax limitado a ${zmax_cap}.`);
+
+                })
+                .catch(error => {
+                    // 8. Tratamento de erros (falha no fetch, processamento ou renderização)
+                    console.error('Erro ao carregar ou renderizar o mapa:', error);
+                    // Exibe mensagem de erro mais detalhada no DIV do mapa
+                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa (${error.message}).<br>Verifique o caminho do GeoJSON ('static/geojson/brasil-estados.geojson'), a chave 'featureidkey' ('properties.sigla'?) e o console (F12).</p>`;
+                });
+        });
+    </script>
+{% endblock %} {# Fim do bloco de scripts extras #}
