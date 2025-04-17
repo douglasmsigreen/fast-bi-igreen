@@ -139,7 +139,7 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch_one=False) -
 def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
     """
     Busca os IDs de cliente para a 'Base Nova' do Rateio,
-    OPCIONALMENTE filtrando por fornecedora. Usa 'idcliente' como id (VERIFICAR).
+    OPCIONALMENTE filtrando por fornecedora e ORIGEM. Usa 'idcliente' como id (VERIFICAR).
     """
     query_base = """
         SELECT DISTINCT cc.idcliente
@@ -157,7 +157,10 @@ def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
         "c.data_ativo IS NOT NULL",
         "c.status IS NULL",
         "c.validadosucesso = 'S'",
-        "c.rateio = 'N'"
+        "c.rateio = 'N'",
+        # <<< FILTRO DE ORIGEM ADICIONADO >>>
+        " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) "
+        # <<< FIM DA ADIÇÃO >>>
     ]
     params = []
 
@@ -182,7 +185,7 @@ def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
 def get_base_enviada_ids(fornecedora: Optional[str] = None) -> List[int]:
     """
     Busca os IDs de cliente para a 'Base Enviada' do Rateio (rateio = 'S'),
-    OPCIONALMENTE filtrando por fornecedora. Usa 'idcliente' (VERIFICAR).
+    OPCIONALMENTE filtrando por fornecedora e ORIGEM. Usa 'idcliente' (VERIFICAR).
     """
     # IMPORTANTE: Verifique se o campo a selecionar aqui é 'idcliente' ou 'codigo'
     # Assumindo que 'idcliente' é a chave estrangeira correta em CLIENTES
@@ -190,7 +193,12 @@ def get_base_enviada_ids(fornecedora: Optional[str] = None) -> List[int]:
         SELECT c.idcliente -- <<< VERIFICAR ESTE CAMPO (idcliente ou codigo?)
         FROM public."CLIENTES" c
     """
-    where_clauses = ["c.rateio = 'S'"]
+    where_clauses = [
+        "c.rateio = 'S'",
+        # <<< FILTRO DE ORIGEM ADICIONADO >>>
+        " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) "
+        # <<< FIM DA ADIÇÃO >>>
+    ]
     params = []
 
     # Adiciona filtro de fornecedora se aplicável (usa 'consolidado' internamente para "todos")
@@ -214,7 +222,7 @@ def get_base_enviada_ids(fornecedora: Optional[str] = None) -> List[int]:
 def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_size: int = 1000) -> List[tuple]:
     """
     Busca os detalhes completos dos clientes para uma lista de IDs,
-    usando batching e corrigindo parâmetro ANY. Usa 'idcliente' no WHERE (VERIFICAR).
+    usando batching, FILTRO DE ORIGEM e corrigindo parâmetro ANY. Usa 'idcliente' no WHERE (VERIFICAR).
     """
     if not client_ids:
         logger.warning("get_client_details_by_ids chamada com lista de IDs vazia.")
@@ -231,9 +239,11 @@ def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_siz
         from_ = 'FROM public."CLIENTES" c'
         needs_consultor_join = any(f.startswith("co.") for f in campos)
         join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
-        # Cláusula WHERE com ANY(%s). Assume que o campo chave em CLIENTES é 'idcliente'.
+        # Cláusula WHERE com ANY(%s) e FILTRO DE ORIGEM. Assume que o campo chave em CLIENTES é 'idcliente'.
         # Se for 'codigo', altere aqui.
-        where = "WHERE c.idcliente = ANY(%s)" # <<< VERIFICAR: É idcliente ou codigo?
+        # <<< CLÁUSULA WHERE MODIFICADA >>>
+        where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))"
+        # <<< FIM DA MODIFICAÇÃO >>>
         order = "ORDER BY c.idcliente" # Mantém a ordem consistente (use o mesmo campo do WHERE)
         query = f"{select} {from_}{join} {where} {order};"
 
@@ -262,7 +272,7 @@ def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_siz
 # --- FUNÇÕES PARA RELATÓRIO 'Clientes por Licenciado' ---
 
 def get_clientes_por_licenciado_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
-    """Busca os dados para o relatório 'Quantidade de Clientes por Licenciado', com paginação."""
+    """Busca os dados para o relatório 'Quantidade de Clientes por Licenciado', com paginação e FILTRO DE ORIGEM."""
     logger.info(f"Buscando dados para 'Clientes por Licenciado' - Offset: {offset}, Limit: {limit}")
     base_query = """
         SELECT
@@ -278,6 +288,9 @@ def get_clientes_por_licenciado_data(offset: int = 0, limit: Optional[int] = Non
             public."CLIENTES" cl ON c.idconsultor = cl.idconsultor
         WHERE
             cl.data_ativo IS NOT NULL -- Apenas clientes ativos
+            -- <<< FILTRO DE ORIGEM ADICIONADO >>>
+            AND (cl.origem IS NULL OR cl.origem IN ('', 'WEB', 'BACKOFFICE'))
+            -- <<< FIM DA ADIÇÃO >>>
         GROUP BY
             c.idconsultor, c.nome, c.cpf, c.email, c.uf
         ORDER BY
@@ -310,7 +323,7 @@ def get_clientes_por_licenciado_data(offset: int = 0, limit: Optional[int] = Non
 
 
 def count_clientes_por_licenciado() -> int:
-    """Conta o número total de consultores (linhas) que teriam clientes ativos."""
+    """Conta o número total de consultores (linhas) que teriam clientes ativos, respeitando o FILTRO DE ORIGEM."""
     logger.info("Contando total de registros para 'Clientes por Licenciado'...")
     # Usamos uma subquery para contar as linhas *após* o GROUP BY da query original
     # e garantimos que só contamos consultores com clientes ativos (JOIN/WHERE)
@@ -318,24 +331,11 @@ def count_clientes_por_licenciado() -> int:
         SELECT COUNT(DISTINCT c.idconsultor) -- Conta consultores distintos
         FROM public."CONSULTOR" c
         INNER JOIN public."CLIENTES" cl ON c.idconsultor = cl.idconsultor -- INNER JOIN garante que só conta quem tem cliente
-        WHERE cl.data_ativo IS NOT NULL; -- Filtra por clientes ativos
+        WHERE cl.data_ativo IS NOT NULL -- Filtra por clientes ativos
+        -- <<< FILTRO DE ORIGEM ADICIONADO >>>
+        AND (cl.origem IS NULL OR cl.origem IN ('', 'WEB', 'BACKOFFICE'));
+        -- <<< FIM DA ADIÇÃO >>>
     """
-    # Alternativa (contando após o group by, como antes, mas mais complexa):
-    # count_query_sql = """
-    #     SELECT COUNT(*)
-    #     FROM (
-    #         SELECT
-    #             c.idconsultor
-    #         FROM
-    #             public."CONSULTOR" c
-    #         LEFT JOIN
-    #             public."CLIENTES" cl ON c.idconsultor = cl.idconsultor
-    #         WHERE
-    #             cl.data_ativo IS NOT NULL
-    #         GROUP BY
-    #             c.idconsultor -- Só precisa agrupar por id para contar
-    #     ) AS subquery_count;
-    # """
     try:
         result = execute_query(count_query_sql, fetch_one=True)
         count = result[0] if result else 0
@@ -351,7 +351,7 @@ def count_clientes_por_licenciado() -> int:
 # --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' (MODIFICADAS) ---
 
 def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
-    """Busca os dados para o relatório 'Quantidade de Boletos por Cliente', com paginação."""
+    """Busca os dados para o relatório 'Quantidade de Boletos por Cliente', com paginação e FILTRO DE ORIGEM."""
     logger.info(f"Buscando dados para 'Quantidade de Boletos por Cliente' - Offset: {offset}, Limit: {limit}")
     # --- Query Modificada ---
     base_query = """
@@ -372,6 +372,10 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -
             public."CLIENTES" c
         LEFT JOIN
             public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao -- JOIN por numinstalacao
+        -- <<< CLÁUSULA WHERE ADICIONADA COM FILTRO DE ORIGEM >>>
+        WHERE
+            (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))
+        -- <<< FIM DA ADIÇÃO >>>
         GROUP BY
             c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao,
             c.fornecedora,  -- <<< COLUNA ADICIONADA AO GROUP BY
@@ -410,31 +414,17 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -
 
 
 def count_boletos_por_cliente() -> int:
-    """Conta o número total de clientes (linhas) que seriam retornados pela query principal."""
+    """Conta o número total de clientes (linhas) que seriam retornados pela query principal, respeitando o FILTRO DE ORIGEM."""
     logger.info("Contando total de registros para 'Quantidade de Boletos por Cliente'...")
-    # Conta quantos clientes únicos existem (base da agregação)
+    # Conta quantos clientes únicos existem (base da agregação) que satisfazem o filtro de origem
     count_query_sql = """
         SELECT COUNT(DISTINCT c.idcliente)
-        FROM public."CLIENTES" c;
-        -- Não precisamos do JOIN aqui, pois a agregação na query principal é por cliente,
-        -- e COUNT(*) no GROUP BY retornaria 1 para cada cliente, mesmo sem boletos.
-        -- Se a intenção fosse contar *apenas* clientes que *têm* boletos, o JOIN seria necessário.
+        FROM public."CLIENTES" c
+        -- <<< CLÁUSULA WHERE ADICIONADA COM FILTRO DE ORIGEM >>>
+        WHERE
+            (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'));
+        -- <<< FIM DA ADIÇÃO >>>
     """
-    # Alternativa (contando após o group by, como antes):
-    # count_query_sql = """
-    #     SELECT COUNT(*)
-    #     FROM (
-    #         SELECT
-    #             c.idcliente -- Seleciona apenas uma coluna do GROUP BY para a contagem
-    #         FROM
-    #             public."CLIENTES" c
-    #         LEFT JOIN
-    #             public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao
-    #         GROUP BY
-    #             c.idcliente -- Só precisa agrupar pelo ID do cliente
-    #             # ... outros campos do group by original não são necessários para a contagem
-    #     ) AS subquery_count;
-    # """
     try:
         result = execute_query(count_query_sql, fetch_one=True)
         count = result[0] if result else 0
@@ -452,10 +442,11 @@ def count_boletos_por_cliente() -> int:
 # --- FUNÇÃO PARA MAPA DO DASHBOARD --- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< NOVO
 
 def get_client_count_by_state() -> List[Tuple[str, int]]:
-    """Busca a contagem de clientes ativos por estado (UF)."""
+    """Busca a contagem de clientes ativos por estado (UF), respeitando o FILTRO DE ORIGEM."""
     logger.info("Buscando contagem de clientes ativos por estado...")
     # Certifique-se que a tabela CLIENTES tem a coluna 'uf' e 'data_ativo'
     # Use a coluna chave primária correta em COUNT() (ex: c.idcliente ou c.codigo)
+    # FILTRO DE ORIGEM JÁ EXISTIA AQUI NO CÓDIGO ORIGINAL
     query = """
         SELECT
             UPPER(c.ufconsumo) as estado_uf, -- Garante UF em maiúsculas (padrão para mapas)
@@ -465,7 +456,7 @@ def get_client_count_by_state() -> List[Tuple[str, int]]:
         WHERE
             c.data_ativo IS NOT NULL -- Filtra por clientes ativos (ou outra condição desejada)
             AND c.ufconsumo IS NOT NULL AND c.ufconsumo <> '' -- Garante que UF existe e não está vazia
-            AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) -- Garante que origem é NULL ou vazia
+            AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) -- Garante que origem é NULL ou válida
         GROUP BY
             UPPER(c.ufconsumo)
         ORDER BY
@@ -529,7 +520,7 @@ def _get_query_fields(report_type: str) -> List[str]:
         "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao",
         "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
         "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "co.nome AS consultor_nome", # Adicionado alias para nome do cliente se precisar c.nome as nome_cliente
-        "c.profissao", "c.estadocivil" # Removido c.nome duplicado, adicionado alias para co.nome
+        "c.profissao", "c.estadocivil", "c.origem" # Removido c.nome duplicado, adicionado alias para co.nome, ADICIONADO c.origem
      ]
 
      # Não definimos campos aqui para 'clientes_por_licenciado' nem 'boletos_por_cliente',
@@ -547,7 +538,7 @@ def _get_query_fields(report_type: str) -> List[str]:
 
 
 def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int = 0, limit: Optional[int] = None) -> Tuple[str, tuple]:
-    """Constrói a query principal para buscar dados para exibição na tela (paginada).
+    """Constrói a query principal para buscar dados para exibição na tela (paginada), incluindo FILTRO DE ORIGEM.
        NÃO USAR para tipos com query customizada ('clientes_por_licenciado', 'boletos_por_cliente')."""
     campos = _get_query_fields(report_type)
     if not campos:
@@ -571,6 +562,10 @@ def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int
          where_clauses.append("c.fornecedora = %s")
          params.append(fornecedora)
 
+    # <<< FILTRO DE ORIGEM ADICIONADO >>>
+    where_clauses.append(" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) ")
+    # <<< FIM DA ADIÇÃO >>>
+
     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
     # Ordenação para exibição paginada (use o campo chave primária correto)
     order = "ORDER BY c.idcliente" # <<< VERIFICAR: É idcliente ou codigo?
@@ -585,7 +580,7 @@ def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int
     return query, params_t
 
 def count_query(report_type: str, fornecedora: Optional[str] = None) -> Tuple[str, tuple]:
-    """Constrói uma query para contar o total de registros com os mesmos filtros da exibição na tela.
+    """Constrói uma query para contar o total de registros com os mesmos filtros da exibição na tela, incluindo FILTRO DE ORIGEM.
        NÃO USAR para tipos com query de contagem própria."""
     if report_type in ['clientes_por_licenciado', 'boletos_por_cliente']:
         raise ValueError(f"count_query não deve ser chamado para '{report_type}'. Use a função de contagem específica.")
@@ -598,6 +593,10 @@ def count_query(report_type: str, fornecedora: Optional[str] = None) -> Tuple[st
     if fornecedora and fornecedora.lower() != "consolidado":
          where_clauses.append("c.fornecedora = %s")
          params.append(fornecedora)
+
+    # <<< FILTRO DE ORIGEM ADICIONADO >>>
+    where_clauses.append(" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) ")
+    # <<< FIM DA ADIÇÃO >>>
 
     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
     # Contar pela chave primária é geralmente mais eficiente e seguro (use o campo chave correto)
@@ -699,9 +698,7 @@ def get_headers(report_type: str) -> List[str]:
         "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente",
         "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade",
         "consultor_nome", # <-- Era "co.nome AS consultor_nome" na query
-        "c.profissao", "c.estadocivil"
-        # Nota: "c.nome" aparece duas vezes na lista de campos original de _get_query_fields para rateio.
-        # Removi a duplicata aqui. Se precisar do nome do cliente E do representante, ajuste os aliases na query e aqui.
+        "c.profissao", "c.estadocivil", "c.origem" # ADICIONADO c.origem aqui
     ]
 
     clientes_por_licenciado_keys = [
@@ -722,6 +719,7 @@ def get_headers(report_type: str) -> List[str]:
         "c.fornecedora",                # 7 <<< ADICIONADO AQUI (índice 6)
         "data_ativo",                   # 8
         "quantidade_registros_rcb"      # 9
+        # Não adicionamos 'c.origem' aqui pois não estava no SELECT original dessa query específica
     ]
     # --- Fim da Modificação ---
 
