@@ -458,15 +458,16 @@ def get_client_count_by_state() -> List[Tuple[str, int]]:
     # Use a coluna chave primária correta em COUNT() (ex: c.idcliente ou c.codigo)
     query = """
         SELECT
-            UPPER(c.uf) as estado_uf, -- Garante UF em maiúsculas (padrão para mapas)
+            UPPER(c.ufconsumo) as estado_uf, -- Garante UF em maiúsculas (padrão para mapas)
             COUNT(c.idcliente) as total_clientes -- Use a chave primária correta
         FROM
             public."CLIENTES" c
         WHERE
             c.data_ativo IS NOT NULL -- Filtra por clientes ativos (ou outra condição desejada)
-            AND c.uf IS NOT NULL AND c.uf <> '' -- Garante que UF existe e não está vazia
+            AND c.ufconsumo IS NOT NULL AND c.ufconsumo <> '' -- Garante que UF existe e não está vazia
+            AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) -- Garante que origem é NULL ou vazia
         GROUP BY
-            UPPER(c.uf)
+            UPPER(c.ufconsumo)
         ORDER BY
             estado_uf;
     """
