@@ -358,6 +358,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -
                 WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN ''
                 ELSE (c.uf || '-' || c.concessionaria)
             END AS regiao,
+            c.fornecedora,
             TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo,
             COUNT(rcb.numinstalacao) AS quantidade_registros_rcb
         FROM
@@ -365,7 +366,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None) -
         LEFT JOIN
             public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao
         GROUP BY
-            c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, data_ativo
+            c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, c.fornecedora, data_ativo
         ORDER BY
             c.idcliente -- A ordenação principal é feita aqui
     """
@@ -415,6 +416,7 @@ def count_boletos_por_cliente() -> int:
                     WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN ''
                     ELSE (c.uf || '-' || c.concessionaria)
                 END,
+                c.fornecedora,
                 c.data_ativo -- Não precisa do TO_CHAR aqui, só a coluna original
         ) AS subquery_count;
     """
@@ -594,6 +596,7 @@ def get_headers(report_type: str) -> List[str]:
             "Celular",           # c.celular
             "Cidade",            # c.cidade
             "Região",            # regiao (calculado)
+            "Fornecedora",       # c.fornecedora
             "Data Ativo",        # data_ativo (formatado)
             "Qtd. Boletos (RCB)" # quantidade_registros_rcb
          ]
