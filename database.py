@@ -139,7 +139,8 @@ def execute_query(query: str, params: Optional[tuple] = None, fetch_one=False) -
 def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
     """
     Busca os IDs de cliente para a 'Base Nova' do Rateio,
-    OPCIONALMENTE filtrando por fornecedora e ORIGEM. Usa 'idcliente' como id (VERIFICAR).
+    OPCIONALMENTE filtrando por fornecedora, ORIGEM e excluindo clientes
+    presentes na tabela DEVOLUTIVAS. Usa 'idcliente' como id.
     """
     query_base = """
         SELECT DISTINCT cc.idcliente
@@ -158,29 +159,35 @@ def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
         "c.status IS NULL",
         "c.validadosucesso = 'S'",
         "c.rateio = 'N'",
-        # <<< FILTRO DE ORIGEM ADICIONADO >>>
-        " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) "
-        # <<< FIM DA ADIÇÃO >>>
+        " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) ",
+        # --- >>> NOVA REGRA ADICIONADA ABAIXO <<< ---
+        # Verifica se o idcliente NÃO existe na tabela DEVOLUTIVAS
+        """ NOT EXISTS (
+                SELECT 1
+                FROM public."DEVOLUTIVAS" d
+                WHERE d.idcliente = c.idcliente
+            ) """
+        # --- >>> FIM DA NOVA REGRA <<< ---
     ]
     params = []
 
-    # Adiciona filtro de fornecedora se aplicável (usa 'consolidado' internamente para "todos")
+    # Adiciona filtro de fornecedora se aplicável
     if fornecedora and fornecedora.lower() != 'consolidado':
         where_clauses.append("c.fornecedora = %s")
         params.append(fornecedora)
-        logger.info(f"Executando query para buscar IDs da Base Nova (Fornecedora: {fornecedora})...")
+        logger.info(f"Executando query para buscar IDs da Base Nova (Forn: {fornecedora}, sem devolutiva)...")
     else:
-        logger.info("Executando query para buscar IDs da Base Nova (Todas Fornecedoras)...")
+        logger.info("Executando query para buscar IDs da Base Nova (Todas Forn, sem devolutiva)...")
 
     full_query = query_base + " WHERE " + " AND ".join(where_clauses) + group_by + ";"
 
     try:
         results = execute_query(full_query, tuple(params))
-        # Assume que idcliente é o campo correto (se for c.codigo, ajuste aqui)
         return [row[0] for row in results] if results else []
     except (RuntimeError, ConnectionError) as e:
         logger.error(f"Erro ao buscar IDs da Base Nova: {e}")
         return []
+
 
 def get_base_enviada_ids(fornecedora: Optional[str] = None) -> List[int]:
     """
@@ -483,35 +490,34 @@ def _get_query_fields(report_type: str) -> List[str]:
         baseado no tipo de relatório. Adapta nomes como 'idcliente' se necessário."""
      report_type = report_type.lower()
 
-     # Campos para Base Clientes (Adapte 'c.idcliente' para 'c.codigo' se for o PK)
-     # <<< VERIFICAR: Usar c.idcliente ou c.codigo como chave primária em CLIENTES?
-     #    Assumindo c.idcliente por enquanto. Se for c.codigo, substituir onde apropriado.
+     # Campos para Base Clientes (sem alterações aqui)
      base_clientes_fields = [
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
-        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", # Usa UF se concessionaria vazia
-        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura", # COALESCE para evitar erro com NULL
-        "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
-        "c.\"cpf/cnpj\"", "c.numcliente", "TO_CHAR(c.dtultalteracao, 'DD/MM/YYYY') AS dtultalteracao",
-        "c.celular_2", "c.email", "c.rg", "c.emissor", "TO_CHAR(c.datainjecao, 'DD/MM/YYYY') AS datainjecao",
-        "c.idconsultor", "co.nome AS consultor_nome", "co.celular AS consultor_celular", "c.cep",
-        "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia",
-        "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli",
-        "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio",
-        "c.validadosucesso", "CASE WHEN c.validadosucesso = 'S' THEN 'Aprovado' ELSE 'Rejeitado' END AS status_sucesso",
-        "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj",
-        "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
-        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", # Aqui usa 'codigo' (é diferente de idcliente?)
-        "c.elegibilidade", "c.idplanopj", "TO_CHAR(c.dtcancelado, 'DD/MM/YYYY') AS dtcancelado",
-        "TO_CHAR(c.data_ativo_original, 'DD/MM/YYYY') AS data_ativo_original", "c.fornecedora",
-        "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.origem",
-        "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora",
-        "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
+         "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
+         "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
+         "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura",
+         "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
+         "c.\"cpf/cnpj\"", "c.numcliente", "TO_CHAR(c.dtultalteracao, 'DD/MM/YYYY') AS dtultalteracao",
+         "c.celular_2", "c.email", "c.rg", "c.emissor", "TO_CHAR(c.datainjecao, 'DD/MM/YYYY') AS datainjecao",
+         "c.idconsultor", "co.nome AS consultor_nome", "co.celular AS consultor_celular", "c.cep",
+         "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia",
+         "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli",
+         "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio",
+         "c.validadosucesso", "CASE WHEN c.validadosucesso = 'S' THEN 'Aprovado' ELSE 'Rejeitado' END AS status_sucesso",
+         "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj",
+         "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
+         "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo",
+         "c.elegibilidade", "c.idplanopj", "TO_CHAR(c.dtcancelado, 'DD/MM/YYYY') AS dtcancelado",
+         "TO_CHAR(c.data_ativo_original, 'DD/MM/YYYY') AS data_ativo_original", "c.fornecedora",
+         "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.origem",
+         "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora",
+         "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
      ]
 
-     # Campos para Rateio (Adapte 'c.idcliente' se necessário)
+     # Campos para Rateio (MODIFICADO)
      rateio_fields = [
         "c.idcliente", # <<< VERIFICAR CHAVE
-        "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
+        "c.nome", # Primeiro nome (usado como 'Nome' no cabeçalho original)
+        "c.numinstalacao", "c.celular", "c.cidade",
         "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
         "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
         "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "c.endereco", "c.numero",
@@ -519,12 +525,16 @@ def _get_query_fields(report_type: str) -> List[str]:
         "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2",
         "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao",
         "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
-        "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "co.nome AS consultor_nome", # Adicionado alias para nome do cliente se precisar c.nome as nome_cliente
-        "c.profissao", "c.estadocivil", "c.origem" # Removido c.nome duplicado, adicionado alias para co.nome, ADICIONADO c.origem
+        "c.logindistribuidora", "c.senhadistribuidora", 
+        # --- >>> NOVO CAMPO ADICIONADO ABAIXO <<< ---
+        "c.nome AS nome_cliente_rateio", # Adicionando c.nome com um novo alias
+        # --- >>> FIM DO NOVO CAMPO <<< ---
+        "co.nome AS consultor_nome", "c.nacionalidade",
+        "c.profissao", "c.estadocivil"
+        # "c.origem" # <<< REMOVIDO daqui
      ]
 
-     # Não definimos campos aqui para 'clientes_por_licenciado' nem 'boletos_por_cliente',
-     # pois as queries são customizadas e não usam esta função.
+     # Seleciona a lista correta
      if report_type == "rateio":
           logger.debug(f"Selecionando campos SQL para o tipo: {report_type}")
           return rateio_fields
@@ -624,52 +634,49 @@ def get_headers(report_type: str) -> List[str]:
     report_type = report_type.lower()
 
     # Mapa de chaves (alias/nomes de campo) para nomes de cabeçalho amigáveis
-    # (Este mapa parece correto, vamos mantê-lo)
     header_map = {
         # Campos Comuns (revisar se todos são usados e mapeados corretamente)
         "c.idcliente": "Código Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação",
-        "c.celular": "Celular", "c.cidade": "Cidade", "regiao": "Região (UF-Conc)", # Alias 'regiao'
-        "data_ativo": "Data Ativo", # Alias 'data_ativo'
-        "qtdeassinatura": "Assinaturas", # Alias 'qtdeassinatura'
-        "c.consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro", # Alias 'dtcad'
-        "c.\"cpf/cnpj\"": "CPF/CNPJ", "c.numcliente": "Número Cliente", "dtultalteracao": "Última Alteração", # Alias 'dtultalteracao'
+        "c.celular": "Celular", "c.cidade": "Cidade", "regiao": "Região (UF-Conc)",
+        "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas",
+        "c.consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro",
+        "c.\"cpf/cnpj\"": "CPF/CNPJ", "c.numcliente": "Número Cliente", "dtultalteracao": "Última Alteração",
         "c.celular_2": "Celular 2", "c.email": "Email", "c.rg": "RG", "c.emissor": "Emissor",
-        "datainjecao": "Data Injeção", # Alias 'datainjecao'
-        "c.idconsultor": "ID Consultor", "consultor_nome": "Nome Consultor", # Alias 'consultor_nome'
-        "consultor_celular": "Celular Consultor", # Alias 'consultor_celular'
-        "c.cep": "CEP", "c.endereco": "Endereço", "c.numero": "Número", "c.bairro": "Bairro",
-        "c.complemento": "Complemento", "c.cnpj": "CNPJ (Empresa)", "c.razao": "Razão Social",
+        "datainjecao": "Data Injeção", "c.idconsultor": "ID Consultor", "consultor_nome": "Nome Consultor",
+        "consultor_celular": "Celular Consultor", "c.cep": "CEP", "c.endereco": "Endereço", "c.numero": "Número",
+        "c.bairro": "Bairro", "c.complemento": "Complemento", "c.cnpj": "CNPJ (Empresa)", "c.razao": "Razão Social",
         "c.fantasia": "Nome Fantasia", "c.ufconsumo": "UF Consumo", "c.classificacao": "Classificação",
         "c.keycontrato": "Key Contrato", "c.keysigner": "Key Signer", "c.leadidsolatio": "Lead ID Solatio",
         "c.indcli": "Ind CLI", "c.enviadocomerc": "Enviado Comerci", "c.obs": "Observação",
         "c.posvenda": "Pós-venda", "c.retido": "Retido", "c.contrato_verificado": "Contrato Verificado",
         "c.rateio": "Rateio (S/N)", "c.validadosucesso": "Validação Sucesso (S/N)",
-        "status_sucesso": "Status Validação", # Alias 'status_sucesso'
-        "c.documentos_enviados": "Documentos Enviados", "c.link_documento": "Link Documento",
-        "c.caminhoarquivo": "Link Conta Energia", "c.caminhoarquivocnpj": "Link Cartão CNPJ",
-        "c.caminhoarquivodoc1": "Link Doc Ident. 1", "c.caminhoarquivodoc2": "Link Doc Ident. 2",
-        "c.caminhoarquivoenergia2": "Link Conta Energia 2", "c.caminhocontratosocial": "Link Contrato Social",
-        "c.caminhocomprovante": "Link Comprovante", "c.caminhoarquivoestatutoconvencao": "Link Estatuto/Convenção",
-        "c.senhapdf": "Senha PDF", "c.codigo": "Código Interno",
-        "c.elegibilidade": "Elegibilidade", "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelamento", # Alias 'dtcancelado'
-        "data_ativo_original": "Data Ativo Original", # Alias 'data_ativo_original'
-        "c.fornecedora": "Fornecedora", # <<< Certifique-se que está mapeado
-        "c.desconto_cliente": "Desconto Cliente", "dtnasc": "Data Nasc.", # Alias 'dtnasc'
-        "c.origem": "Origem", "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro",
+        "status_sucesso": "Status Validação", "c.documentos_enviados": "Documentos Enviados",
+        "c.link_documento": "Link Documento", "c.caminhoarquivo": "Link Conta Energia",
+        "c.caminhoarquivocnpj": "Link Cartão CNPJ", "c.caminhoarquivodoc1": "Link Doc Ident. 1",
+        "c.caminhoarquivodoc2": "Link Doc Ident. 2", "c.caminhoarquivoenergia2": "Link Conta Energia 2",
+        "c.caminhocontratosocial": "Link Contrato Social", "c.caminhocomprovante": "Link Comprovante",
+        "c.caminhoarquivoestatutoconvencao": "Link Estatuto/Convenção", "c.senhapdf": "Senha PDF",
+        "c.codigo": "Código Interno", "c.elegibilidade": "Elegibilidade", "c.idplanopj": "ID Plano PJ",
+        "dtcancelado": "Data Cancelamento", "data_ativo_original": "Data Ativo Original",
+        "c.fornecedora": "Fornecedora", "c.desconto_cliente": "Desconto Cliente", "dtnasc": "Data Nasc.",
+        "c.origem": "Origem", # <<< MANTIDO AQUI para outros relatórios, mas será removido de rateio_keys
+        "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro",
         "c.logindistribuidora": "Login Distribuidora", "c.senhadistribuidora": "Senha Distribuidora",
         "c.nacionalidade": "Nacionalidade", "c.profissao": "Profissão", "c.estadocivil": "Estado Civil",
         "c.obs_compartilhada": "Observação Compartilhada", "c.linkassinatura1": "Link Assinatura",
         # Campos Específicos 'Clientes por Licenciado'
-        "c.cpf": "CPF Consultor", "c.uf": "UF Consultor", # c.uf aqui é do consultor
+        "c.cpf": "CPF Consultor", "c.uf": "UF Consultor",
         "quantidade_clientes_ativos": "Qtd. Clientes Ativos",
         # Campos Específicos 'Boletos por Cliente'
         "quantidade_registros_rcb": "Qtd. Boletos (RCB)",
+        # --- >>> NOVO MAPEAMENTO ADICIONADO ABAIXO <<< ---
+        "nome_cliente_rateio": "Cliente" # Mapeia o novo alias para o cabeçalho desejado
+        # --- >>> FIM DO NOVO MAPEAMENTO <<< ---
     }
 
     # --- Define a ORDEM EXATA das colunas para cada relatório ---
-    # Use as chaves que correspondem aos ALIASES ou nomes de campos simples
-    # A ordem nesta lista determinará a ordem das colunas na tabela/Excel
 
+    # base_clientes_keys (sem alterações)
     base_clientes_keys = [
         "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo",
         "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente",
@@ -688,6 +695,7 @@ def get_headers(report_type: str) -> List[str]:
         "c.obs_compartilhada", "c.linkassinatura1"
     ]
 
+    # rateio_keys (MODIFICADO)
     rateio_keys = [
         "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo",
         "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor",
@@ -696,43 +704,37 @@ def get_headers(report_type: str) -> List[str]:
         "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2",
         "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante",
         "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente",
-        "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade",
-        "consultor_nome", # <-- Era "co.nome AS consultor_nome" na query
-        "c.profissao", "c.estadocivil", "c.origem" # ADICIONADO c.origem aqui
+        "dtnasc", "c.logindistribuidora", "c.senhadistribuidora",
+        # --- >>> NOVA CHAVE ADICIONADA ABAIXO <<< ---
+        "nome_cliente_rateio", # Adiciona a chave correspondente ao alias
+        # --- >>> FIM DA NOVA CHAVE <<< ---
+        "consultor_nome",
+        "c.nacionalidade",
+        "c.profissao", "c.estadocivil"
+        # "c.origem" # <<< REMOVIDO daqui
     ]
 
+    # clientes_por_licenciado_keys (sem alterações)
     clientes_por_licenciado_keys = [
-        # Ordem conforme SELECT em get_clientes_por_licenciado_data
         "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos"
-        # Note que aqui usamos 'c.nome', 'c.cpf', 'c.email', 'c.uf' que vêm da tabela CONSULTOR
     ]
 
-    # --- Lista Modificada ---
+    # boletos_por_cliente_keys (sem alterações)
     boletos_por_cliente_keys = [
-        # Ordem conforme SELECT em get_boletos_por_cliente_data (AJUSTADA)
-        "c.idcliente",                  # 1
-        "c.nome",                       # 2
-        "c.numinstalacao",              # 3
-        "c.celular",                    # 4
-        "c.cidade",                     # 5
-        "regiao",                       # 6
-        "c.fornecedora",                # 7 <<< ADICIONADO AQUI (índice 6)
-        "data_ativo",                   # 8
-        "quantidade_registros_rcb"      # 9
-        # Não adicionamos 'c.origem' aqui pois não estava no SELECT original dessa query específica
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao",
+        "c.fornecedora", "data_ativo", "quantidade_registros_rcb"
     ]
-    # --- Fim da Modificação ---
 
     # Seleciona a lista de chaves correta para o tipo de relatório
     keys_for_report = []
     if report_type == "base_clientes":
         keys_for_report = base_clientes_keys
     elif report_type == "rateio":
-        keys_for_report = rateio_keys
+        keys_for_report = rateio_keys # Usa a lista modificada
     elif report_type == "clientes_por_licenciado":
         keys_for_report = clientes_por_licenciado_keys
     elif report_type == "boletos_por_cliente":
-        keys_for_report = boletos_por_cliente_keys # Usa a lista modificada
+        keys_for_report = boletos_por_cliente_keys
     else:
         logger.warning(f"Tipo de relatório desconhecido '{report_type}' em get_headers. Retornando lista vazia.")
         return [] # Retorna vazio se o tipo for inválido
@@ -740,13 +742,12 @@ def get_headers(report_type: str) -> List[str]:
     # Cria a lista final de cabeçalhos usando o mapa e a ordem definida
     headers_list = []
     for key in keys_for_report:
-        # Busca o nome amigável no mapa. Se não encontrar, usa a própria chave como fallback (melhorado)
         friendly_name = header_map.get(key)
         if friendly_name:
             headers_list.append(friendly_name)
         else:
             # Fallback: tenta limpar a chave para algo legível
-            fallback_name = key.split('.')[-1].replace('_', ' ').title() # Pega a parte após 'c.' ou 'co.', troca _ por espaço, capitaliza
+            fallback_name = key.split('.')[-1].replace('_', ' ').title()
             headers_list.append(fallback_name)
             logger.warning(f"Chave '{key}' não encontrada no header_map para relatório '{report_type}'. Usando fallback: '{fallback_name}'")
 
