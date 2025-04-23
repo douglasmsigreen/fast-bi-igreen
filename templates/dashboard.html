@@ -1,45 +1,144 @@
-{# templates/dashboard.html #}
-{% extends "base.html" %} {# Herda a estrutura base #}
+{# templates/dashboard.html - MODIFICADO #}
+{% extends "base.html" %}
 
-{% block title %}Dashboard - Fast BI{% endblock %} {# Título da página do dashboard #}
+{# Define o título que pode aparecer na barra superior interna #}
+{% block page_title %}Painel de Controle{% endblock %}
 
 {% block content %}
-{# Mensagem de boas-vindas no dashboard #}
-<div class="dashboard-welcome">
-    <h2>Bem-vindo ao Fast BI!</h2>
-    <p>Selecione uma das opções abaixo para começar.</p> {# Mensagem de orientação #}
+
+{# Linha para Filtros #}
+<div class="filter-row">
+    <div class="filter-group">
+        <label for="filter-month">FILTRAR POR</label>
+        <select id="filter-month" name="month">
+            <option value="2025-04" selected>ABR/2025</option> {# Exemplo Estático #}
+            <option value="2025-03">MAR/2025</option>
+            {# Adicionar mais opções dinamicamente se necessário #}
+        </select>
+    </div>
+    {# Outros filtros podem ir aqui #}
 </div>
 
-{# Container para os itens/links de navegação do dashboard #}
-<div class="dashboard-container">
+{# Grid para os Widgets/Cards - Usaremos CSS Grid ou Flexbox #}
+<div class="dashboard-grid">
 
-    {# Item/Link para a página de Relatórios #}
-    <a href="{{ url_for('relatorios') }}" class="dashboard-item"> {# Link ativo #}
-        <div class="dashboard-item-icon">
-            <img src="{{ url_for('static', filename='img/icon_relatorios.png') }}" alt="Relatórios">
+    {# Card: Resultado do Mês #}
+    <div class="card kpi-card">
+        <div class="card-header">
+            Resultado do Mês
+            <i class="fas fa-info-circle tooltip-icon" title="Dados consolidados do mês selecionado."></i> {# Ícone Info #}
         </div>
-        <span class="dashboard-item-label">Relatórios</span>
-    </a>
-
-    {# Item/Link para a nova página do Mapa de Clientes #}
-    <a href="{{ url_for('mapa_clientes') }}" class="dashboard-item"> {# <<<<<<<<<<<<<<<<<<<<<<<< LINK ATIVO #}
-        <div class="dashboard-item-icon">
-            {# Você pode usar o ícone 'icon_dashboards.png' ou criar um novo para mapa #}
-            <img src="{{ url_for('static', filename='img/icon_dashboards.png') }}" alt="Mapas e Gráficos"> {# Ícone reutilizado #}
+        <div class="card-body">
+            <div class="kpi-main-value">269.656</div>
+            <div class="kpi-sub-label">kWh vendidos</div>
+            <hr class="kpi-divider">
+            <div class="kpi-secondary-values">
+                <div>
+                    <span class="kpi-secondary-label">Faturamento total (R$) ABR/2025</span>
+                    <span class="kpi-secondary-value">R$ 37.260,73</span>
+                     <i class="fas fa-info-circle tooltip-icon" title="Faturamento bruto do período."></i>
+                </div>
+                <div>
+                    <span class="kpi-secondary-label">Faturamento consolidado (R$)</span>
+                    <span class="kpi-secondary-value">R$ 105.571,98</span>
+                     <i class="fas fa-info-circle tooltip-icon" title="Faturamento acumulado."></i>
+                </div>
+            </div>
         </div>
-        <span class="dashboard-item-label">Mapas e Gráficos</span> {# <<<<<<<<<<<<<<<<<<<<<<<< TEXTO ATUALIZADO #}
-    </a>
+    </div>
 
-    {# Item/Link para Upload (mantido desabilitado como exemplo) #}
-    <a href="#" class="dashboard-item disabled">
-        <div class="dashboard-item-icon">
-            <img src="{{ url_for('static', filename='img/icon_upload.png') }}" alt="Upload">
+    {# Card: Clientes Ativos #}
+     <div class="card qualification-card">
+        <div class="card-header">Clientes Ativos</div>
+        <div class="card-body">
+            <div class="qualification-numbers">
+                <div class="qual-item">
+                    <span class="qual-number">974</span>
+                    <span class="qual-label">Endereços<br>ativos</span>
+                </div>
+                <div class="qual-item">
+                    <span class="qual-number">268</span>
+                    <span class="qual-label">Endereços<br>pendentes/<br>desativados</span>
+                </div>
+            </div>
+             <a href="#" class="details-link">VER DETALHES</a>
         </div>
-        <span class="dashboard-item-label">Upload</span>
-    </a>
+    </div>
 
-</div>
-{% endblock %} {# Fim do bloco de conteúdo #}
+    {# Card: Evolução da Remuneração (Gráfico) #}
+    <div class="card chart-card">
+        <div class="card-header">
+            <select id="chart-year" name="year">
+                 <option value="2025" selected>2025</option>
+                 <option value="2024">2024</option>
+            </select>
+            <span>Evolução Mensal</span>
+        </div>
+        <div class="card-body">
+            {# Área onde o gráfico será renderizado (ex: com Chart.js) #}
+            <canvas id="remunerationChart"></canvas>
+        </div>
+    </div>
 
-{# O bloco scripts_extra não é necessário aqui, pois não há JS específico do mapa nesta página #}
-{# {% block scripts_extra %}{% endblock %} #}
+</div> {# Fim dashboard-grid #}
+
+{% endblock %}
+
+{% block scripts_extra %}
+{# Incluir Chart.js (se for usar) #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Exemplo de Script para o Gráfico ---
+    const ctx = document.getElementById('remunerationChart');
+    if (ctx) {
+        // Dados de exemplo - Substituir por dados reais (via AJAX ou Jinja)
+        const labels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+        const data = {
+            labels: labels,
+            datasets: [{
+                label: 'Remuneração',
+                data: [0, 10, 40, 80, 30, 15, 5, 0, 0, 0, 0, 0], // Dados exemplo da imagem
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)', // Cor da linha (verde/azul)
+                tension: 0.4 // Suaviza a curva
+            }]
+        };
+        const config = {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }, // Esconde legenda
+                scales: {
+                     y: { beginAtZero: true, ticks: { display: false } , grid: { display: false} }, // Esconde eixo Y
+                     x: { grid: { display: false } } // Esconde grid X
+                 }
+            }
+        };
+        new Chart(ctx, config);
+    }
+
+    // --- Script para Copiar Link (Exemplo) ---
+    const copyButton = document.querySelector('.btn-copy-link');
+    const linkInput = document.querySelector('.indication-link-area input');
+    if (copyButton && linkInput) {
+        copyButton.addEventListener('click', function() {
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // Para mobile
+            try {
+                document.execCommand('copy');
+                // (Opcional) Mudar texto do botão ou mostrar notificação
+                console.log('Link copiado!');
+                 alert('Link copiado para a área de transferência!');
+            } catch (err) {
+                console.error('Falha ao copiar link: ', err);
+                alert('Não foi possível copiar o link.');
+            }
+            window.getSelection().removeAllRanges(); // Desseleciona
+        });
+    }
+});
+</script>
+{% endblock %}

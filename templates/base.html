@@ -1,57 +1,143 @@
+{# templates/base.html - MODIFICADO #}
 <!doctype html>
 <html lang="pt-br">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {# O título da página agora é definido pelo bloco 'title' ou usa um padrão #}
     <title>{% block title %}Fast BI{% endblock %}</title>
-    {# Link para o CSS principal #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    {# Link para o Favicon #}
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-    {# Bloco para adicionar CSS ou JS específico da página #}
+    {# --- Adicionar link para Font Awesome (ou outra biblioteca de ícones) --- #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     {% block head_extra %}{% endblock %}
-  </head>
-  <body>
+</head>
+<body>
 
-    {# Barra de Navegação Superior #}
-    <nav class="navbar">
-        {# --- Logo Clicável --- #}
-        <a href="{{ url_for('dashboard') }}" title="Ir para o Dashboard" style="line-height: 0; display: inline-block;">
-            <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="Logo iGreen - Ir para Dashboard" height="40">
-        </a>
-        {# --- Fim do Logo Clicável --- #}
+    <div class="page-wrapper"> {# Novo wrapper para sidebar + content #}
 
-        {# Título Principal na Navbar #}
-        <span class="navbar-title">Fast BI</span>
+        {# --- Barra Lateral (Sidebar) --- #}
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                 {# Logo menor para a sidebar #}
+                <a href="{{ url_for('dashboard') }}" title="Ir para o Dashboard">
+                    <img src="{{ url_for('static', filename='img/logo_igreen_branco.png') }}" alt="Logo iGreen" height="35"> {# Ajuste nome/tamanho se necessário #}
+                </a>
+            </div>
+            <nav class="sidebar-nav">
+              <ul>
+                  {# 1. Painel de Controle (Dashboard) #}
+                  <li class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+                      <a href="{{ url_for('dashboard') }}">
+                          <i class="fas fa-tachometer-alt fa-fw"></i> {# Ícone de Dashboard #}
+                          <span>Painel de Controle</span>
+                      </a>
+                  </li>
 
-        {# Conteúdo à Direita da Navbar (Saudação e Logout) #}
-        <div style="margin-left: auto;">
-            {% if current_user.is_authenticated %}
-                {# Exibe o nome do utilizador logado #}
-                <span style="margin-right: 15px;">Olá, {{ current_user.nome | default('Utilizador', true) }}!</span>
-                {# Botão/Link de Logout #}
-                <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Logout</a>
-            {% endif %}
-        </div>
-    </nav>
+                  {# 2. Relatórios #}
+                  <li class="{{ 'active' if request.endpoint == 'relatorios' else '' }}">
+                       <a href="{{ url_for('relatorios') }}">
+                          <i class="fas fa-file-alt fa-fw"></i> {# Ícone de Relatório/Documento #}
+                          <span>Relatórios</span>
+                      </a>
+                  </li>
 
-    {# Container Principal para o Conteúdo das Páginas Internas #}
-    {# Mensagens Flash foram removidas daqui conforme solicitado anteriormente #}
-    <div class="container">
-        {% block content %}
-        {% endblock %}
-    </div>
+                  {# 3. Mapas e Gráficos #}
+                   <li class="{{ 'active' if request.endpoint == 'mapa_clientes' else '' }}">
+                      <a href="{{ url_for('mapa_clientes') }}">
+                           <i class="fas fa-chart-bar fa-fw"></i> {# Ícone de Gráfico de Barras (ou fa-map-marked-alt) #}
+                          <span>Mapas e Gráficos</span>
+                      </a>
+                  </li>
 
-    {# Rodapé #}
-    <footer>
-        © {{ now().year }} - Todos direitos reservados
-    </footer>
+                  {# 4. Upload (Link desabilitado/placeholder por enquanto) #}
+                   <li class="disabled"> {# Adiciona classe 'disabled' para estilo opcional #}
+                      <a href="#"> {# Link '#' indica sem destino por enquanto #}
+                          <i class="fas fa-upload fa-fw"></i> {# Ícone de Upload #}
+                          <span>Upload</span>
+                      </a>
+                  </li>
 
-    {# Scripts JavaScript Globais (se houver) #}
+                   {# --- Manter Logout no final --- #}
+                   {% if current_user.is_authenticated %}
+                   <li class="sidebar-logout">
+                       <a href="{{ url_for('logout') }}">
+                           <i class="fas fa-sign-out-alt fa-fw"></i>
+                           <span>Sair</span>
+                       </a>
+                   </li>
+                   {% endif %}
+              </ul>
+          </nav>
+        </aside>
+        {# --- Fim da Barra Lateral --- #}
+
+        {# --- Área de Conteúdo Principal --- #}
+        <main class="main-content">
+            {# (Opcional) Barra Superior dentro do conteúdo para título da página ou infos do usuário #}
+            <header class="content-header">
+                 {# Exemplo: Título dinâmico ou Saudação #}
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                 <div class="header-user-info">
+                    {% if current_user.is_authenticated %}
+                         <span>{{ current_user.nome | default('Utilizador', true) }} |</span>
+                         <span class="current-date">quarta-Feira, 23 de abril de 2025</span> {# Exemplo - gerar dinamicamente #}
+                         <a href="{{ url_for('logout') }}" class="btn-logout-alt" title="Sair"><i class="fas fa-sign-out-alt"></i></a>
+                    {% endif %}
+                 </div>
+            </header>
+
+            {# Container para o conteúdo específico da página (o bloco content original) #}
+            <div class="content-area">
+              {# --- BLOCO DE MENSAGENS FLASH COMENTADO ---
+              {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  <div class="flash-messages-container">
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category or 'info' }}">{{ message }}</div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              {% endwith %}
+              --- FIM DO BLOCO COMENTADO --- #}
+ 
+             {% block content %}
+             {# O conteúdo específico da página será inserido aqui #}
+             {% endblock %}
+         </div>
+
+            {# Rodapé (pode ficar dentro ou fora do main-content) #}
+            <footer class="main-footer">
+                © {{ now().year }} - Todos direitos reservados
+            </footer>
+        </main>
+        {# --- Fim da Área de Conteúdo Principal --- #}
+
+    </div> {# Fim page-wrapper #}
+
+    {# Scripts JS Globais (se houver) #}
     {# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
     {# Bloco para adicionar scripts JS específicos da página #}
     {% block scripts_extra %}{% endblock %}
 
-  </body>
+    {# Script para atualizar data (exemplo) #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateElement = document.querySelector('.current-date');
+            if (dateElement) {
+                const now = new Date();
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                // Ajuste para locale pt-BR para formatar corretamente
+                 try {
+                    dateElement.textContent = now.toLocaleDateString('pt-BR', options);
+                 } catch (e) { // Fallback simples
+                     const day = String(now.getDate()).padStart(2, '0');
+                     const month = String(now.getMonth() + 1).padStart(2, '0'); // Meses são 0-indexed
+                     const year = now.getFullYear();
+                     dateElement.textContent = `${day}/${month}/${year}`;
+                     console.warn("toLocaleDateString('pt-BR') não suportado ou falhou, usando fallback DD/MM/YYYY.");
+                 }
+            }
+        });
+    </script>
+</body>
 </html>

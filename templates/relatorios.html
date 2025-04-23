@@ -2,10 +2,10 @@
 
 {% extends "base.html" %}
 
-{% block title %}Relatórios{% endblock %}
+{% block title %}Relatórios - Fast BI{% endblock %} {# Opcional: Título da aba mais específico #}
+{% block page_title %}Relatórios{% endblock %}   {# <<< ADICIONE ESTA LINHA #}
 
 {% block content %}
-<h1>Relatórios</h1>
 
 {# Formulário de Filtros #}
     <form method="GET" action="{{ url_for('relatorios') }}" class="filter-form">
