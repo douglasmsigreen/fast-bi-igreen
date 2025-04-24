@@ -5,6 +5,7 @@ import logging
 from flask import g
 from config import Config
 from typing import List, Tuple, Optional, Any
+from datetime import datetime # Adicionado import
 
 logger = logging.getLogger(__name__)
 db_pool = None
@@ -173,11 +174,9 @@ def count_clientes_por_licenciado() -> int:
     try: result = execute_query(count_query_sql, fetch_one=True); return result[0] if result else 0
     except Exception as e: logger.error(f"Erro count_clientes_por_licenciado: {e}", exc_info=True); return 0
 
-# --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' (MODIFICADAS COM FILTRO FORNECEDORA) ---
+# --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' ---
 def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, fornecedora: Optional[str] = None) -> List[tuple]:
-    """Busca os dados para 'Quantidade de Boletos por Cliente', com paginação,
-       FILTRO DE ORIGEM e filtro opcional de FORNECEDORA."""
-    # logger.info(f"Buscando dados 'Boletos por Cliente' - Offset: {offset}, Limit: {limit}, Forn: {fornecedora}")
+    """Busca os dados para 'Quantidade de Boletos por Cliente'."""
     base_query = """
         SELECT c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade,
                CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN '' ELSE (c.uf || '-' || c.concessionaria) END AS regiao,
@@ -187,10 +186,8 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
         LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao """
     where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     params = []
-    # <<< ADICIONADO FILTRO DE FORNECEDORA >>>
     if fornecedora and fornecedora.lower() != 'consolidado':
         where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
-    # <<< FIM ADIÇÃO >>>
     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
     group_by = " GROUP BY c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, c.fornecedora, data_ativo "
     order_by = "ORDER BY c.idcliente"
@@ -198,28 +195,18 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
     if limit is not None: params.append(limit)
     if offset > 0: offset_clause = "OFFSET %s"; params.append(offset)
     paginated_query = f"{base_query} {where} {group_by} {order_by} {limit_clause} {offset_clause};"
-    try:
-        results = execute_query(paginated_query, tuple(params))
-        # logger.info(f"Retornados {len(results) if results else 0} regs 'Boletos por Cliente' (Forn: {fornecedora}).")
-        return results if results else []
+    try: return execute_query(paginated_query, tuple(params)) or []
     except Exception as e: logger.error(f"Erro get_boletos_por_cliente_data: {e}", exc_info=True); return []
 
 def count_boletos_por_cliente(fornecedora: Optional[str] = None) -> int:
-    """Conta o total de clientes para 'Boletos por Cliente', respeitando filtros."""
-    # logger.info(f"Contando 'Boletos por Cliente' (Forn: {fornecedora})...")
+    """Conta o total de clientes para 'Boletos por Cliente'."""
     where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     params = []
-    # <<< ADICIONADO FILTRO DE FORNECEDORA >>>
     if fornecedora and fornecedora.lower() != 'consolidado':
         where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
-    # <<< FIM ADIÇÃO >>>
     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
     count_query_sql = f'SELECT COUNT(DISTINCT c.idcliente) FROM public."CLIENTES" c {where};'
-    try:
-        result = execute_query(count_query_sql, tuple(params), fetch_one=True)
-        count = result[0] if result else 0
-        # logger.info(f"Contagem 'Boletos por Cliente': {count} (Forn: {fornecedora})")
-        return count
+    try: result = execute_query(count_query_sql, tuple(params), fetch_one=True); return result[0] if result else 0
     except Exception as e: logger.error(f"Erro count_boletos_por_cliente: {e}", exc_info=True); return 0
 # --- FIM FUNÇÕES BOLETOS POR CLIENTE ---
 
@@ -249,7 +236,6 @@ def get_rateio_rzk_base_nova_ids() -> List[int]:
         " NOT EXISTS ( SELECT 1 FROM public.\"DEVOLUTIVAS\" d WHERE d.idcliente = c.idcliente ) "
     ]
     full_query = query_base + " WHERE " + " AND ".join(where_clauses) + group_by + ";"
-    # logger.info("Query Base Nova RZK IDs...")
     try: results = execute_query(full_query); return [r[0] for r in results] if results else []
     except Exception as e: logger.error(f"Erro get_rateio_rzk_base_nova_ids: {e}"); return []
 
@@ -258,31 +244,17 @@ def get_rateio_rzk_base_enviada_ids() -> List[int]:
     query_base = 'SELECT c.idcliente FROM public."CLIENTES" c'
     where_clauses = [ "c.fornecedora = 'RZK'", "c.rateio = 'S'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) " ]
     full_query = query_base + " WHERE " + " AND ".join(where_clauses) + ";"
-    # logger.info("Query Base Enviada RZK IDs...")
     try: results = execute_query(full_query); return [r[0] for r in results] if results else []
     except Exception as e: logger.error(f"Erro get_rateio_rzk_base_enviada_ids: {e}"); return []
 
 def _get_rateio_rzk_fields() -> List[str]:
     """Retorna a lista de campos SQL EXATOS para Rateio RZK."""
-    return [
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
-        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
-        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio",
-        "c.status AS devolutiva", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
-        "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor",
-        "co.nome AS licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro",
-        "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo",
-        "c.classificacao", "c.keycontrato AS chave_contrato", "c.link_documento",
-        "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1",
-        "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
-        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf",
-        "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
-        "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio",
-        "c.nacionalidade", "c.profissao", "c.estadocivil"
-    ]
+    # ... (lista de campos RZK) ...
+    return [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio", "c.status AS devolutiva", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "co.nome AS licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato AS chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ]
 
 def get_rateio_rzk_client_details_by_ids(client_ids: List[int], batch_size: int = 1000) -> List[tuple]:
     """Busca detalhes completos para Rateio RZK por lista de IDs."""
+    # ... (código existente) ...
     if not client_ids: return []
     all_details = []
     try:
@@ -292,17 +264,16 @@ def get_rateio_rzk_client_details_by_ids(client_ids: List[int], batch_size: int 
         join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor'
         where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
         order = "ORDER BY c.idcliente"; query = f"{select} {from_}{join} {where} {order};"
-        # logger.info(f"Buscando detalhes RZK para {len(client_ids)} IDs...")
         for i in range(0, len(client_ids), batch_size):
             batch_ids = client_ids[i:i + batch_size]; params = (batch_ids,)
             batch_results = execute_query(query, params)
             if batch_results: all_details.extend(batch_results)
-        # logger.info(f"Busca RZK details concluída: {len(all_details)} regs.")
         return all_details
     except Exception as e: logger.error(f"Erro get_rateio_rzk_client_details_by_ids: {e}", exc_info=True); return []
 
 def get_rateio_rzk_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
     """Busca dados paginados para display Rateio RZK (Base Enviada)."""
+    # ... (código existente) ...
     campos_rzk = _get_rateio_rzk_fields()
     select = f"SELECT {', '.join(campos_rzk)}"; from_ = 'FROM public."CLIENTES" c'
     join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor'
@@ -317,6 +288,7 @@ def get_rateio_rzk_data(offset: int = 0, limit: Optional[int] = None) -> List[tu
 
 def count_rateio_rzk() -> int:
     """Conta total para display Rateio RZK (Base Enviada)."""
+    # ... (código existente) ...
     where_clauses = ["c.fornecedora = 'RZK'", "c.rateio = 'S'", "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     where = f"WHERE {' AND '.join(where_clauses)}"; count_query_sql = f'SELECT COUNT(c.idcliente) FROM public."CLIENTES" c {where};'
     try: result = execute_query(count_query_sql, fetch_one=True); return result[0] if result else 0
@@ -324,213 +296,315 @@ def count_rateio_rzk() -> int:
 
 # --- FIM FUNÇÕES RZK ---
 
-# --- Funções para Estrutura de Query e Cabeçalhos ---
 
+# --- FUNÇÃO Soma de Consumo Médio por Mês (baseado em data_ativo) ---
+def get_total_consumo_medio_by_month(month_str: Optional[str] = None) -> float:
+    """
+    Calcula a soma total de 'consumomedio' para clientes cuja data_ativo
+    cai dentro do mês especificado.
+
+    Args:
+        month_str: O mês para filtrar no formato 'YYYY-MM'.
+                   Se None, busca de todos os clientes com data_ativo.
+
+    Returns:
+        A soma total como float, ou 0.0 se nenhum dado ou erro.
+    """
+    base_query = """
+        SELECT SUM(COALESCE(c.consumomedio, 0))
+        FROM public."CLIENTES" c
+        WHERE
+            (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+            AND {date_filter}; -- Placeholder para filtro de data
+    """
+    params = []
+    # Filtro padrão: apenas data_ativo não nula se nenhum mês for especificado
+    date_filter_sql = "c.data_ativo IS NOT NULL"
+
+    if month_str:
+        try:
+            start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
+            if start_date.month == 12:
+                end_date_exclusive = start_date.replace(year=start_date.year + 1, month=1, day=1)
+            else:
+                end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
+
+            logger.info(f"Filtrando soma de consumo por data_ativo no mês: {month_str} (>= {start_date} e < {end_date_exclusive})")
+
+            # Filtra apenas por data_ativo DENTRO do mês selecionado
+            date_filter_sql = """
+                (c.data_ativo >= %s AND c.data_ativo < %s)
+            """
+            params.extend([start_date, end_date_exclusive]) # Passa data inicial E data final
+
+        except ValueError:
+            logger.warning(f"Formato de mês inválido para consumo: '{month_str}'. Usando filtro padrão (data_ativo IS NOT NULL).")
+            # Mantém filtro padrão se data for inválida
+            date_filter_sql = "c.data_ativo IS NOT NULL"
+            params = [] # Limpa params se voltou pro padrão
+
+    final_query = base_query.format(date_filter=date_filter_sql)
+    logger.info(f"Calculando soma de consumo médio (Mês: {month_str or 'Todos'})...")
+
+    try:
+        result = execute_query(final_query, tuple(params), fetch_one=True)
+        total_consumo = float(result[0]) if result and result[0] is not None else 0.0
+        logger.info(f"Soma de consumo médio (Mês: {month_str or 'Todos'}): {total_consumo:.2f}")
+        return total_consumo
+    except Exception as e:
+        logger.error(f"Erro ao calcular soma de consumo médio (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
+        return 0.0 # Retorna 0 em caso de erro
+# --- FIM FUNÇÃO ---
+
+
+# --- FUNÇÃO Contagem de Clientes Ativos por Mês (baseado em data_ativo) ---
+def count_clientes_ativos_by_month(month_str: Optional[str] = None) -> int:
+    """
+    Conta os clientes cuja data_ativo cai dentro do mês especificado.
+
+    Args:
+        month_str: O mês para filtrar no formato 'YYYY-MM'.
+                   Se None, conta todos os clientes com data_ativo não nula.
+
+    Returns:
+        A contagem de clientes como inteiro.
+    """
+    base_query = """
+        SELECT COUNT(c.idcliente)
+        FROM public."CLIENTES" c
+        WHERE
+            (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+            AND {date_filter}; -- Placeholder para filtro de data
+    """
+    params = []
+    # Filtro padrão: apenas data_ativo não nula se nenhum mês for especificado
+    date_filter_sql = "c.data_ativo IS NOT NULL"
+
+    if month_str:
+        try:
+            start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
+            if start_date.month == 12:
+                end_date_exclusive = start_date.replace(year=start_date.year + 1, month=1, day=1)
+            else:
+                end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
+
+            logger.info(f"Contando clientes ativos por data_ativo no mês: {month_str} (>= {start_date} e < {end_date_exclusive})")
+
+            # Filtra por data_ativo DENTRO do mês selecionado
+            date_filter_sql = """
+                (c.data_ativo >= %s AND c.data_ativo < %s)
+            """
+            params.extend([start_date, end_date_exclusive])
+        except ValueError:
+            logger.warning(f"Formato de mês inválido para contagem: '{month_str}'. Usando filtro padrão (data_ativo IS NOT NULL).")
+            date_filter_sql = "c.data_ativo IS NOT NULL"
+            params = [] # Limpa params se voltou pro padrão
+
+    final_query = base_query.format(date_filter=date_filter_sql)
+    logger.info(f"Contando clientes ativos (Mês: {month_str or 'Todos'})...")
+
+    try:
+        result = execute_query(final_query, tuple(params), fetch_one=True)
+        count = int(result[0]) if result and result[0] is not None else 0
+        logger.info(f"Contagem de clientes ativos (Mês: {month_str or 'Todos'}): {count}")
+        return count
+    except Exception as e:
+        logger.error(f"Erro ao contar clientes ativos (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
+        return 0 # Retorna 0 em caso de erro
+# --- FIM FUNÇÃO ---
+
+
+# --- FUNÇÃO Resumo por Fornecedora (baseado em data_ativo) ---
+def get_fornecedora_summary(month_str: Optional[str] = None) -> List[Tuple[str, int, float]] or None:
+    """
+    Busca um resumo (qtd clientes, soma consumo) por fornecedora,
+    filtrando por clientes cuja data_ativo cai dentro do mês especificado.
+
+    Args:
+        month_str: O mês para filtrar no formato 'YYYY-MM'.
+                   Se None, busca de todos os clientes com data_ativo.
+
+    Returns:
+        Lista de tuplas (fornecedora, qtd, soma_consumo) ou None em caso de erro.
+    """
+    base_query = """
+        SELECT
+            COALESCE(NULLIF(TRIM(c.fornecedora), ''), 'NÃO ESPECIFICADA') AS fornecedora_tratada,
+            COUNT(c.idcliente) AS qtd_clientes,
+            SUM(COALESCE(c.consumomedio, 0)) AS soma_consumo_medio_por_fornecedora
+        FROM
+            public."CLIENTES" c
+        WHERE
+            -- Filtro base de origem
+            (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+            -- Filtro de data ajustado
+            AND {date_filter} -- Placeholder para o filtro de data
+        GROUP BY
+            fornecedora_tratada
+        ORDER BY
+            fornecedora_tratada;
+    """
+    params = []
+     # Filtro padrão: apenas data_ativo não nula se nenhum mês for especificado
+    date_filter_sql = "c.data_ativo IS NOT NULL"
+
+    if month_str:
+        try:
+            start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
+            if start_date.month == 12:
+                end_date_exclusive = start_date.replace(year=start_date.year + 1, month=1, day=1)
+            else:
+                end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
+
+            logger.info(f"Filtrando resumo fornecedora por data_ativo no mês: {month_str} (>= {start_date} e < {end_date_exclusive})")
+
+            # Filtra apenas por data_ativo DENTRO do mês selecionado
+            date_filter_sql = """
+                (c.data_ativo >= %s AND c.data_ativo < %s)
+            """
+            params.extend([start_date, end_date_exclusive]) # Passa data inicial E data final
+
+        except ValueError:
+            logger.warning(f"Formato de mês inválido recebido: '{month_str}'. Usando filtro padrão (data_ativo IS NOT NULL).")
+            # Mantém filtro padrão se data for inválida
+            date_filter_sql = "c.data_ativo IS NOT NULL"
+            params = [] # Limpa params se voltou pro padrão
+
+    final_query = base_query.format(date_filter=date_filter_sql)
+    logger.info(f"Buscando resumo por fornecedora (Mês: {month_str or 'Todos'})...")
+
+    try:
+        results = execute_query(final_query, tuple(params)) # Passa os parâmetros (pode estar vazio)
+        if results:
+            formatted_results = [
+                (str(row[0]), int(row[1]), float(row[2]) if row[2] is not None else 0.0)
+                for row in results
+            ]
+            logger.info(f"Resumo por fornecedora (Mês: {month_str or 'Todos'}) encontrado: {len(formatted_results)} registros.")
+            return formatted_results
+        else:
+            logger.info(f"Nenhum dado encontrado para o resumo por fornecedora (Mês: {month_str or 'Todos'}).")
+            return []
+    except Exception as e:
+        logger.error(f"Erro ao buscar resumo por fornecedora (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
+        return None # Retorna None em caso de erro
+# --- FIM DA FUNÇÃO MODIFICADA ---
+
+# --- NOVA FUNÇÃO para Contagem Mensal de Clientes Ativados por Ano ---
+def get_monthly_active_clients_by_year(year: int) -> List[int]:
+    """
+    Busca a contagem de clientes ativados em cada mês de um ano específico,
+    baseado na coluna data_ativo.
+
+    Args:
+        year: O ano (inteiro) para filtrar.
+
+    Returns:
+        Uma lista com 12 inteiros, representando a contagem para cada mês (Jan a Dez).
+        Retorna uma lista de 12 zeros se houver erro ou nenhum dado.
+    """
+    query = """
+        SELECT
+            EXTRACT(MONTH FROM c.data_ativo)::INTEGER AS mes,
+            COUNT(c.idcliente) AS contagem
+        FROM
+            public."CLIENTES" c
+        WHERE
+            EXTRACT(YEAR FROM c.data_ativo) = %s -- Filtra pelo ano
+            AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        GROUP BY
+            mes
+        ORDER BY
+            mes;
+    """
+    params = (year,)
+    monthly_counts = [0] * 12 # Inicializa uma lista com 12 zeros
+
+    logger.info(f"Buscando contagem mensal de clientes ativados para o ano {year}...")
+    try:
+        results = execute_query(query, params)
+        if results:
+            for row in results:
+                month_index = row[0] - 1 # Converte mês (1-12) para índice da lista (0-11)
+                if 0 <= month_index < 12:
+                    monthly_counts[month_index] = int(row[1])
+            logger.info(f"Contagem mensal para {year} encontrada: {monthly_counts}")
+        else:
+            logger.info(f"Nenhum cliente ativado encontrado para o ano {year}.")
+
+        return monthly_counts
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar contagem mensal para o ano {year}: {e}", exc_info=True)
+        return [0] * 12 # Retorna zeros em caso de erro
+# --- FIM NOVA FUNÇÃO ---
+
+
+# --- Funções para Estrutura de Query e Cabeçalhos (sem alterações aqui) ---
 def _get_query_fields(report_type: str) -> List[str]:
-    """Retorna a lista de campos SQL BASE para Base Clientes ou Rateio Geral."""
-    report_type = report_type.lower()
-    base_clientes_fields = [
-         "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
-         "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
-         "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura",
-         "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
-         "c.\"cpf/cnpj\"", "c.numcliente", "TO_CHAR(c.dtultalteracao, 'DD/MM/YYYY') AS dtultalteracao",
-         "c.celular_2", "c.email", "c.rg", "c.emissor", "TO_CHAR(c.datainjecao, 'DD/MM/YYYY') AS datainjecao",
-         "c.idconsultor", "co.nome AS consultor_nome", "co.celular AS consultor_celular", "c.cep",
-         "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia",
-         "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli",
-         "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio",
-         "c.validadosucesso", "CASE WHEN c.validadosucesso = 'S' THEN 'Aprovado' ELSE 'Rejeitado' END AS status_sucesso",
-         "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj",
-         "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
-         "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo",
-         "c.elegibilidade", "c.idplanopj", "TO_CHAR(c.dtcancelado, 'DD/MM/YYYY') AS dtcancelado",
-         "TO_CHAR(c.data_ativo_original, 'DD/MM/YYYY') AS data_ativo_original", "c.fornecedora",
-         "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.origem",
-         "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora",
-         "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
-     ]
-    base_rateio_fields = [
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
-        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
-        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio",
-        "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente",
-        "c.email", "c.rg", "c.emissor", "c.cep", "co.nome AS consultor_nome",
-        "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao",
-        "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento",
-        "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1",
-        "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
-        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf",
-        "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
-        "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio",
-        "c.nacionalidade", "c.profissao", "c.estadocivil"
-     ]
-    if report_type == "base_clientes": return base_clientes_fields
-    elif report_type == "rateio": return base_rateio_fields
-    else: logger.warning(f"_get_query_fields: Tipo '{report_type}' não mapeado."); return []
+    # ... (código existente) ...
+     report_type = report_type.lower()
+     base_clientes_fields = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura", "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "TO_CHAR(c.dtultalteracao, 'DD/MM/YYYY') AS dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "TO_CHAR(c.datainjecao, 'DD/MM/YYYY') AS datainjecao", "c.idconsultor", "co.nome AS consultor_nome", "co.celular AS consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "CASE WHEN c.validadosucesso = 'S' THEN 'Aprovado' ELSE 'Rejeitado' END AS status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "TO_CHAR(c.dtcancelado, 'DD/MM/YYYY') AS dtcancelado", "TO_CHAR(c.data_ativo_original, 'DD/MM/YYYY') AS data_ativo_original", "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ]
+     base_rateio_fields = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "co.nome AS consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ]
+     if report_type == "base_clientes": return base_clientes_fields
+     elif report_type == "rateio": return base_rateio_fields
+     else: logger.warning(f"_get_query_fields: Tipo '{report_type}' não mapeado."); return []
 
 def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int = 0, limit: Optional[int] = None) -> Tuple[str, tuple]:
-    """Constrói query para Base Clientes ou Rateio Geral."""
-    if report_type not in ["base_clientes", "rateio"]: raise ValueError(f"build_query não adequado para '{report_type}'.")
-    campos = _get_query_fields(report_type);
-    if not campos: raise ValueError(f"Campos não definidos para '{report_type}'")
-    select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
-    needs_consultor_join = any(f.startswith("co.") for f in campos)
-    join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
-    where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
-    if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
-    where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; order = "ORDER BY c.idcliente"; limit_clause = ""; offset_clause = ""
-    if limit is not None: limit_clause = f"LIMIT %s"; params.append(limit)
-    if offset > 0: offset_clause = f"OFFSET %s"; params.append(offset)
-    query = f"{select} {from_}{join} {where} {order} {limit_clause} {offset_clause};"
-    return query, tuple(params)
+    # ... (código existente) ...
+     if report_type not in ["base_clientes", "rateio"]: raise ValueError(f"build_query não adequado para '{report_type}'.")
+     campos = _get_query_fields(report_type);
+     if not campos: raise ValueError(f"Campos não definidos para '{report_type}'")
+     select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
+     needs_consultor_join = any(f.startswith("co.") for f in campos)
+     join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
+     where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
+     if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; order = "ORDER BY c.idcliente"; limit_clause = ""; offset_clause = ""
+     if limit is not None: limit_clause = f"LIMIT %s"; params.append(limit)
+     if offset > 0: offset_clause = f"OFFSET %s"; params.append(offset)
+     query = f"{select} {from_}{join} {where} {order} {limit_clause} {offset_clause};"
+     return query, tuple(params)
+
 
 def count_query(report_type: str, fornecedora: Optional[str] = None) -> Tuple[str, tuple]:
-    """Constrói query de contagem para Base Clientes ou Rateio Geral."""
-    if report_type not in ["base_clientes", "rateio"]: raise ValueError(f"count_query não adequado para '{report_type}'.")
-    from_ = 'FROM public."CLIENTES" c'; where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
-    if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
-    where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; query = f"SELECT COUNT(c.idcliente) {from_} {where};"
-    return query, tuple(params)
+    # ... (código existente) ...
+     if report_type not in ["base_clientes", "rateio"]: raise ValueError(f"count_query não adequado para '{report_type}'.")
+     from_ = 'FROM public."CLIENTES" c'; where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
+     if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; query = f"SELECT COUNT(c.idcliente) {from_} {where};"
+     return query, tuple(params)
+
 
 def get_fornecedoras() -> List[str]:
-    """Busca a lista distinta de fornecedoras."""
+    # ... (código existente) ...
     query = 'SELECT DISTINCT fornecedora FROM public."CLIENTES" WHERE fornecedora IS NOT NULL AND fornecedora <> \'\' ORDER BY fornecedora;'
     try: results = execute_query(query); return sorted([str(f[0]) for f in results if f and f[0]]) if results else []
     except Exception as e: logger.error(f"Erro get_fornecedoras: {e}", exc_info=True); return []
 
-# REVISADA: get_headers com entrada para "rateio_rzk"
+
 def get_headers(report_type: str) -> List[str]:
-    """Retorna os cabeçalhos para o tipo de relatório especificado."""
-    # logger.debug(f"get_headers INICIADA: report_type='{report_type}'")
-    report_type = report_type.lower()
-
-    header_map = {
-        "c.idcliente": "Código Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular",
-        "c.cidade": "Cidade", "regiao": "Região (UF-Conc)", "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas",
-        "c.consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro",
-        "c.\"cpf/cnpj\"": "CPF/CNPJ", "c.numcliente": "Número Cliente", "dtultalteracao": "Última Alteração",
-        "c.celular_2": "Celular 2", "c.email": "Email", "c.rg": "RG", "c.emissor": "Emissor", "datainjecao": "Data Injeção",
-        "c.idconsultor": "ID Consultor", "consultor_nome": "Representante", "consultor_celular": "Celular Consultor",
-        "c.cep": "CEP", "c.endereco": "Endereço", "c.numero": "Número", "c.bairro": "Bairro", "c.complemento": "Complemento",
-        "c.cnpj": "CNPJ (Empresa)", "c.razao": "Razão Social", "c.fantasia": "Nome Fantasia", "c.ufconsumo": "UF Consumo",
-        "c.classificacao": "Classificação", "c.keycontrato": "Key Contrato", "c.keysigner": "Key Signer",
-        "c.leadidsolatio": "Lead ID Solatio", "c.indcli": "Ind CLI", "c.enviadocomerc": "Enviado Comerci", "c.obs": "Observação",
-        "c.posvenda": "Pós-venda", "c.retido": "Retido", "c.contrato_verificado": "Contrato Verificado",
-        "c.rateio": "Rateio (S/N)", "c.validadosucesso": "Validação Sucesso (S/N)", "status_sucesso": "Status Validação",
-        "c.documentos_enviados": "Documentos Enviados", "c.link_documento": "Link Documento",
-        "c.caminhoarquivo": "Link Conta Energia", "c.caminhoarquivocnpj": "Link Cartão CNPJ",
-        "c.caminhoarquivodoc1": "Link Doc Ident. 1", "c.caminhoarquivodoc2": "Link Doc Ident. 2",
-        "c.caminhoarquivoenergia2": "Link Conta Energia 2", "c.caminhocontratosocial": "Link Contrato Social",
-        "c.caminhocomprovante": "Link Comprovante", "c.caminhoarquivoestatutoconvencao": "Link Estatuto/Convenção",
-        "c.senhapdf": "Senha PDF", "c.codigo": "Código Interno", "c.elegibilidade": "Elegibilidade",
-        "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelamento", "data_ativo_original": "Data Ativo Original",
-        "c.fornecedora": "Fornecedora", "c.desconto_cliente": "Desconto Cliente", "dtnasc": "Data Nasc.", "c.origem": "Origem",
-        "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro",
-        "c.logindistribuidora": "Login Distribuidora", "c.senhadistribuidora": "Senha Distribuidora",
-        "c.nacionalidade": "Nacionalidade", "c.profissao": "Profissão", "c.estadocivil": "Estado Civil",
-        "c.obs_compartilhada": "Observação Compartilhada", "c.linkassinatura1": "Link Assinatura",
-        # Específicos
-        "c.cpf": "CPF Consultor", "c.uf": "UF Consultor", "quantidade_clientes_ativos": "Qtd. Clientes Ativos",
-        "quantidade_registros_rcb": "Qtd. Boletos (RCB)", "nome_cliente_rateio": "Cliente Rateio",
-        # ALIASES RZK
-        "devolutiva": "Devolutiva", "licenciado": "Licenciado", "chave_contrato": "Chave Contrato"
-    }
-
-    # Listas de CHAVES
-    base_clientes_keys = [
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
-    ]
-    base_rateio_keys = [
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil"
-    ]
-    rateio_rzk_keys = [
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", # 0-7
-        "devolutiva", # 8 (Nova Col 9)
-        "dtcad", # 9 (Original Col 9, agora Col 10)
-        "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", # 10-14
-        "licenciado", # 15 (Nova Col 16)
-        "c.cep", # 16 (Original Col 14, agora Col 17)
-        "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", # 17-22
-        "c.fantasia", "c.ufconsumo", "c.classificacao", # 23-25
-        "chave_contrato", # 26 (Nova Col 27)
-        "c.link_documento",# 27 (Original Col 25, agora Col 28)
-        "c.caminhoarquivo", # 28 (Original Col 26, agora Col 29)
-        "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2",
-        "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf",
-        "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora",
-        "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil"
-    ]
-    clientes_por_licenciado_keys = [
-        "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos"
-    ]
-    boletos_por_cliente_keys = [
-        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao",
-        "c.fornecedora", "data_ativo", "quantidade_registros_rcb"
-    ]
-
-    # Seleciona a lista de chaves apropriada
-    keys_for_report = []
-    if report_type == "base_clientes": keys_for_report = base_clientes_keys
-    elif report_type == "clientes_por_licenciado": keys_for_report = clientes_por_licenciado_keys
-    elif report_type == "boletos_por_cliente": keys_for_report = boletos_por_cliente_keys
-    elif report_type == "rateio": keys_for_report = base_rateio_keys
-    elif report_type == "rateio_rzk": keys_for_report = rateio_rzk_keys
-    else: logger.warning(f"Tipo desconhecido '{report_type}' em get_headers."); return []
-
-    # Cria a lista final de cabeçalhos
-    headers_list = []; missing_keys_in_map = []
-    for i, key in enumerate(keys_for_report):
+    # ... (código existente) ...
+     report_type = report_type.lower()
+     header_map = { "c.idcliente": "Código Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular", "c.cidade": "Cidade", "regiao": "Região (UF-Conc)", "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas", "c.consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ", "c.numcliente": "Número Cliente", "dtultalteracao": "Última Alteração", "c.celular_2": "Celular 2", "c.email": "Email", "c.rg": "RG", "c.emissor": "Emissor", "datainjecao": "Data Injeção", "c.idconsultor": "ID Consultor", "consultor_nome": "Representante", "consultor_celular": "Celular Consultor", "c.cep": "CEP", "c.endereco": "Endereço", "c.numero": "Número", "c.bairro": "Bairro", "c.complemento": "Complemento", "c.cnpj": "CNPJ (Empresa)", "c.razao": "Razão Social", "c.fantasia": "Nome Fantasia", "c.ufconsumo": "UF Consumo", "c.classificacao": "Classificação", "c.keycontrato": "Key Contrato", "c.keysigner": "Key Signer", "c.leadidsolatio": "Lead ID Solatio", "c.indcli": "Ind CLI", "c.enviadocomerc": "Enviado Comerci", "c.obs": "Observação", "c.posvenda": "Pós-venda", "c.retido": "Retido", "c.contrato_verificado": "Contrato Verificado", "c.rateio": "Rateio (S/N)", "c.validadosucesso": "Validação Sucesso (S/N)", "status_sucesso": "Status Validação", "c.documentos_enviados": "Documentos Enviados", "c.link_documento": "Link Documento", "c.caminhoarquivo": "Link Conta Energia", "c.caminhoarquivocnpj": "Link Cartão CNPJ", "c.caminhoarquivodoc1": "Link Doc Ident. 1", "c.caminhoarquivodoc2": "Link Doc Ident. 2", "c.caminhoarquivoenergia2": "Link Conta Energia 2", "c.caminhocontratosocial": "Link Contrato Social", "c.caminhocomprovante": "Link Comprovante", "c.caminhoarquivoestatutoconvencao": "Link Estatuto/Convenção", "c.senhapdf": "Senha PDF", "c.codigo": "Código Interno", "c.elegibilidade": "Elegibilidade", "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelamento", "data_ativo_original": "Data Ativo Original", "c.fornecedora": "Fornecedora", "c.desconto_cliente": "Desconto Cliente", "dtnasc": "Data Nasc.", "c.origem": "Origem", "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro", "c.logindistribuidora": "Login Distribuidora", "c.senhadistribuidora": "Senha Distribuidora", "c.nacionalidade": "Nacionalidade", "c.profissao": "Profissão", "c.estadocivil": "Estado Civil", "c.obs_compartilhada": "Observação Compartilhada", "c.linkassinatura1": "Link Assinatura", "c.cpf": "CPF Consultor", "c.uf": "UF Consultor", "quantidade_clientes_ativos": "Qtd. Clientes Ativos", "quantidade_registros_rcb": "Qtd. Boletos (RCB)", "nome_cliente_rateio": "Cliente Rateio", "devolutiva": "Devolutiva", "licenciado": "Licenciado", "chave_contrato": "Chave Contrato" }
+     base_clientes_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ]
+     base_rateio_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ]
+     rateio_rzk_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "devolutiva", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ]
+     clientes_por_licenciado_keys = [ "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos" ]
+     boletos_por_cliente_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "c.fornecedora", "data_ativo", "quantidade_registros_rcb" ]
+     keys_for_report = []
+     if report_type == "base_clientes": keys_for_report = base_clientes_keys
+     elif report_type == "clientes_por_licenciado": keys_for_report = clientes_por_licenciado_keys
+     elif report_type == "boletos_por_cliente": keys_for_report = boletos_por_cliente_keys
+     elif report_type == "rateio": keys_for_report = base_rateio_keys
+     elif report_type == "rateio_rzk": keys_for_report = rateio_rzk_keys
+     else: logger.warning(f"Tipo desconhecido '{report_type}' em get_headers."); return []
+     headers_list = []; missing_keys_in_map = []
+     for i, key in enumerate(keys_for_report):
         friendly_name = header_map.get(key)
         if friendly_name: headers_list.append(friendly_name)
         else:
             fallback_name = key.split('.')[-1].replace('_', ' ').title() if '.' in key else key.replace('_', ' ').title()
             headers_list.append(fallback_name); missing_keys_in_map.append(key)
-            # logger.warning(f"Header Idx {i}: Chave '{key}' s/ map. Fallback: '{fallback_name}'.")
-
-    if missing_keys_in_map: logger.warning(f"Chaves não mapeadas em header_map p/ '{report_type}': {missing_keys_in_map}.")
-    # logger.info(f"Headers gerados para '{report_type}'. Total: {len(headers_list)}")
-    return headers_list
-
-def get_fornecedora_summary() -> List[Tuple[str, int, float]] or None:
-    """
-    Busca um resumo da quantidade de clientes ativos e soma de consumo médio
-    agrupado por fornecedora.
-    """
-    query = """
-        SELECT
-            -- Trata fornecedora NULL ou vazia como 'NÃO ESPECIFICADA'
-            COALESCE(NULLIF(TRIM(c.fornecedora), ''), 'NÃO ESPECIFICADA') AS fornecedora_tratada,
-            COUNT(*) AS qtd_clientes,
-            SUM(c.consumomedio) AS soma_consumo_medio_por_fornecedora
-        FROM
-            public."CLIENTES" c
-        WHERE
-            c.data_ativo IS NOT NULL
-            AND (
-                c.origem IS NULL
-                OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')
-            )
-        GROUP BY
-            fornecedora_tratada -- Agrupa pelo nome tratado
-        ORDER BY
-            fornecedora_tratada; -- Ordena pelo nome tratado
-    """
-    logger.info("Buscando resumo de clientes por fornecedora para o dashboard...")
-    try:
-        results = execute_query(query)
-        if results:
-            # Converte a soma para float para evitar problemas com Decimal no Jinja/JSON se necessário
-            # E garante que qtd_clientes seja int
-            formatted_results = [
-                (str(row[0]), int(row[1]), float(row[2]) if row[2] is not None else 0.0)
-                for row in results
-            ]
-            logger.info(f"Resumo por fornecedora encontrado: {len(formatted_results)} registros.")
-            return formatted_results
-        else:
-            logger.info("Nenhum dado encontrado para o resumo por fornecedora.")
-            return []
-    except Exception as e:
-        logger.error(f"Erro ao buscar resumo por fornecedora: {e}", exc_info=True)
-        return None # Retorna None em caso de erro para tratamento na rota
+     if missing_keys_in_map: logger.warning(f"Chaves não mapeadas em header_map p/ '{report_type}': {missing_keys_in_map}.")
+     return headers_list

@@ -1,4 +1,4 @@
-{# templates/dashboard.html - MODIFICADO com card Resumo Fornecedora #}
+{# templates/dashboard.html - Final com todos os KPIs e gráfico dinâmicos #}
 {% extends "base.html" %}
 
 {# Define o título que pode aparecer na barra superior interna #}
@@ -11,174 +11,273 @@
     <div class="filter-group">
         <label for="filter-month">FILTRAR POR</label>
         <select id="filter-month" name="month">
-            <option value="2025-04" selected>ABR/2025</option> {# Exemplo Estático #}
-            <option value="2025-03">MAR/2025</option>
-            {# Adicionar mais opções dinamicamente se necessário #}
+            {# Popula as opções passadas pelo Flask #}
+            {% for option in month_options %}
+                <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>
+                    {{ option.text }}
+                </option>
+            {% endfor %}
+            {# Fallback se nenhuma opção for passada #}
+            {% if not month_options %}
+                 <option value="{{ selected_month }}" selected>{{ selected_month }}</option>
+            {% endif %}
         </select>
     </div>
-    {# Outros filtros podem ir aqui #}
 </div>
 
-{# Grid para os Widgets/Cards - Usaremos CSS Grid ou Flexbox #}
+{# Grid para os Widgets/Cards #}
 <div class="dashboard-grid">
 
-    {# Card: Resultado do Mês #}
+    {# Card: Resultado do Mês - DINÂMICO #}
     <div class="card kpi-card">
         <div class="card-header">
             Resultado do Mês
-            <i class="fas fa-info-circle tooltip-icon" title="Dados consolidados do mês selecionado."></i> {# Ícone Info #}
+            <i class="fas fa-info-circle tooltip-icon" title="Soma do consumo médio dos clientes com data_ativo no mês selecionado."></i>
         </div>
         <div class="card-body">
-            <div class="kpi-main-value">269.656</div>
-            <div class="kpi-sub-label">kWh vendidos</div>
-            <hr class="kpi-divider">
-            <div class="kpi-secondary-values">
-                <div>
-                    <span class="kpi-secondary-label">Faturamento total (R$) ABR/2025</span>
-                    <span class="kpi-secondary-value">R$ 37.260,73</span>
-                     <i class="fas fa-info-circle tooltip-icon" title="Faturamento bruto do período."></i>
-                </div>
-                <div>
-                    <span class="kpi-secondary-label">Faturamento consolidado (R$)</span>
-                    <span class="kpi-secondary-value">R$ 105.571,98</span>
-                     <i class="fas fa-info-circle tooltip-icon" title="Faturamento acumulado."></i>
-                </div>
+            <div class="kpi-main-value" id="kpi-total-kwh">
+                 {# Formatação inicial do número vindo do Flask #}
+                 {{ "{:,.0f}".format(total_kwh).replace(",", "X").replace(".", ",").replace("X", ".") }}
             </div>
+            <div class="kpi-sub-label">kWh vendidos</div>
+            {# Informações de faturamento removidas anteriormente #}
         </div>
     </div>
 
-    {# Card: Clientes Ativos #}
+    {# Card: Clientes Ativos - DINÂMICO #}
      <div class="card qualification-card">
         <div class="card-header">Clientes Ativos</div>
         <div class="card-body">
             <div class="qualification-numbers">
                 <div class="qual-item">
-                    <span class="qual-number">974</span>
-                    <span class="qual-label">Endereços<br>ativos</span>
+                    {# Adiciona ID ao número principal e usa valor do Flask #}
+                    <span class="qual-number" id="kpi-clientes-ativos-count">
+                        {{ "{:,.0f}".format(clientes_ativos_count).replace(",", ".") }} {# Formatação inicial #}
+                    </span>
+                    <span class="qual-label">Clientes<br>ativados no mês</span> {# Label ajustado #}
                 </div>
-                <div class="qual-item">
-                    <span class="qual-number">268</span>
-                    <span class="qual-label">Endereços<br>pendentes/<br>desativados</span>
-                </div>
+                {# Segunda parte e link removidos anteriormente #}
             </div>
-             <a href="#" class="details-link">VER DETALHES</a>
         </div>
-    </div>
+     </div>
 
-    {# Card: Evolução da Remuneração (Gráfico) #}
+    {# Card: Evolução Mensal - GRÁFICO DINÂMICO #}
     <div class="card chart-card">
         <div class="card-header">
             <select id="chart-year" name="year">
+                 {# Idealmente, popular anos dinamicamente #}
                  <option value="2025" selected>2025</option>
                  <option value="2024">2024</option>
+                 <option value="2023">2023</option>
             </select>
             <span>Evolução Mensal</span>
         </div>
         <div class="card-body">
-            {# Área onde o gráfico será renderizado (ex: com Chart.js) #}
-            <canvas id="remunerationChart"></canvas>
+            <canvas id="remunerationChart"></canvas> {# ID pode ser renomeado para clareza, ex: monthlyActiveClientsChart #}
+        </div>
+    </div>
+
+    {# Card Resumo por Fornecedora - DINÂMICO #}
+    <div class="card fornecedora-summary-card grid-span-2"> {# Classe para ocupar 2 colunas #}
+        <div class="card-header">
+            Resumo por Fornecedora (Clientes Ativos)
+            <i class="fas fa-info-circle tooltip-icon" title="Contagem e consumo dos clientes com data_ativo no mês selecionado."></i>
+        </div>
+        <div class="card-body">
+            {# Placeholder para Loading/Erro #}
+            <div id="fornecedora-summary-status" style="text-align: center; padding: 20px; display: none;">
+                <i class="fas fa-spinner fa-spin"></i> Carregando...
+            </div>
+            {# Tabela com tbody identificado #}
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                <table class="table table-sm table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fornecedora</th>
+                            <th style="text-align: right;">Clientes Ativos</th> {# Cabeçalho alterado #}
+                            <th style="text-align: right;">Total de kWh</th>     {# Cabeçalho alterado #}
+                        </tr>
+                    </thead>
+                    {# O CORPO DA TABELA SERÁ PREENCHIDO PELO JAVASCRIPT #}
+                    <tbody id="fornecedora-summary-tbody">
+                        {# Dados iniciais carregados pelo Flask (se houver) #}
+                         {% if fornecedora_summary %}
+                            {% for row in fornecedora_summary %}
+                            <tr>
+                                <td>{{ row[0] }}</td>
+                                <td style="text-align: right;">{{ row[1] | int }}</td>
+                                {# Formatação inicial com sufixo kWh #}
+                                <td style="text-align: right;">{{ "{:,.2f}".format(row[2]).replace(",", "X").replace(".", ",").replace("X", ".") }} kWh</td>
+                            </tr>
+                            {% endfor %}
+                        {% elif not error_summary %} {# Se não for erro, mas vazio #}
+                            <tr><td colspan="3" style="text-align: center;">Nenhum dado encontrado para o mês selecionado.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            {# Exibe erro inicial do Flask aqui se houver #}
+            {% if error_summary %}
+                 <p class="text-danger" style="text-align: center; margin-top: 10px;">{{ error_summary }}</p>
+            {% endif %}
         </div>
     </div>
 
 </div> {# Fim dashboard-grid #}
 
-{# <<< INÍCIO DO NOVO CARD: Resumo por Fornecedora >>> #}
-<div class="card fornecedora-summary-card"> {# Adicionada classe específica se precisar de estilo futuro #}
-    <div class="card-header">
-        Resumo por Fornecedora (Clientes Ativos)
-        <i class="fas fa-info-circle tooltip-icon" title="Contagem de clientes ativos e soma do consumo médio agrupados por fornecedora."></i>
-    </div>
-    <div class="card-body">
-        {# Verifica se a variável passada pelo app.py (fornecedora_summary) existe e tem dados #}
-        {% if fornecedora_summary is not none and fornecedora_summary %}
-            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;"> {# Adiciona scroll se a tabela for grande #}
-                <table class="table table-sm table-striped table-hover"> {# Estilos básicos de tabela (Bootstrap-like) #}
-                    <thead>
-                        <tr>
-                            <th>Fornecedora</th>
-                            <th style="text-align: right;">Qtd Clientes</th>
-                            <th style="text-align: right;">Soma Consumo Médio</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {# Loop para exibir cada linha de dados vinda do backend #}
-                        {% for row in fornecedora_summary %}
-                        <tr>
-                            <td>{{ row[0] }}</td> {# Coluna 0: fornecedora_tratada #}
-                            <td style="text-align: right;">{{ row[1] | int }}</td> {# Coluna 1: qtd_clientes #}
-                             {# Coluna 2: soma_consumo_medio - Formata para padrão BR #}
-                            <td style="text-align: right;">{{ "{:,.2f}".format(row[2]).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% elif fornecedora_summary is none %} {# Se for None, indica erro no backend #}
-             <p class="text-danger">Erro ao carregar dados das fornecedoras.</p>
-        {% else %} {# Se a lista estiver vazia, mas não for None #}
-            <p>Nenhum dado de fornecedora encontrado para exibir.</p>
-        {% endif %}
-    </div>
-</div>
-{# <<< FIM DO NOVO CARD >>> #}
-
 {% endblock %}
 
+{# Bloco de Scripts com a nova lógica AJAX para TODOS os cards e GRÁFICO dinâmicos #}
 {% block scripts_extra %}
-{# Incluir Chart.js (se for usar) #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Exemplo de Script para o Gráfico ---
-    const ctx = document.getElementById('remunerationChart');
-    if (ctx) {
-        // Dados de exemplo - Substituir por dados reais (via AJAX ou Jinja)
-        const labels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-        const data = {
-            labels: labels,
-            datasets: [{
-                label: 'Remuneração',
-                data: [0, 10, 40, 80, 30, 15, 5, 0, 0, 0, 0, 0], // Dados exemplo da imagem
-                fill: false,
-                borderColor: 'rgb(75, 192, 192)', // Cor da linha (verde/azul)
-                tension: 0.4 // Suaviza a curva
-            }]
-        };
-        const config = {
-            type: 'line',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } }, // Esconde legenda
-                scales: {
-                     y: { beginAtZero: true, ticks: { display: false } , grid: { display: false} }, // Esconde eixo Y
-                     x: { grid: { display: false } } // Esconde grid X
-                 }
-            }
-        };
-        new Chart(ctx, config);
-    }
 
-    // --- Script para Copiar Link (Exemplo) ---
-    const copyButton = document.querySelector('.btn-copy-link');
-    const linkInput = document.querySelector('.indication-link-area input');
-    if (copyButton && linkInput) {
-        copyButton.addEventListener('click', function() {
-            linkInput.select();
-            linkInput.setSelectionRange(0, 99999); // Para mobile
-            try {
-                document.execCommand('copy');
-                // (Opcional) Mudar texto do botão ou mostrar notificação
-                console.log('Link copiado!');
-                 alert('Link copiado para a área de transferência!');
-            } catch (err) {
-                console.error('Falha ao copiar link: ', err);
-                alert('Não foi possível copiar o link.');
-            }
-            window.getSelection().removeAllRanges(); // Desseleciona
+    // --- Variável para guardar a instância do gráfico ---
+    let monthlyChartInstance = null; // Renomeado para clareza
+
+    // --- Elementos do DOM ---
+    const monthSelect = document.getElementById('filter-month');
+    const summaryTableBody = document.getElementById('fornecedora-summary-tbody');
+    const summaryStatus = document.getElementById('fornecedora-summary-status');
+    const kpiTotalKwhElement = document.getElementById('kpi-total-kwh');
+    const kpiClientesAtivosElement = document.getElementById('kpi-clientes-ativos-count');
+    const chartCanvas = document.getElementById('remunerationChart'); // Ou novo ID
+    const yearSelectChart = document.getElementById('chart-year');
+
+    // --- Função para formatar número ---
+    function formatNumber(num, decimalPlaces = 0) {
+        if (typeof num !== 'number' || isNaN(num)) return '0'; // Retorna '0' se inválido
+        return num.toLocaleString('pt-BR', {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces
         });
     }
+
+    // --- Função para Atualizar Gráfico Mensal ---
+    async function updateChartData(year) {
+        if (!monthlyChartInstance) {
+            console.error("Instância do Chart não encontrada para atualizar.");
+            return;
+        }
+        console.log(`Atualizando gráfico para o ano: ${year}`);
+        // Pode adicionar um estado visual de "carregando" aqui se desejar
+
+        try {
+            const apiUrl = "{{ url_for('api_chart_monthly_active_clients') }}";
+            const response = await fetch(`${apiUrl}?year=${year}`);
+            if (!response.ok) {
+                let errorMsg = `Erro ${response.status}`; try { const d = await response.json(); errorMsg = d.error || errorMsg; } catch(e){} throw new Error(errorMsg);
+            }
+            const chartData = await response.json();
+
+            if (chartData && chartData.monthly_counts) {
+                monthlyChartInstance.data.datasets[0].data = chartData.monthly_counts;
+                monthlyChartInstance.data.datasets[0].label = 'Clientes Ativados';
+                monthlyChartInstance.update();
+                console.log("Dados do gráfico atualizados:", chartData.monthly_counts);
+            } else {
+                 console.warn("Nenhum dado recebido para o gráfico do ano:", year);
+                 monthlyChartInstance.data.datasets[0].data = Array(12).fill(0); // Zera os dados
+                 monthlyChartInstance.data.datasets[0].label = 'Sem dados';
+                 monthlyChartInstance.update();
+            }
+        } catch (error) {
+            console.error(`Erro ao buscar dados do gráfico para ${year}:`, error);
+            // Pode mostrar uma mensagem de erro no lugar do gráfico
+        } finally {
+            // Remover estado visual de "carregando"
+        }
+    }
+
+    // --- Inicialização do Gráfico ---
+    if (chartCanvas && yearSelectChart) {
+        const initialYear = yearSelectChart.value;
+        const labels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+        const initialData = {
+            labels: labels,
+            datasets: [{ label: 'Carregando...', data: Array(12).fill(0), fill: false, borderColor: 'rgb(75, 192, 192)', tension: 0.4 }]
+        };
+        const config = { type: 'line', data: initialData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } } };
+        monthlyChartInstance = new Chart(chartCanvas, config); // Guarda a instância
+        console.log("Gráfico inicializado.");
+        updateChartData(initialYear); // Busca dados iniciais
+
+        // --- Listener para mudança de ano no GRÁFICO ---
+        yearSelectChart.addEventListener('change', function() {
+            updateChartData(this.value);
+        });
+    } else {
+        if(!chartCanvas) console.error("Elemento canvas do gráfico não encontrado.");
+        if(!yearSelectChart) console.error("Elemento select #chart-year não encontrado.");
+    }
+
+
+    // --- Função GERAL para buscar dados dos KPIs e Resumo ---
+    async function updateDashboardData(month) {
+        // Indicadores de carregamento
+        if(summaryStatus) { summaryStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando resumo...'; summaryStatus.style.display = 'block'; }
+        if(summaryTableBody) summaryTableBody.innerHTML = '';
+        if(kpiTotalKwhElement) kpiTotalKwhElement.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if(kpiClientesAtivosElement) kpiClientesAtivosElement.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+
+        // Cria Promises para todas as chamadas API
+        const fetchSummary = fetch("{{ url_for('api_fornecedora_summary') }}?month=" + month);
+        const fetchKpiKwh = fetch("{{ url_for('api_kpi_total_kwh') }}?month=" + month);
+        const fetchKpiClientes = fetch("{{ url_for('api_kpi_clientes_ativos') }}?month=" + month);
+
+        // Processa todas as Promises
+        try {
+            const [summaryResponse, kpiKwhResponse, kpiClientesResponse] = await Promise.all([fetchSummary, fetchKpiKwh, fetchKpiClientes]);
+
+            // Processa Resumo Fornecedora
+            if (summaryTableBody && summaryStatus) {
+                 if (!summaryResponse.ok) { let errorMsg = `Erro ${summaryResponse.status}`; try { const d = await summaryResponse.json(); errorMsg = d.error || errorMsg; } catch(e){} throw new Error(errorMsg); }
+                 const dataSummary = await summaryResponse.json();
+                 summaryStatus.style.display = 'none';
+                 if (dataSummary && dataSummary.length > 0) { dataSummary.forEach(row => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${row.fornecedora}</td><td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td><td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`; summaryTableBody.appendChild(tr); }); }
+                 else { summaryTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado encontrado para este mês.</td></tr>'; }
+            }
+
+            // Processa KPI Total kWh
+            if (kpiTotalKwhElement) {
+                if (!kpiKwhResponse.ok) { let errorMsg = `Erro ${kpiKwhResponse.status}`; try { const d = await kpiKwhResponse.json(); errorMsg = d.error || errorMsg; } catch(e){} throw new Error(errorMsg); }
+                const dataKpi = await kpiKwhResponse.json();
+                kpiTotalKwhElement.textContent = formatNumber(dataKpi.total_kwh, 0);
+            }
+
+             // Processa KPI Clientes Ativos
+             if (kpiClientesAtivosElement) {
+                 if (!kpiClientesResponse.ok) { let errorMsg = `Erro ${kpiClientesResponse.status}`; try { const d = await kpiClientesResponse.json(); errorMsg = d.error || errorMsg; } catch(e){} throw new Error(errorMsg); }
+                 const dataClientes = await kpiClientesResponse.json();
+                 kpiClientesAtivosElement.textContent = formatNumber(dataClientes.clientes_ativos_count, 0);
+             }
+
+        } catch (error) {
+            console.error('Erro ao buscar dados do dashboard:', error);
+            // Trata erros gerais - pode exibir uma mensagem de erro mais genérica
+            if(summaryStatus) { summaryStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar dados: ${error.message}</span>`; summaryStatus.style.display = 'block'; }
+            if(kpiTotalKwhElement) kpiTotalKwhElement.innerHTML = `<span style="font-size: 0.5em; color: red;">Erro!</span>`;
+            if(kpiClientesAtivosElement) kpiClientesAtivosElement.innerHTML = `<span style="font-size: 0.5em; color: red;">Erro!</span>`;
+        }
+    }
+
+    // --- Listener para o filtro de MÊS ---
+    if (monthSelect) {
+        monthSelect.addEventListener('change', function() {
+            const selectedMonth = this.value;
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('month', selectedMonth);
+            window.history.replaceState({}, '', currentUrl);
+            updateDashboardData(selectedMonth); // Chama a função geral
+        });
+    } else {
+        console.error("Elemento #filter-month não encontrado.");
+    }
+    // --- FIM Script Atualização Dashboard ---
+
+    // --- Script para Copiar Link (se existir) ---
+    // ... (código existente) ...
 });
 </script>
 {% endblock %}

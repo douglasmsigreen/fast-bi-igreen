@@ -252,7 +252,7 @@ nav.pagination li.active span { background-color: #007bff; color: white; border-
 nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; border-color: #dee2e6; cursor: default; }
 
 
-/* --- ESTILOS DO DASHBOARD (NOVOS) --- */
+/* --- ESTILOS DO DASHBOARD --- */
 
 /* Estilos dos Filtros e Grid do Dashboard */
 .filter-row { /* Reutilizado de Relatórios, pode precisar de ajustes */
@@ -273,10 +273,9 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
 
 .dashboard-grid {
     display: grid;
-    /* Ajuste as colunas conforme necessário para seu layout */
-    /* Exemplo: 2 colunas principais, mas cards podem se esticar */
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 25px; /* Espaço entre os cards */
+    align-items: end; /* <<< Adicionado para alinhar cards na base */
 }
 
 /* --- Estilos dos Cards do Dashboard --- */
@@ -288,6 +287,7 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    /* align-self: end; */ /* Comentado - usando align-items no grid container */
 }
 
 .card-header {
@@ -351,6 +351,12 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
 }
 .promotional-material-card i { color: #007bff; }
 
+/* --- >>> NOVA REGRA ADICIONADA <<< --- */
+/* Força um item do grid a ocupar 2 colunas */
+.grid-span-2 {
+    grid-column: span 2;
+}
+
 /* Rodapé Principal */
 .main-footer {
     text-align: center; padding: 15px 30px; border-top: 1px solid #dee2e6;
@@ -367,6 +373,11 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
     .sidebar-nav li a i { margin-right: 0; }
     .main-content { margin-left: 70px; } /* Ajusta margem do conteúdo */
     .dashboard-grid { grid-template-columns: 1fr; } /* Uma coluna para cards */
+
+    /* Garante que span 2 ocupe toda a largura em telas menores */
+    .grid-span-2 {
+        grid-column: 1 / -1;
+    }
 }
 @media (max-width: 768px) {
      /* body { flex-direction: column; } REMOVIDO - Body não é mais flex */
@@ -393,6 +404,7 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
      .header-user-info .current-date { margin-left: 0; }
      .content-area { padding: 15px; }
      .dashboard-grid { gap: 15px; }
+     /* Não precisa redefinir .grid-span-2 aqui, pois a media query anterior já cuida disso */
 }
 /* --- Estilos para Tabela no Card Resumo Fornecedora --- */
 .fornecedora-summary-card .table-responsive {
@@ -428,8 +440,8 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
 .fornecedora-summary-card tbody td:nth-child(1) { /* Coluna Fornecedora */
     text-align: left;
 }
-.fornecedora-summary-card tbody td:nth-child(2), /* Coluna Qtd Clientes */
-.fornecedora-summary-card tbody td:nth-child(3) { /* Coluna Soma Consumo */
+.fornecedora-summary-card tbody td:nth-child(2), /* Coluna Clientes Ativos */
+.fornecedora-summary-card tbody td:nth-child(3) { /* Coluna Total de kWh */
     text-align: right;
     font-family: Consolas, monaco, monospace; /* Fonte monoespaçada para números */
 }
