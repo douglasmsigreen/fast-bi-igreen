@@ -1,161 +1,132 @@
 {# templates/mapa_clientes.html #}
-{% extends "base.html" %} {# Herda a estrutura base (navbar, rodapé, etc.) de base.html #}
+{% extends "base.html" %}
 {% block title %}Mapa de Clientes - Fast BI{% endblock %}
-{% block page_title %}Mapa e Gráficos{% endblock %} {# <<< ADICIONADO #}
+{% block page_title %}Mapa e Gráficos{% endblock %}
 
-{# Bloco principal de conteúdo da página #}
 {% block content %}
-{# Usa o container principal para manter o layout consistente com outras páginas #}
 <div class="container">
-    {# Título principal da página #}
     <h1>Mapa de Clientes por Estado</h1>
-    {# Texto descritivo opcional abaixo do título #}
-    <p style="text-align: center; margin-bottom: 20px;">Visualização da distribuição de clientes ativos por estado.</p>
+    {# Descrição atualizada para refletir a cor #}
+    <p style="text-align: center; margin-bottom: 20px;">Visualização da quantidade de clientes ativos e consumo médio total de kwh por estado</p>
 
-    {# O elemento DIV onde o gráfico Plotly será renderizado. #}
-    {# O ID 'brazil-map-div' é usado pelo JavaScript para encontrar este container. #}
-    {# Estilos inline definem tamanho e aparência inicial. Podem ser movidos para o CSS. #}
     <div id="brazil-map-div" style="width: 100%; max-width: 1000px; height: 650px; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: #f9f9f9;">
-        {# Mensagem exibida enquanto os dados e o mapa estão sendo carregados #}
         <p style="text-align: center; padding-top: 50px; color: #666;">Carregando mapa...</p>
     </div>
 </div>
-{% endblock %} {# Fim do bloco de conteúdo #}
+{% endblock %}
 
-{# Bloco para adicionar JavaScript específico desta página #}
 {% block scripts_extra %}
-    {# 1. Inclui a biblioteca Plotly.js a partir de um CDN (recomendado para facilidade) #}
-    {# Alternativa: baixar Plotly.js e servir de /static/js/plotly.min.js #}
     <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
-
-    {# 2. Script customizado para: #}
-    {#    a) Buscar os dados da API backend #}
-    {#    b) Configurar e renderizar o mapa Plotly #}
     <script>
-        // Garante que o script só roda após o HTML da página estar completamente carregado
         document.addEventListener('DOMContentLoaded', function() {
-            // Referência ao DIV onde o mapa será desenhado
             const mapDiv = document.getElementById('brazil-map-div');
 
-            // 3. Faz a requisição (fetch) para a API que retorna os dados agregados por estado
-            //    Usa url_for para garantir que a URL da API está correta, mesmo se a estrutura do site mudar
-            fetch("{{ url_for('api_client_count_by_state') }}")
+            // Usa a API que retorna UF, count e sum_consumo
+            fetch("{{ url_for('api_state_summary_for_map') }}")
                 .then(response => {
-                    // Tratamento inicial da resposta HTTP
                     if (!response.ok) {
-                        // Se houver erro na resposta (ex: 404, 500), tenta pegar a mensagem de erro do corpo JSON
                         return response.json().then(err => { throw new Error(err.error || `Erro HTTP: ${response.status}`) });
                     }
-                    // Se a resposta for OK, converte para JSON
-                    return response.json();
+                    return response.json(); // Espera [{'uf': 'SP', 'count': 100, 'sum_consumo': 50000.0}, ...]
                 })
                 .then(apiData => {
-                    // 4. Processa os dados JSON recebidos da API
-                    if (apiData.error) { // Verifica se a API retornou uma chave 'error'
-                        throw new Error(apiData.error);
+                    if (!Array.isArray(apiData)) {
+                         let errorDetail = ""; try { errorDetail = apiData.error || JSON.stringify(apiData); } catch(e) { errorDetail = "Resposta inesperada"; }
+                         throw new Error(`Formato de dados inválido recebido da API: ${errorDetail}`);
                     }
-                    // Verifica se há dados válidos para plotar
-                    if (!apiData.locations || apiData.locations.length === 0) {
+                    if (apiData.length === 0) {
                         mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de estado disponível para exibir no mapa.</p>';
-                        console.warn("Dados de localização (UFs) vazios recebidos da API.");
-                        return; // Aborta a renderização do mapa
+                        console.warn("Nenhum dado recebido da API do mapa.");
+                        return;
                     }
 
-                    const zValues = apiData.z; // Pega o array de valores
+                    // --- Processa os dados da API - COR PELA CONTAGEM ---
+                    const locations = []; // Array para as UFs
+                    const zValues = [];   // Array para o valor que define a COR (CONTAGEM)
+                    const customData = [];// Array para os dados extras no hover (SOMA DO CONSUMO)
 
-                    // ----- CÁLCULO DO zmax (Ex: 95º Percentil) PARA LIMITAR A ESCALA -----
-                    let zmax_cap = Math.max(...zValues); // Valor padrão é o máximo absoluto
-                    if (zValues.length > 1) {
-                        // Cria uma cópia e ordena os valores numericamente (ascendente)
-                        const sortedZ = [...zValues].sort((a, b) => a - b);
-                        // Calcula o índice para o 95º percentil
-                        // Math.ceil garante que pegamos um índice válido mesmo para arrays pequenos
-                        const percentileIndex = Math.ceil(sortedZ.length * 0.95) - 1;
-                        // Define o zmax_cap como o valor naquele percentil
-                        // Garante que o índice não seja negativo
-                        zmax_cap = sortedZ[Math.max(0, percentileIndex)];
-
-                        // Se o 95º percentil for 0 (ou muito baixo), use o máximo para evitar problemas
-                        if (zmax_cap <= 0) {
-                            zmax_cap = Math.max(...zValues);
-                            console.warn("95º Percentil resultou em valor baixo ou zero. Usando máximo absoluto para zmax.");
+                    apiData.forEach(stateData => {
+                         if (stateData && typeof stateData.uf === 'string' && typeof stateData.count === 'number' && typeof stateData.sum_consumo === 'number') {
+                            locations.push(stateData.uf);
+                            zValues.push(stateData.count);        // <<< COR baseada na CONTAGEM >>>
+                            customData.push(stateData.sum_consumo); // <<< SOMA vai para customdata >>>
                         } else {
-                             console.log(`Valor máximo original: ${Math.max(...zValues)}`);
-                             console.log(`Definindo zmax (95º Percentil) como: ${zmax_cap}`);
+                            console.warn("Registro de estado inválido ou incompleto recebido da API:", stateData);
+                        }
+                    });
+
+                    if (locations.length === 0) {
+                         mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de estado válido encontrado após processamento.</p>';
+                         console.warn("Nenhum dado válido para plotar no mapa após filtrar a resposta da API.");
+                         return;
+                    }
+                    // --------------------------------------------------------------
+
+                    // ----- CÁLCULO DO zmax (PARA A CONTAGEM DE CLIENTES) -----
+                    let zmax_cap = Math.max(...zValues); // zValues agora contém contagens
+                    if (zValues.length > 1) {
+                        const sortedZ = [...zValues].sort((a, b) => a - b);
+                        const percentileIndex = Math.ceil(sortedZ.length * 0.95) - 1; // 95º Percentil
+                        zmax_cap = sortedZ[Math.max(0, percentileIndex)];
+                        if (zmax_cap <= 0) { // Fallback
+                            zmax_cap = Math.max(...zValues);
+                             console.warn("95º Percentil (contagem clientes) resultou em valor <= 0. Usando máximo absoluto para zmax.");
+                        } else {
+                             console.log(`Valor máximo original (contagem clientes): ${Math.max(...zValues)}`);
+                             console.log(`Definindo zmax (contagem clientes - 95º Percentil) como: ${zmax_cap.toFixed(0)}`);
                         }
                     }
-                     // Você pode descomentar a linha abaixo para testar um valor fixo:
-                     zmax_cap = 10000; // Exemplo de valor fixo, ajuste conforme seus dados!
-                    // -------------------------------------------------------------------------
+                    // Exemplo de valor fixo para contagem:
+                    zmax_cap = 10000; // Ajuste se necessário
 
-                    // 5. Define a configuração do 'trace' (a camada de dados) para o Plotly
+                    // --- Configuração do Trace Plotly ---
                     const mapTrace = [{
-                        type: 'choropleth',              // Tipo de gráfico
-                        locationmode: 'geojson-id',      // Usa IDs do GeoJSON para mapear localizações
-
-                        // --- Caminho para o arquivo GeoJSON LOCAL ---
-                        // Usa url_for para gerar o caminho correto dentro da pasta /static
-                        // Garanta que o arquivo 'brasil-estados.geojson' está em 'static/geojson/'
+                        type: 'choropleth',
+                        locationmode: 'geojson-id',
                         geojson: "{{ url_for('static', filename='geojson/brasil-estados.geojson') }}",
-
-                        // --- Chave de Identificação no GeoJSON ---
-                        // ESSENCIAL: Verifique no SEU arquivo 'brasil-estados.geojson' qual a chave
-                        // dentro de 'properties' que contém a sigla UF (ex: 'SP', 'MG').
-                        // Substitua 'properties.sigla' se necessário.
-                        featureidkey: 'properties.sigla', // Exemplo: pode ser 'properties.UF' ou outra
-
-                        locations: apiData.locations,     // Array de UFs vindo da API ['SP', 'MG', ...]
-                        z: zValues,                       // Array de valores numéricos vindo da API [150, 120, ...]
-                        zmin: 0,                          // Valor mínimo para a escala de cores
-                        zmax: zmax_cap,                   // <<< Valor máximo para a escala de cores (limitador)
-
-                        colorscale: 'Greens',             // Escala de cores em tons de verde
-                        reversescale: true,               // Inverte a escala (escuro = baixo, claro = alto)
-                        colorbar: {                       // Configurações da barra de legenda
-                            title: 'Qtd. Clientes',
+                        featureidkey: 'properties.sigla', // VERIFIQUE a chave no seu GeoJSON
+                        locations: locations,             // UFs
+                        z: zValues,                       // <<< CONTAGEM de clientes (para cor) >>>
+                        customdata: customData,           // <<< SOMA do consumo (para hover) >>>
+                        zmin: 0,
+                        zmax: zmax_cap,                   // Limite superior da escala de cor (baseado na contagem)
+                        colorscale: 'Greens',
+                        reversescale: true,              // <<< FALSE para verde escuro = mais clientes >>>
+                        colorbar: {
+                            title: 'Qtd. Clientes Ativos', // <<< TÍTULO DA LEGENDA ATUALIZADO >>>
                             thickness: 15
                         },
-                        hoverinfo: 'location+z',          // O que mostrar no tooltip padrão
-                        hovertemplate: '<b>%{location}</b><br>Clientes: %{z}<extra></extra>', // Tooltip customizado
-                        marker: {                         // Linhas entre os estados
-                            line:{
-                                color: 'rgb(180,180,180)', // Cor das linhas (cinza claro)
-                                width: 0.5                // Espessura das linhas
-                            }
-                        }
+                        hoverinfo: 'location+z+text',     // Necessário para hovertemplate funcionar corretamente com 'z' e 'customdata'
+                        // <<< HOVER TEMPLATE ATUALIZADO >>>
+                        // %{z} agora pega a CONTAGEM
+                        // %{customdata} agora pega a SOMA
+                        hovertemplate: '<b>%{location}</b><br>' +
+                                       'Clientes Ativos: %{z:,.0f}<br>' +          // Mostra a contagem (de z)
+                                       'Consumo Total: %{customdata:,.0f} kWh' + // Mostra a soma (de customdata)
+                                       '<extra></extra>', // Oculta info extra do Plotly
+                        marker: { line:{ color: 'rgb(180,180,180)', width: 0.5 } }
                     }];
 
-                    // 6. Define a configuração do 'layout' (aparência geral do gráfico)
+                    // --- Configuração do Layout Plotly (sem alterações) ---
                     const mapLayout = {
-                        geo:{                             // Configurações geográficas
-                            scope: 'south america',         // Foco na América do Sul
-                            center: { lon: -54, lat: -15 }, // Centro aproximado do Brasil
-                            projection: { type: 'mercator' }, // Tipo de projeção
-                            lataxis: { range: [-35, 6] },   // Limites de latitude
-                            lonaxis: { range: [-75, -32] }, // Limites de longitude
-                            showland: true,                 // Mostrar terra
-                            landcolor: 'rgb(230, 230, 230)',// Cor da terra
-                            subunitcolor: 'rgb(255, 255, 255)' // Cor das linhas internas (se houver)
-                        },
-                        margin: { t: 10, b: 10, l: 10, r: 10 }, // Margens do gráfico
-                        paper_bgcolor: 'rgba(0,0,0,0)',     // Fundo da área total transparente
-                        plot_bgcolor: 'rgba(0,0,0,0)'       // Fundo da área de plotagem transparente
+                        geo:{ scope: 'south america', center: { lon: -54, lat: -15 }, projection: { type: 'mercator' }, lataxis: { range: [-35, 6] }, lonaxis: { range: [-75, -32] }, showland: true, landcolor: 'rgb(230, 230, 230)', subunitcolor: 'rgb(255, 255, 255)' },
+                        margin: { t: 10, b: 10, l: 10, r: 10 },
+                        paper_bgcolor: 'rgba(0,0,0,0)',
+                        plot_bgcolor: 'rgba(0,0,0,0)'
                     };
 
-                    // 7. Renderiza o gráfico Plotly no DIV 'mapDiv'
+                    // --- Renderiza o Gráfico ---
                     Plotly.newPlot(mapDiv, mapTrace, mapLayout, {
-                        responsive: true,  // Torna o gráfico responsivo
-                        displaylogo: false // Oculta o logo do Plotly
+                        responsive: true,
+                        displaylogo: false
                     });
-                    console.log(`Mapa do Brasil (Plotly) renderizado com GeoJSON local e zmax limitado a ${zmax_cap}.`);
+                    console.log(`Mapa do Brasil (Plotly) renderizado. Cor por Qtd Clientes, Hover com Qtd e Soma Consumo.`);
 
                 })
                 .catch(error => {
-                    // 8. Tratamento de erros (falha no fetch, processamento ou renderização)
                     console.error('Erro ao carregar ou renderizar o mapa:', error);
-                    // Exibe mensagem de erro mais detalhada no DIV do mapa
-                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa (${error.message}).<br>Verifique o caminho do GeoJSON ('static/geojson/brasil-estados.geojson'), a chave 'featureidkey' ('properties.sigla'?) e o console (F12).</p>`;
+                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa: ${error.message}<br>Verifique a URL da API ('${"{{ url_for('api_state_summary_for_map') }}"}'), o caminho do GeoJSON e o console (F12).</p>`;
                 });
         });
     </script>
-{% endblock %} {# Fim do bloco de scripts extras #}
+{% endblock %}

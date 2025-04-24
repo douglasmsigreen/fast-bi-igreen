@@ -1,10 +1,10 @@
-# app.py (Versão Final com Exportação Rateio RZK Multi-Abas e Card Fornecedora no Dashboard + API)
+# app.py
 
 import os
 import logging
 # from logging.handlers import RotatingFileHandler
 from flask import (Flask, render_template, request, Response, g,
-                   flash, redirect, url_for, abort, session, jsonify) # Adicionar jsonify se não estiver
+                   flash, redirect, url_for, abort, session, jsonify) # Adicionar jsonify
 from werkzeug.utils import secure_filename
 # Importações para Login
 from flask_login import (LoginManager, login_user, logout_user, login_required,
@@ -18,7 +18,7 @@ from forms import LoginForm
 # Necessário para validação do 'next_page' e data/hora
 from urllib.parse import urlparse, urljoin
 import math
-from datetime import datetime, timedelta # Adicionar timedelta se for calcular mês atual
+from datetime import datetime, timedelta # Adicionar timedelta
 import re # Para validar o formato do mês
 
 
@@ -26,7 +26,6 @@ import re # Para validar o formato do mês
 log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - [%(name)s:%(lineno)d] - %(message)s")
 log_handler = logging.StreamHandler()
 log_handler.setFormatter(log_formatter)
-# Configurar logger raiz (nível será definido abaixo)
 logger = logging.getLogger()
 if logger.hasHandlers(): logger.handlers.clear()
 logger.addHandler(log_handler)
@@ -95,74 +94,54 @@ def logout():
     logger.info(f"Logout: '{current_user.email if hasattr(current_user, 'email') else '?'}'")
     logout_user(); flash('Logout efetuado.', 'success'); return redirect(url_for('login'))
 
-# --- Rota Dashboard ATUALIZADA ---
+# --- Rota Dashboard ---
 @app.route('/')
 @login_required
 def dashboard():
     """Rota para a página inicial do dashboard."""
+    # Os dados agora são carregados principalmente via AJAX,
+    # mas podemos manter a busca inicial para placeholders ou fallback.
     fornecedora_summary_data = None
     total_kwh_mes = 0.0
-    clientes_ativos_count = 0 # Valor inicial para a nova contagem
-    error_dashboard = None # Mensagem de erro geral
+    clientes_ativos_count = 0
+    clientes_registrados_count = 0
+    error_dashboard = None
 
-    # --- Lógica para determinar o mês inicial ---
     selected_month_str = request.args.get('month')
-    if not selected_month_str:
+    if not selected_month_str or not re.match(r'^\d{4}-\d{2}$', selected_month_str):
         selected_month_str = datetime.now().strftime('%Y-%m')
-        logger.debug(f"Nenhum mês fornecido na URL, usando mês atual: {selected_month_str}")
-    elif not re.match(r'^\d{4}-\d{2}$', selected_month_str): # Valida formato básico
-         logger.warning(f"Formato de mês inválido na URL: '{selected_month_str}'. Usando mês atual.")
-         selected_month_str = datetime.now().strftime('%Y-%m')
 
+    # Busca inicial (opcional, mas útil para preencher antes do AJAX)
     try:
-        # Busca dados existentes
         fornecedora_summary_data = database.get_fornecedora_summary(month_str=selected_month_str)
         total_kwh_mes = database.get_total_consumo_medio_by_month(month_str=selected_month_str)
-        # --- Busca a nova contagem de clientes ativos ---
         clientes_ativos_count = database.count_clientes_ativos_by_month(month_str=selected_month_str)
-        # -----------------------------------------------
-
+        clientes_registrados_count = database.count_clientes_registrados_by_month(month_str=selected_month_str)
         if fornecedora_summary_data is None:
-             # Tratamento de erro específico para o resumo, se necessário
-             error_dashboard = f"Erro ao buscar resumo por fornecedora para {selected_month_str}."
-             fornecedora_summary_data = [] # Garante lista vazia
-
+            error_dashboard = f"Erro ao buscar resumo por fornecedora para {selected_month_str}."
+            fornecedora_summary_data = []
     except Exception as e:
-        logger.error(f"Erro geral na rota dashboard ao buscar dados para {selected_month_str}: {e}", exc_info=True)
-        error_dashboard = "Erro inesperado ao carregar dados do dashboard."
-        # Reseta todos os valores em caso de erro geral
-        fornecedora_summary_data = []
-        total_kwh_mes = 0.0
-        clientes_ativos_count = 0
+        logger.error(f"Erro dashboard (carga inicial) para {selected_month_str}: {e}", exc_info=True)
+        error_dashboard = "Erro ao carregar dados iniciais do dashboard."
+        fornecedora_summary_data = []; total_kwh_mes = 0.0; clientes_ativos_count = 0; clientes_registrados_count = 0
+    if error_dashboard: flash(error_dashboard, "warning")
 
-    if error_dashboard:
-        flash(error_dashboard, "warning")
-
-    # --- Gera opções para o dropdown (exemplo: últimos 12 meses) ---
     month_options = []
     current_date = datetime.now()
     for i in range(12):
-        dt = current_date - timedelta(days=i * 30) # Aproximação simples de meses
-        month_val = dt.strftime('%Y-%m')
-        month_text = dt.strftime('%b/%Y').upper() # Ex: ABR/2025
+        dt = current_date - timedelta(days=i * 30); month_val = dt.strftime('%Y-%m'); month_text = dt.strftime('%b/%Y').upper()
         month_options.append({'value': month_val, 'text': month_text})
-    # Garante que o mês selecionado esteja na lista, se não for um dos 12 últimos
     if selected_month_str not in [m['value'] for m in month_options]:
          try:
             sel_dt = datetime.strptime(selected_month_str + '-01', '%Y-%m-%d')
             month_options.insert(0, {'value': selected_month_str, 'text': sel_dt.strftime('%b/%Y').upper()})
-         except ValueError:
-            pass # Ignora se o selected_month_str for inválido
+         except ValueError: pass
 
     return render_template(
-        'dashboard.html',
-        title="Dashboard - Fast BI",
-        total_kwh=total_kwh_mes,
-        clientes_ativos_count=clientes_ativos_count, # <--- Passa a nova contagem
-        fornecedora_summary=fornecedora_summary_data,
-        month_options=month_options, # Passa opções para o select
-        selected_month=selected_month_str, # Passa o mês selecionado para o template
-        error_summary=error_dashboard # Passa erro (renomeado para refletir potencial erro geral)
+        'dashboard.html', title="Dashboard - Fast BI", total_kwh=total_kwh_mes,
+        clientes_ativos_count=clientes_ativos_count, clientes_registrados_count=clientes_registrados_count,
+        fornecedora_summary=fornecedora_summary_data, month_options=month_options,
+        selected_month=selected_month_str, error_summary=error_dashboard
     )
 # --- FIM Rota Dashboard ---
 
@@ -171,7 +150,7 @@ def dashboard():
 @app.route('/relatorios')
 @login_required
 def relatorios():
-    # ... (código existente) ...
+    # Código da rota relatorios (sem alterações relevantes para o mapa)
     user_nome = current_user.nome if hasattr(current_user, 'nome') else '?'
     try:
         page = request.args.get('page', 1, type=int); page = max(1, page)
@@ -230,7 +209,7 @@ def relatorios():
 @app.route('/export', methods=['GET'])
 @login_required
 def exportar_excel_route():
-    # ... (código existente) ...
+    # Código da rota exportar_excel_route (sem alterações relevantes para o mapa)
     user_nome = current_user.nome if hasattr(current_user, 'nome') else '?'
     try:
         selected_fornecedora = request.args.get('fornecedora', 'Consolidado')
@@ -291,76 +270,79 @@ def exportar_excel_route():
 # --- Rota para a Página do Mapa de Clientes ---
 @app.route('/mapa-clientes')
 @login_required
-def mapa_clientes(): return render_template('mapa_clientes.html', title="Mapa de Clientes - Fast BI")
+def mapa_clientes():
+    # A página HTML em si não precisa de dados extras do Flask aqui
+    return render_template('mapa_clientes.html', title="Mapa de Clientes - Fast BI")
 
-# --- Rota da API para Dados do Mapa ---
-@app.route('/api/map-data/client-count-by-state')
+# --- >>> ROTA API MODIFICADA PARA O MAPA <<< ---
+# Renomeada para maior clareza e retorna dados mais completos
+@app.route('/api/map-data/state-summary')
 @login_required
-def api_client_count_by_state():
-    # ... (código existente) ...
+def api_state_summary_for_map():
+    """Retorna dados agregados (UF, contagem, soma consumo) por estado para o mapa."""
     try:
-        data = database.get_client_count_by_state()
-        formatted_data = {'locations': [r[0] for r in data if r and len(r)>0], 'z': [r[1] for r in data if r and len(r)>1]}
-        if len(formatted_data['locations']) != len(formatted_data['z']): logger.error("API Mapa: Tamanhos diferentes."); return jsonify({"error": "Erro interno"}), 500
-        return jsonify(formatted_data)
-    except Exception as e: logger.error(f"API Mapa Erro: {e}", exc_info=True); return jsonify({"error": "Erro interno"}), 500
+        # Chama a função MODIFICADA do banco que retorna UF, Contagem e Soma
+        data_from_db = database.get_state_map_data() # Ex: [('SP', 100, 50000.0), ('MG', 80, 42000.0)]
+
+        # Transforma a lista de tuplas em uma lista de dicionários para facilitar o JS
+        structured_data = [
+            {'uf': row[0], 'count': row[1], 'sum_consumo': row[2]}
+            for row in data_from_db
+        ]
+        logger.debug(f"API Mapa: Enviando {len(structured_data)} registros de estado.")
+        # Retorna a lista de dicionários como JSON
+        return jsonify(structured_data)
+
+    except Exception as e:
+        logger.error(f"API Mapa (/api/map-data/state-summary) Erro: {e}", exc_info=True)
+        return jsonify({"error": "Erro interno ao buscar dados do mapa."}), 500
+# --- >>> FIM ROTA API MODIFICADA <<< ---
 
 # --- Rota API para Resumo por Fornecedora ---
 @app.route('/api/summary/fornecedora')
 @login_required
 def api_fornecedora_summary():
-    # ... (código existente) ...
      month_str = request.args.get('month')
-     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
-        return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
+     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str): return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
      try:
         summary_data = database.get_fornecedora_summary(month_str=month_str)
-        if summary_data is None:
-            return jsonify({"error": "Erro interno ao buscar dados."}), 500
-        elif not summary_data:
-             return jsonify([])
-        else:
-            data_as_dicts = [{"fornecedora": r[0], "qtd_clientes": r[1], "soma_consumo": r[2]} for r in summary_data]
-            return jsonify(data_as_dicts)
-     except Exception as e:
-        logger.error(f"API Fornecedora Summary: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
-        return jsonify({"error": "Erro inesperado no servidor."}), 500
+        if summary_data is None: return jsonify({"error": "Erro interno ao buscar dados."}), 500
+        elif not summary_data: return jsonify([])
+        else: data_as_dicts = [{"fornecedora": r[0], "qtd_clientes": r[1], "soma_consumo": r[2]} for r in summary_data]; return jsonify(data_as_dicts)
+     except Exception as e: logger.error(f"API Fornecedora Summary: Erro inesperado para o mês {month_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
 
 
 # --- Rota API para KPI Total kWh ---
 @app.route('/api/kpi/total-kwh')
 @login_required
 def api_kpi_total_kwh():
-    # ... (código existente) ...
     month_str = request.args.get('month')
-    if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
-        logger.warning(f"API KPI Total kWh: Formato de mês inválido recebido '{month_str}'.")
-        return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
-    logger.info(f"API KPI Total kWh: Recebida requisição para mês '{month_str}'.")
-    try:
-        total_kwh = database.get_total_consumo_medio_by_month(month_str=month_str)
-        return jsonify({"total_kwh": total_kwh})
-    except Exception as e:
-        logger.error(f"API KPI Total kWh: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
-        return jsonify({"error": "Erro inesperado no servidor."}), 500
+    if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str): return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
+    # logger.info(f"API KPI Total kWh: Recebida requisição para mês '{month_str}'.") # Log menos verboso
+    try: total_kwh = database.get_total_consumo_medio_by_month(month_str=month_str); return jsonify({"total_kwh": total_kwh})
+    except Exception as e: logger.error(f"API KPI Total kWh: Erro inesperado para o mês {month_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
 
 
-# --- Rota API para KPI Clientes Ativos ---
+# --- Rota API para KPI Clientes Ativos (data_ativo) ---
 @app.route('/api/kpi/clientes-ativos')
 @login_required
 def api_kpi_clientes_ativos():
-    # ... (código existente) ...
     month_str = request.args.get('month')
-    if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
-        logger.warning(f"API KPI Clientes Ativos: Formato de mês inválido recebido '{month_str}'.")
-        return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
-    logger.info(f"API KPI Clientes Ativos: Recebida requisição para mês '{month_str}'.")
-    try:
-        count = database.count_clientes_ativos_by_month(month_str=month_str)
-        return jsonify({"clientes_ativos_count": count})
-    except Exception as e:
-        logger.error(f"API KPI Clientes Ativos: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
-        return jsonify({"error": "Erro inesperado no servidor."}), 500
+    if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str): return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
+    # logger.info(f"API KPI Clientes Ativos: Recebida requisição para mês '{month_str}'.") # Log menos verboso
+    try: count = database.count_clientes_ativos_by_month(month_str=month_str); return jsonify({"clientes_ativos_count": count})
+    except Exception as e: logger.error(f"API KPI Clientes Ativos: Erro inesperado para o mês {month_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
+
+# --- Rota API para KPI Clientes REGISTRADOS (dtcad) ---
+@app.route('/api/kpi/clientes-registrados')
+@login_required
+def api_kpi_clientes_registrados():
+    """Retorna a contagem de clientes REGISTRADOS no mês (baseado em dtcad)."""
+    month_str = request.args.get('month')
+    if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str): return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
+    # logger.info(f"API KPI Clientes Registrados: Recebida requisição para mês '{month_str}'.") # Log menos verboso
+    try: count = database.count_clientes_registrados_by_month(month_str=month_str); return jsonify({"clientes_registrados_count": count})
+    except Exception as e: logger.error(f"API KPI Clientes Registrados: Erro inesperado para o mês {month_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
 
 
 # --- Rota API para Dados do Gráfico Mensal ---
@@ -369,21 +351,15 @@ def api_kpi_clientes_ativos():
 def api_chart_monthly_active_clients():
     """Retorna a contagem de clientes ativados por mês para um dado ano."""
     year_str = request.args.get('year')
-    if not year_str or not re.match(r'^\d{4}$', year_str):
-        logger.warning(f"API Chart Mensal: Formato de ano inválido recebido '{year_str}'.")
-        return jsonify({"error": "Formato de ano inválido. Use YYYY."}), 400
+    if not year_str or not re.match(r'^\d{4}$', year_str): return jsonify({"error": "Formato de ano inválido. Use YYYY."}), 400
     try:
         year = int(year_str)
-        logger.info(f"API Chart Mensal: Recebida requisição para ano '{year}'.")
+        # logger.info(f"API Chart Mensal: Recebida requisição para ano '{year}'.") # Log menos verboso
         monthly_data = database.get_monthly_active_clients_by_year(year=year)
         return jsonify({"monthly_counts": monthly_data})
-    except ValueError:
-         logger.warning(f"API Chart Mensal: Ano inválido (não inteiro) '{year_str}'.")
-         return jsonify({"error": "Ano inválido."}), 400
-    except Exception as e:
-        logger.error(f"API Chart Mensal: Erro inesperado para o ano {year_str}: {e}", exc_info=True)
-        return jsonify({"error": "Erro inesperado no servidor."}), 500
-# --- FIM NOVA Rota API ---
+    except ValueError: logger.warning(f"API Chart Mensal: Ano inválido (não inteiro) '{year_str}'."); return jsonify({"error": "Ano inválido."}), 400
+    except Exception as e: logger.error(f"API Chart Mensal: Erro inesperado para o ano {year_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
+# --- FIM Rota API ---
 
 
 # --- Execução da Aplicação ---
