@@ -108,7 +108,7 @@ def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
     where_clauses = [
         "cc.type_document = 'procuracao_igreen'", "upper(cc.status) = 'ATIVO'",
         "c.data_ativo IS NOT NULL", "c.status IS NULL", "c.validadosucesso = 'S'",
-        "c.rateio = 'N'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) ",
+        "c.rateio = 'N'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) ",
         " NOT EXISTS ( SELECT 1 FROM public.\"DEVOLUTIVAS\" d WHERE d.idcliente = c.idcliente ) "
     ]
     params = []
@@ -121,7 +121,7 @@ def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
 def get_base_enviada_ids(fornecedora: Optional[str] = None) -> List[int]:
     """Busca IDs para 'Base Enviada' do Rateio Geral."""
     query_base = 'SELECT c.idcliente FROM public."CLIENTES" c'
-    where_clauses = [ "c.rateio = 'S'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) "]
+    where_clauses = [ "c.rateio = 'S'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]
     params = []
     if fornecedora and fornecedora.lower() != 'consolidado':
         where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
@@ -140,7 +140,7 @@ def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_siz
         select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
         needs_consultor_join = any(f.startswith("co.") for f in campos)
         join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
-        where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))"
+        where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
         order = "ORDER BY c.idcliente"; query = f"{select} {from_}{join} {where} {order};"
         for i in range(0, len(client_ids), batch_size):
             batch_ids = client_ids[i:i + batch_size]; params = (batch_ids,)
@@ -155,7 +155,7 @@ def get_clientes_por_licenciado_data(offset: int = 0, limit: Optional[int] = Non
     base_query = """
         SELECT c.idconsultor, c.nome, c.cpf, c.email, c.uf, COUNT(cl.idconsultor) AS quantidade_clientes_ativos
         FROM public."CONSULTOR" c LEFT JOIN public."CLIENTES" cl ON c.idconsultor = cl.idconsultor
-        WHERE cl.data_ativo IS NOT NULL AND (cl.origem IS NULL OR cl.origem IN ('', 'WEB', 'BACKOFFICE'))
+        WHERE cl.data_ativo IS NOT NULL AND (cl.origem IS NULL OR cl.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         GROUP BY c.idconsultor, c.nome, c.cpf, c.email, c.uf ORDER BY quantidade_clientes_ativos DESC, c.nome """
     params = []; limit_clause = ""; offset_clause = ""
     if limit is not None: limit_clause = "LIMIT %s"; params.append(limit)
@@ -169,7 +169,7 @@ def count_clientes_por_licenciado() -> int:
     count_query_sql = """
         SELECT COUNT(DISTINCT c.idconsultor) FROM public."CONSULTOR" c
         INNER JOIN public."CLIENTES" cl ON c.idconsultor = cl.idconsultor
-        WHERE cl.data_ativo IS NOT NULL AND (cl.origem IS NULL OR cl.origem IN ('', 'WEB', 'BACKOFFICE')); """
+        WHERE cl.data_ativo IS NOT NULL AND (cl.origem IS NULL OR cl.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')); """
     try: result = execute_query(count_query_sql, fetch_one=True); return result[0] if result else 0
     except Exception as e: logger.error(f"Erro count_clientes_por_licenciado: {e}", exc_info=True); return 0
 
@@ -185,7 +185,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
                COUNT(rcb.numinstalacao) AS quantidade_registros_rcb
         FROM public."CLIENTES" c
         LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao """
-    where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))"]
+    where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     params = []
     # <<< ADICIONADO FILTRO DE FORNECEDORA >>>
     if fornecedora and fornecedora.lower() != 'consolidado':
@@ -207,7 +207,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
 def count_boletos_por_cliente(fornecedora: Optional[str] = None) -> int:
     """Conta o total de clientes para 'Boletos por Cliente', respeitando filtros."""
     # logger.info(f"Contando 'Boletos por Cliente' (Forn: {fornecedora})...")
-    where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))"]
+    where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     params = []
     # <<< ADICIONADO FILTRO DE FORNECEDORA >>>
     if fornecedora and fornecedora.lower() != 'consolidado':
@@ -229,7 +229,7 @@ def get_client_count_by_state() -> List[Tuple[str, int]]:
         SELECT UPPER(c.ufconsumo) as estado_uf, COUNT(c.idcliente) as total_clientes
         FROM public."CLIENTES" c
         WHERE c.data_ativo IS NOT NULL AND c.ufconsumo IS NOT NULL AND c.ufconsumo <> ''
-          AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))
+          AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         GROUP BY UPPER(c.ufconsumo) ORDER BY estado_uf; """
     try: return execute_query(query) or []
     except Exception as e: logger.error(f"Erro get_client_count_by_state: {e}", exc_info=True); return []
@@ -245,7 +245,7 @@ def get_rateio_rzk_base_nova_ids() -> List[int]:
     where_clauses = [
         "c.fornecedora = 'RZK'", "cc.type_document = 'procuracao_igreen'", "upper(cc.status) = 'ATIVO'",
         "c.data_ativo IS NOT NULL", "c.status IS NULL", "c.validadosucesso = 'S'",
-        "c.rateio = 'N'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) ",
+        "c.rateio = 'N'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) ",
         " NOT EXISTS ( SELECT 1 FROM public.\"DEVOLUTIVAS\" d WHERE d.idcliente = c.idcliente ) "
     ]
     full_query = query_base + " WHERE " + " AND ".join(where_clauses) + group_by + ";"
@@ -256,7 +256,7 @@ def get_rateio_rzk_base_nova_ids() -> List[int]:
 def get_rateio_rzk_base_enviada_ids() -> List[int]:
     """Busca IDs para 'Base Enviada' do Rateio RZK."""
     query_base = 'SELECT c.idcliente FROM public."CLIENTES" c'
-    where_clauses = [ "c.fornecedora = 'RZK'", "c.rateio = 'S'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) " ]
+    where_clauses = [ "c.fornecedora = 'RZK'", "c.rateio = 'S'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) " ]
     full_query = query_base + " WHERE " + " AND ".join(where_clauses) + ";"
     # logger.info("Query Base Enviada RZK IDs...")
     try: results = execute_query(full_query); return [r[0] for r in results] if results else []
@@ -290,7 +290,7 @@ def get_rateio_rzk_client_details_by_ids(client_ids: List[int], batch_size: int 
         if not campos: logger.error("Falha campos RZK details"); return []
         select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
         join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor'
-        where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))"
+        where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
         order = "ORDER BY c.idcliente"; query = f"{select} {from_}{join} {where} {order};"
         # logger.info(f"Buscando detalhes RZK para {len(client_ids)} IDs...")
         for i in range(0, len(client_ids), batch_size):
@@ -306,7 +306,7 @@ def get_rateio_rzk_data(offset: int = 0, limit: Optional[int] = None) -> List[tu
     campos_rzk = _get_rateio_rzk_fields()
     select = f"SELECT {', '.join(campos_rzk)}"; from_ = 'FROM public."CLIENTES" c'
     join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor'
-    where_clauses = ["c.fornecedora = 'RZK'", "c.rateio = 'S'", "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))"]
+    where_clauses = ["c.fornecedora = 'RZK'", "c.rateio = 'S'", "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     where = f"WHERE {' AND '.join(where_clauses)}"; order = "ORDER BY c.idcliente"; params = []
     limit_clause = "LIMIT %s" if limit is not None else ""; offset_clause = ""
     if limit is not None: params.append(limit)
@@ -317,7 +317,7 @@ def get_rateio_rzk_data(offset: int = 0, limit: Optional[int] = None) -> List[tu
 
 def count_rateio_rzk() -> int:
     """Conta total para display Rateio RZK (Base Enviada)."""
-    where_clauses = ["c.fornecedora = 'RZK'", "c.rateio = 'S'", "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE'))"]
+    where_clauses = ["c.fornecedora = 'RZK'", "c.rateio = 'S'", "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     where = f"WHERE {' AND '.join(where_clauses)}"; count_query_sql = f'SELECT COUNT(c.idcliente) FROM public."CLIENTES" c {where};'
     try: result = execute_query(count_query_sql, fetch_one=True); return result[0] if result else 0
     except Exception as e: logger.error(f"Erro count_rateio_rzk (display): {e}", exc_info=True); return 0
@@ -377,7 +377,7 @@ def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int
     select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
     needs_consultor_join = any(f.startswith("co.") for f in campos)
     join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
-    where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) "]; params = []
+    where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
     if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; order = "ORDER BY c.idcliente"; limit_clause = ""; offset_clause = ""
     if limit is not None: limit_clause = f"LIMIT %s"; params.append(limit)
@@ -388,7 +388,7 @@ def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int
 def count_query(report_type: str, fornecedora: Optional[str] = None) -> Tuple[str, tuple]:
     """Constrói query de contagem para Base Clientes ou Rateio Geral."""
     if report_type not in ["base_clientes", "rateio"]: raise ValueError(f"count_query não adequado para '{report_type}'.")
-    from_ = 'FROM public."CLIENTES" c'; where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE')) "]; params = []
+    from_ = 'FROM public."CLIENTES" c'; where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
     if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; query = f"SELECT COUNT(c.idcliente) {from_} {where};"
     return query, tuple(params)
@@ -491,3 +491,46 @@ def get_headers(report_type: str) -> List[str]:
     if missing_keys_in_map: logger.warning(f"Chaves não mapeadas em header_map p/ '{report_type}': {missing_keys_in_map}.")
     # logger.info(f"Headers gerados para '{report_type}'. Total: {len(headers_list)}")
     return headers_list
+
+def get_fornecedora_summary() -> List[Tuple[str, int, float]] or None:
+    """
+    Busca um resumo da quantidade de clientes ativos e soma de consumo médio
+    agrupado por fornecedora.
+    """
+    query = """
+        SELECT
+            -- Trata fornecedora NULL ou vazia como 'NÃO ESPECIFICADA'
+            COALESCE(NULLIF(TRIM(c.fornecedora), ''), 'NÃO ESPECIFICADA') AS fornecedora_tratada,
+            COUNT(*) AS qtd_clientes,
+            SUM(c.consumomedio) AS soma_consumo_medio_por_fornecedora
+        FROM
+            public."CLIENTES" c
+        WHERE
+            c.data_ativo IS NOT NULL
+            AND (
+                c.origem IS NULL
+                OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')
+            )
+        GROUP BY
+            fornecedora_tratada -- Agrupa pelo nome tratado
+        ORDER BY
+            fornecedora_tratada; -- Ordena pelo nome tratado
+    """
+    logger.info("Buscando resumo de clientes por fornecedora para o dashboard...")
+    try:
+        results = execute_query(query)
+        if results:
+            # Converte a soma para float para evitar problemas com Decimal no Jinja/JSON se necessário
+            # E garante que qtd_clientes seja int
+            formatted_results = [
+                (str(row[0]), int(row[1]), float(row[2]) if row[2] is not None else 0.0)
+                for row in results
+            ]
+            logger.info(f"Resumo por fornecedora encontrado: {len(formatted_results)} registros.")
+            return formatted_results
+        else:
+            logger.info("Nenhum dado encontrado para o resumo por fornecedora.")
+            return []
+    except Exception as e:
+        logger.error(f"Erro ao buscar resumo por fornecedora: {e}", exc_info=True)
+        return None # Retorna None em caso de erro para tratamento na rota

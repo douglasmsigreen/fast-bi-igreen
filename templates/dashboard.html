@@ -1,4 +1,4 @@
-{# templates/dashboard.html - MODIFICADO #}
+{# templates/dashboard.html - MODIFICADO com card Resumo Fornecedora #}
 {% extends "base.html" %}
 
 {# Define o título que pode aparecer na barra superior interna #}
@@ -81,6 +81,46 @@
     </div>
 
 </div> {# Fim dashboard-grid #}
+
+{# <<< INÍCIO DO NOVO CARD: Resumo por Fornecedora >>> #}
+<div class="card fornecedora-summary-card"> {# Adicionada classe específica se precisar de estilo futuro #}
+    <div class="card-header">
+        Resumo por Fornecedora (Clientes Ativos)
+        <i class="fas fa-info-circle tooltip-icon" title="Contagem de clientes ativos e soma do consumo médio agrupados por fornecedora."></i>
+    </div>
+    <div class="card-body">
+        {# Verifica se a variável passada pelo app.py (fornecedora_summary) existe e tem dados #}
+        {% if fornecedora_summary is not none and fornecedora_summary %}
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;"> {# Adiciona scroll se a tabela for grande #}
+                <table class="table table-sm table-striped table-hover"> {# Estilos básicos de tabela (Bootstrap-like) #}
+                    <thead>
+                        <tr>
+                            <th>Fornecedora</th>
+                            <th style="text-align: right;">Qtd Clientes</th>
+                            <th style="text-align: right;">Soma Consumo Médio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {# Loop para exibir cada linha de dados vinda do backend #}
+                        {% for row in fornecedora_summary %}
+                        <tr>
+                            <td>{{ row[0] }}</td> {# Coluna 0: fornecedora_tratada #}
+                            <td style="text-align: right;">{{ row[1] | int }}</td> {# Coluna 1: qtd_clientes #}
+                             {# Coluna 2: soma_consumo_medio - Formata para padrão BR #}
+                            <td style="text-align: right;">{{ "{:,.2f}".format(row[2]).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% elif fornecedora_summary is none %} {# Se for None, indica erro no backend #}
+             <p class="text-danger">Erro ao carregar dados das fornecedoras.</p>
+        {% else %} {# Se a lista estiver vazia, mas não for None #}
+            <p>Nenhum dado de fornecedora encontrado para exibir.</p>
+        {% endif %}
+    </div>
+</div>
+{# <<< FIM DO NOVO CARD >>> #}
 
 {% endblock %}
 

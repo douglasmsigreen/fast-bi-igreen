@@ -394,3 +394,52 @@ nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; bor
      .content-area { padding: 15px; }
      .dashboard-grid { gap: 15px; }
 }
+/* --- Estilos para Tabela no Card Resumo Fornecedora --- */
+.fornecedora-summary-card .table-responsive {
+    border: none; /* Remove borda do container se a tabela tiver a sua */
+    margin-top: 5px; /* Pequeno espaço acima da tabela */
+}
+
+.fornecedora-summary-card table {
+    width: 100%;
+    margin-bottom: 0; /* Remove margem inferior padrão da tabela se houver */
+    color: #495057; /* Cor de texto padrão */
+    border-collapse: collapse; /* Garante que bordas se unam */
+    font-size: 0.88em; /* Tamanho de fonte um pouco menor para caber mais info */
+}
+
+.fornecedora-summary-card th,
+.fornecedora-summary-card td {
+    padding: 8px 10px; /* Espaçamento interno (vertical, horizontal) */
+    vertical-align: middle; /* Alinha verticalmente ao centro */
+    border: 1px solid #dee2e6; /* Borda cinza clara */
+    white-space: nowrap; /* Evita quebra de linha */
+}
+
+.fornecedora-summary-card thead th {
+    background-color: #f8f9fa; /* Fundo cinza bem claro para cabeçalho */
+    font-weight: 600; /* Texto em negrito */
+    text-align: center; /* Centraliza texto do cabeçalho */
+    border-bottom-width: 2px; /* Linha inferior mais grossa */
+    color: #343a40; /* Cor de texto mais escura */
+}
+
+/* Alinhamento das colunas de dados */
+.fornecedora-summary-card tbody td:nth-child(1) { /* Coluna Fornecedora */
+    text-align: left;
+}
+.fornecedora-summary-card tbody td:nth-child(2), /* Coluna Qtd Clientes */
+.fornecedora-summary-card tbody td:nth-child(3) { /* Coluna Soma Consumo */
+    text-align: right;
+    font-family: Consolas, monaco, monospace; /* Fonte monoespaçada para números */
+}
+
+/* Zebra Stripping (Opcional, já que usamos table-striped) */
+.fornecedora-summary-card tbody tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Hover effect (Opcional, já que usamos table-hover) */
+.fornecedora-summary-card tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
