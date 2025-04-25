@@ -1,114 +1,68 @@
-{# templates/login.html - REFATORADO COM CLASSES TAILWIND CSS #}
 <!doctype html>
 <html lang="pt-br">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - Fast BI</title>
-    {# --- Link para o CSS compilado do Tailwind --- #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dist/output.css') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-    {# Font Awesome para o ícone do olho (opcional) ou outros ícones #}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-{# Fundo branco padrão para a página de login #}
-<body class="bg-white">
+    <html lang="pt-br">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Login - Fast BI</title>
+            <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+            <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+            </head>
+<body class="login-page-body"> {# Adiciona uma classe ao body para estilos específicos #}
 
-    {# Wrapper principal com Flexbox #}
-    <div class="flex min-h-screen">
+    <div class="login-wrapper">
 
-        {# Coluna da Esquerda (Imagem) - Oculta em telas pequenas (até lg), ocupa 55% em telas grandes #}
-        {# hidden: Oculto por padrão, lg:block: Mostra em telas 'lg' ou maiores, lg:w-[55%]: Largura em telas grandes #}
-        {# bg-cover/bg-center: Controle da imagem de fundo #}
-        <div class="hidden lg:block lg:w-[55%] bg-cover bg-center"
-             style="background-image: url('{{ url_for('static', filename='img/telalogin.jpg') }}');">
-            {# Conteúdo opcional sobre a imagem, se desejar #}
+        {# Coluna da Esquerda (Imagem) #}
+        <div class="login-image-column">
+            {# A imagem será definida via CSS background-image #}
         </div>
 
-        {# Coluna da Direita (Formulário) - Ocupa 100% em telas pequenas, 45% em telas grandes #}
-        {# w-full: Largura total por padrão, lg:w-[45%]: Largura em telas grandes #}
-        {# flex/items-center/justify-center: Centraliza o container do formulário #}
-        {# p-8 md:p-12: Padding responsivo #}
-        <div class="w-full lg:w-[45%] flex items-center justify-center p-8 md:p-12">
-            {# Container do Formulário com largura máxima #}
-            <div class="w-full max-w-md">
+        {# Coluna da Direita (Formulário) #}
+        <div class="login-form-column">
+            <div class="login-form-container">
 
-                {# Logo Centralizado #}
-                <div class="mb-8 text-center">
-                    <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="iGreen Energy Logo" class="mx-auto h-12"> {# mx-auto: Centraliza, h-12: Altura #}
+                {# Logo (ajuste caminho e estilo) #}
+                <div class="login-logo">
+                    <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="iGreen Energy Logo">
                 </div>
 
                 {# Título #}
-                {# text-2xl/md:text-3xl: Tamanho responsivo, font-bold: Negrito, text-center: Centralizado, mb-8: Margem inferior #}
-                <h2 class="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
-                    Bem-vindo ao Fast BI <span class="text-xl">📊</span>
-                </h2>
-
-                 {# Mensagens Flash (adicionado para consistência) #}
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                 {% if messages %}
-                   <div class="mb-6 space-y-3">
-                     {% for category, message in messages %}
-                       {% set alert_color = 'blue' %}
-                       {% if category == 'danger' or category == 'error' %}{% set alert_color = 'red' %}
-                       {% elif category == 'warning' %}{% set alert_color = 'yellow' %}
-                       {% elif category == 'success' %}{% set alert_color = 'green' %}
-                       {% endif %}
-                       <div class="border-l-4 border-{{ alert_color }}-500 bg-{{ alert_color }}-50 p-3 rounded-r-md shadow-sm" role="alert">
-                         <p class="text-sm font-medium text-{{ alert_color }}-800">{{ message }}</p>
-                       </div>
-                     {% endfor %}
-                   </div>
-                 {% endif %}
-               {% endwith %}
+                <h2 class="login-title">Bem-vindo ao Fast BI <span class="crm-icon">📊</span></h2>
 
                 {# Formulário de Login #}
-                <form method="POST" action="{{ url_for('login') }}" novalidate>
+                <form method="POST" action="{{ url_for('login') }}" novalidate class="login-form">
                     {{ form.hidden_tag() }} {# CSRF Token #}
 
-                    {# Grupo do Email #}
-                    <div class="mb-5">
-                        {# block: Força quebra de linha, text-sm/font-medium/text-gray-600: Estilo label, mb-1: Margem inferior #}
-                        {{ form.email.label(class="block text-sm font-medium text-gray-600 mb-1") }}
-                        {# Input com estilo Tailwind: block, w-full, rounded, border, shadow-sm, focus styles #}
-                        {# Use ring-igreen-light ou ring-green-300 etc., conforme seu config #}
-                        {{ form.email(class="block w-full rounded-md border-gray-300 shadow-sm focus:border-igreen focus:ring focus:ring-igreen-light focus:ring-opacity-50 py-2 px-3", placeholder="seuemail@exemplo.com") }}
+                    <div class="form-group">
+                        {{ form.email.label }} {# Label acima #}
+                        {{ form.email(class="form-control", placeholder="seuemail@exemplo.com") }}
                         {% if form.email.errors %}
-                            <div class="mt-1 text-xs text-red-600"> {# Estilo da mensagem de erro #}
-                                {% for error in form.email.errors %}<p>{{ error }}</p>{% endfor %}
+                            <div class="invalid-feedback">
+                                {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
                             </div>
                         {% endif %}
                     </div>
 
-                    {# Grupo da Senha #}
-                    <div class="mb-5">
-                        {{ form.password.label(class="block text-sm font-medium text-gray-600 mb-1") }}
-                        {# Adicionar wrapper para possível ícone de olho #}
-                        <div class="relative">
-                             {{ form.password(class="block w-full rounded-md border-gray-300 shadow-sm focus:border-igreen focus:ring focus:ring-igreen-light focus:ring-opacity-50 py-2 px-3", placeholder="********") }}
-                             {# Ícone (opcional, requer JS) - Posicionado à direita #}
-                             {# <span class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400">
-                                 <i class="fas fa-eye"></i>
-                             </span> #}
+                    <div class="form-group">
+                        {{ form.password.label }} {# Label acima #}
+                        {# Adicionar um wrapper para o ícone do olho (requer JS para funcionar) #}
+                        <div class="password-wrapper">
+                             {{ form.password(class="form-control", placeholder="********") }}
+                             {# <span class="password-toggle-icon">👁️</span> #} {# Ícone - JS necessário #}
                         </div>
                         {% if form.password.errors %}
-                            <div class="mt-1 text-xs text-red-600">
-                                {% for error in form.password.errors %}<p>{{ error }}</p>{% endfor %}
+                            <div class="invalid-feedback">
+                                {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
                             </div>
                         {% endif %}
                     </div>
 
-                    {# Grupo do Lembrar-me #}
-                    <div class="mb-6 flex items-center"> {# flex/items-center: Alinha checkbox e label #}
-                        {{ form.remember_me(class="h-4 w-4 rounded border-gray-300 text-igreen focus:ring-igreen") }} {# Estilo checkbox #}
-                        {{ form.remember_me.label(class="ml-2 block text-sm text-gray-700") }} {# Margem e estilo label #}
+                    <div class="form-group form-check-group">
+                        {{ form.remember_me(class="form-check-input") }}
+                        {{ form.remember_me.label(class="form-check-label") }}
                     </div>
 
-                    {# Botão de Submit #}
-                    {# w-full: Largura total, flex/justify-center: Centraliza texto/ícone, py/px: Padding, border/rounded: Aparência #}
-                    {# bg-igreen/hover:bg-igreen-dark: Cores (ajuste!), text-white: Cor texto, font-semibold: Peso, shadow-sm: Sombra #}
-                    {# transition/duration/ease: Efeito suave #}
-                    {{ form.submit(value="Entrar", class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-semibold text-white bg-igreen hover:bg-igreen-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-igreen transition duration-150 ease-in-out cursor-pointer") }}
+                    {{ form.submit(class="btn btn-login-submit", value="Entrar") }} {# Texto do botão no 'value' #}
                 </form>
 
             </div> {# Fim login-form-container #}
@@ -116,6 +70,7 @@
 
     </div> {# Fim login-wrapper #}
 
-    {# Scripts JS no final, se necessário #}
+{# Scripts JS no final, se necessário (ex: para toggle de senha) #}
+{# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
 </body>
 </html>

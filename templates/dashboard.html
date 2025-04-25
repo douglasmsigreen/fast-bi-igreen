@@ -1,177 +1,171 @@
-{# templates/dashboard.html - REFATORADO COM CLASSES TAILWIND CSS #}
-{% extends "base.html" %} {# Assume que base.html também foi refatorado para Tailwind #}
+{# templates/dashboard.html - Final com ordenação na tabela fornecedora #}
+{% extends "base.html" %}
 
+{# Define o título que pode aparecer na barra superior interna #}
 {% block page_title %}Painel de Controle{% endblock %}
 
 {% block content %}
 
-{# Linha para Filtros - Usando Flexbox e espaçamento Tailwind #}
-<div class="mb-6 flex items-center space-x-4"> {# mb-6: Margem inferior, flex/items-center: Alinhamento, space-x-4: Espaço entre itens #}
-    <label for="filter-month" class="text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">FILTRAR POR</label>
-    {# select com estilo Tailwind: rounded, border, padding, focus styles #}
-    <select id="filter-month" name="month" class="block w-auto rounded-md border-gray-300 shadow-sm focus:border-igreen focus:ring focus:ring-igreen-light focus:ring-opacity-50 text-sm py-2 px-3">
-        {% for option in month_options %}
-            <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>
-                {{ option.text }}
-            </option>
-        {% endfor %}
-        {% if not month_options %}
-             <option value="{{ selected_month }}" selected>{{ selected_month }}</option>
-        {% endif %}
-    </select>
+{# Linha para Filtros #}
+<div class="filter-row">
+    <div class="filter-group">
+        <label for="filter-month">FILTRAR POR</label>
+        <select id="filter-month" name="month">
+            {# Popula as opções passadas pelo Flask #}
+            {% for option in month_options %}
+                <option value="{{ option.value }}" {% if option.value == selected_month %}selected{% endif %}>
+                    {{ option.text }}
+                </option>
+            {% endfor %}
+            {# Fallback se nenhuma opção for passada #}
+            {% if not month_options %}
+                 <option value="{{ selected_month }}" selected>{{ selected_month }}</option>
+            {% endif %}
+        </select>
+    </div>
 </div>
 
-{# Grid para os Widgets/Cards - Responsivo #}
-{# grid: Habilita grid, gap-6: Espaçamento entre cards, grid-cols-1/md:grid-cols-2/xl:grid-cols-4: Define colunas responsivas #}
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+{# Grid para os Widgets/Cards #}
+<div class="dashboard-grid">
 
-    {# Card: Resultado do Mês - Estilo Tailwind #}
-    {# bg-white: Fundo, rounded-lg: Cantos, shadow: Sombra, overflow-hidden: Necessário p/ cantos, flex/flex-col: Layout coluna #}
-    <div class="bg-white rounded-lg shadow overflow-hidden flex flex-col">
-        {# Header do Card: Padding, Fundo, Borda, Estilo de texto #}
-        <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider flex justify-between items-center">
-            <span>Resultado do Mês</span>
-            <i class="fas fa-info-circle text-gray-400 cursor-help" title="Soma do consumo médio dos clientes com data_ativo no mês selecionado."></i>
+    {# Card: Resultado do Mês - DINÂMICO #}
+    <div class="card kpi-card">
+        <div class="card-header">
+            Resultado do Mês
+            <i class="fas fa-info-circle tooltip-icon" title="Soma do consumo médio dos clientes com data_ativo no mês selecionado."></i>
         </div>
-        {# Corpo do Card: Padding, Centralização com Flexbox #}
-        <div class="p-5 flex-grow flex flex-col items-center justify-center">
-            {# Valor Principal: Tamanho, Peso, Cor (usando cor customizada 'igreen-dark' ou padrão 'green-700') #}
-            <div class="text-4xl font-bold text-igreen-dark mb-1" id="kpi-total-kwh">
+        <div class="card-body">
+            <div class="kpi-main-value" id="kpi-total-kwh">
+                 {# Formatação inicial do número vindo do Flask #}
                  {{ "{:,.0f}".format(total_kwh).replace(",", "X").replace(".", ",").replace("X", ".") }}
             </div>
-            {# Label Secundário: Tamanho, Cor #}
-            <div class="text-sm text-gray-500">kWh vendidos</div>
+            <div class="kpi-sub-label">kWh vendidos</div>
         </div>
     </div>
 
-    {# Card: Clientes do Mês - Estilo Tailwind #}
-    <div class="bg-white rounded-lg shadow overflow-hidden flex flex-col">
-        <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">Clientes do Mês</div>
-        {# Corpo do Card: Centralização, Espaçamento entre itens #}
-        <div class="p-5 flex-grow flex items-center justify-center space-x-8 text-center">
-            {# Item 1: Clientes Registrados #}
-            <div>
-                <span class="block text-3xl font-bold text-igreen-dark" id="kpi-clientes-registrados-count">
-                    {{ "{:,.0f}".format(clientes_registrados_count).replace(",", ".") }}
-                </span>
-                <span class="block text-xs text-gray-500 mt-1 leading-tight">Registrados<br>no mês</span>
-            </div>
-             {# Item 2: Clientes Ativados #}
-            <div>
-                 <span class="block text-3xl font-bold text-igreen-dark" id="kpi-clientes-ativos-count">
-                    {{ "{:,.0f}".format(clientes_ativos_count).replace(",", ".") }}
-                 </span>
-                <span class="block text-xs text-gray-500 mt-1 leading-tight">Ativados<br>no mês</span>
-            </div>
+    {# Card: Clientes do Mês - COM DOIS VALORES E ORDEM INVERTIDA #}
+    <div class="card qualification-card">
+        <div class="card-header">Clientes do Mês</div>
+        <div class="card-body">
+            <div class="qualification-numbers" style="display: flex; justify-content: space-around; align-items: flex-start; gap: 15px;">
+
+                {# Contagem por DTCAD (Agora na Esquerda) #}
+                <div class="qual-item" style="text-align: center;">
+                    <span class="qual-number" id="kpi-clientes-registrados-count" style="font-size: 2.2em;">
+                        {{ "{:,.0f}".format(clientes_registrados_count).replace(",", ".") }}
+                    </span>
+                    <span class="qual-label" style="font-size: 0.85em;">Registrados<br>no mês</span>
+                </div>
+
+                {# Contagem por DATA_ATIVO (Agora na Direita) #}
+                <div class="qual-item" style="text-align: center;">
+                    <span class="qual-number" id="kpi-clientes-ativos-count" style="font-size: 2.2em;">
+                        {{ "{:,.0f}".format(clientes_ativos_count).replace(",", ".") }}
+                    </span>
+                    <span class="qual-label" style="font-size: 0.85em;">Ativados<br>no mês</span>
+                </div>
+
+            </div> {# Fim qualification-numbers #}
         </div>
     </div>
 
-    {# Card: Evolução Mensal (Gráfico) - Ocupa 2 colunas em telas maiores #}
-    {# col-span-1/md:col-span-2/xl:col-span-2: Define quantas colunas o card ocupa responsivamente #}
-    <div class="bg-white rounded-lg shadow overflow-hidden flex flex-col col-span-1 md:col-span-2 xl:col-span-2">
-        <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider flex justify-between items-center">
-             {# Select com estilo similar ao filtro principal #}
-            <select id="chart-year" name="year" class="text-xs font-semibold border-none bg-transparent focus:ring-0 p-0 pr-6">
+    {# Card: Evolução Mensal - GRÁFICO DINÂMICO #}
+    <div class="card chart-card grid-span-2"> {# Ocupa 2 colunas #}
+        <div class="card-header">
+            <select id="chart-year" name="year">
+                 {# Idealmente, popular anos dinamicamente ou ajustar range #}
                  <option value="2025" {% if now().year == 2025 %}selected{% endif %}>2025</option>
                  <option value="2024" {% if now().year == 2024 %}selected{% endif %}>2024</option>
                  <option value="2023" {% if now().year == 2023 %}selected{% endif %}>2023</option>
             </select>
-            <span>Evolução Ativações</span>
+            <span>Evolução Ativações</span> {# Título ajustado #}
         </div>
-        {# Corpo do Card: Padding, Altura mínima, Posição relativa para o canvas #}
-        <div class="p-4 flex-grow min-h-[280px] relative">
-            {# O Canvas em si não precisa de muitas classes Tailwind, o JS cuida do resto #}
-            <canvas id="remunerationChart"></canvas>
+        <div class="card-body">
+            <canvas id="remunerationChart"></canvas> {# ID pode ser renomeado para clareza, ex: monthlyActivationChart #}
         </div>
     </div>
 
     {# --- LINHA INFERIOR COM AS DUAS TABELAS --- #}
-    {# Ambas tabelas ocupam 2 colunas em telas maiores #}
 
-    {# Card Resumo por Fornecedora - Estilo Tailwind #}
-    <div class="bg-white rounded-lg shadow overflow-hidden flex flex-col col-span-1 md:col-span-2 xl:col-span-2">
-        <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider flex justify-between items-center">
-            <span>Resumo por Fornecedora (Ativos)</span>
-            <i class="fas fa-info-circle text-gray-400 cursor-help" title="Contagem e consumo dos clientes com data_ativo no mês selecionado. Clique nos cabeçalhos para ordenar."></i>
+    {# Card Resumo por Fornecedora - COM CLASSE COMUM e SPAN 2 #}
+    <div class="card summary-table-card fornecedora-summary-card grid-span-2"> {# << Classe comum adicionada #}
+        <div class="card-header">
+            Resumo por Fornecedora (Ativos)
+            <i class="fas fa-info-circle tooltip-icon" title="Contagem e consumo dos clientes com data_ativo no mês selecionado. Clique nos cabeçalhos para ordenar."></i>
         </div>
-        {# Corpo do Card: Flex-grow permite que a tabela ocupe espaço #}
-        <div class="flex-grow flex flex-col">
+        <div class="card-body">
             {# Status de Carregamento/Erro #}
-            <div id="fornecedora-summary-status" class="p-3 text-center text-sm text-gray-500 italic" style="display: none;">
-                <i class="fas fa-spinner fa-spin fa-sm mr-2"></i> Carregando...
+            <div id="fornecedora-summary-status" style="text-align: center; padding: 10px; display: none;">
+                <i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...
             </div>
-            {# Container da Tabela com scroll vertical e altura máxima #}
-            <div class="overflow-y-auto max-h-[250px] flex-grow">
-                {# Tabela com estilo Tailwind #}
-                <table id="fornecedora-summary-table" class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-10"> {# Sticky header #}
+            {# Tabela #}
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                {# Tabela Fornecedora - Classes de cabeçalho/ícone mantidas #}
+                <table id="fornecedora-summary-table" class="table table-sm table-striped table-hover">
+                    <thead>
                         <tr>
-                            {# Cabeçalho: Padding, Estilo Texto, Alinhamento, Cursor para ordenação #}
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sortable-header" data-column-index="0" data-sort-type="text">
-                                Fornecedora <span class="sort-icon ml-1"></span>
-                            </th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider sortable-header" data-column-index="1" data-sort-type="number">
-                                Clientes <span class="sort-icon ml-1"></span>
-                            </th>
-                             <th scope="col" class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider sortable-header" data-column-index="2" data-sort-type="number">
-                                Total kWh <span class="sort-icon ml-1"></span>
-                            </th>
+                            <th scope="col" class="sortable-header" data-column-index="0" data-sort-type="text">Fornecedora <span class="sort-icon"></span></th>
+                            <th scope="col" class="sortable-header" data-column-index="1" data-sort-type="number" style="text-align: right;">Clientes <span class="sort-icon"></span></th>
+                            <th scope="col" class="sortable-header" data-column-index="2" data-sort-type="number" style="text-align: right;">Total kWh <span class="sort-icon"></span></th>
                         </tr>
                     </thead>
-                    {# Corpo da Tabela: Estilo zebrado (even:bg-gray-50), hover (hover:bg-gray-100) #}
-                    <tbody id="fornecedora-summary-tbody" class="bg-white divide-y divide-gray-200 text-sm">
-                        {# Placeholder inicial #}
-                        <tr><td colspan="3" class="px-4 py-4 text-center text-gray-400 italic">Carregando dados...</td></tr>
-                        {# Dados preenchidos via AJAX aqui #}
+                    <tbody id="fornecedora-summary-tbody">
+                        {# Dados preenchidos via AJAX. Placeholder opcional #}
+                        <tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
-             {# Exibe erro inicial do Flask (se houver) #}
+            {# Exibe erro inicial do Flask aqui se houver (pouco provável agora) #}
             {% if error_summary %}
-                 <p class="px-4 py-2 text-center text-xs text-red-600">{{ error_summary }}</p>
+                 <p class="text-danger" style="text-align: center; margin-top: 10px; font-size: 0.9em;">{{ error_summary }}</p>
             {% endif %}
         </div>
     </div>
 
-    {# Card Resumo por Concessionária - Estilo Tailwind (similar ao anterior) #}
-    <div class="bg-white rounded-lg shadow overflow-hidden flex flex-col col-span-1 md:col-span-2 xl:col-span-2">
-        <div class="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider flex justify-between items-center">
-            <span>Resumo por Região/Conc. (Ativos)</span>
-            <i class="fas fa-info-circle text-gray-400 cursor-help" title="Contagem e consumo dos clientes com data_ativo no mês selecionado. Clique nos cabeçalhos para ordenar."></i>
+    {# --- NOVO Card Resumo por Concessionária --- #}
+    <div class="card summary-table-card concessionaria-summary-card grid-span-2"> {# << Classe comum adicionada #}
+        <div class="card-header">
+            Resumo por Região/Concessionária (Ativos)
+            <i class="fas fa-info-circle tooltip-icon" title="Contagem e consumo dos clientes com data_ativo no mês selecionado. Clique nos cabeçalhos para ordenar."></i>
         </div>
-        <div class="flex-grow flex flex-col">
-            <div id="concessionaria-summary-status" class="p-3 text-center text-sm text-gray-500 italic" style="display: none;">
-                <i class="fas fa-spinner fa-spin fa-sm mr-2"></i> Carregando...
+        <div class="card-body">
+            {# Status de Carregamento/Erro #}
+            <div id="concessionaria-summary-status" style="text-align: center; padding: 10px; display: none;">
+                <i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...
             </div>
-            <div class="overflow-y-auto max-h-[250px] flex-grow">
-                <table id="concessionaria-summary-table" class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-10">
+            {# Nova Tabela com IDs diferentes #}
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                 {# Tabela Concessionaria - Classes de cabeçalho/ícone PADRONIZADAS #}
+                <table id="concessionaria-summary-table" class="table table-sm table-striped table-hover"> {# ID da tabela alterado #}
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider sortable-header" data-column-index="0" data-sort-type="text">
-                                Região/Conc. <span class="sort-icon ml-1"></span>
+                            <th scope="col" class="sortable-header" data-column-index="0" data-sort-type="text"> {# << Classe padronizada #}
+                                Região/Conc. <span class="sort-icon"></span> {# << Classe padronizada #}
                             </th>
-                            <th scope="col" class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider sortable-header" data-column-index="1" data-sort-type="number">
-                                Clientes <span class="sort-icon ml-1"></span>
+                            <th scope="col" class="sortable-header" data-column-index="1" data-sort-type="number" style="text-align: right;"> {# << Classe padronizada #}
+                                Clientes <span class="sort-icon"></span> {# << Classe padronizada #}
                             </th>
-                             <th scope="col" class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider sortable-header" data-column-index="2" data-sort-type="number">
-                                Total kWh <span class="sort-icon ml-1"></span>
+                            <th scope="col" class="sortable-header" data-column-index="2" data-sort-type="number" style="text-align: right;"> {# << Classe padronizada #}
+                                Total kWh <span class="sort-icon"></span> {# << Classe padronizada #}
                             </th>
                         </tr>
                     </thead>
-                    <tbody id="concessionaria-summary-tbody" class="bg-white divide-y divide-gray-200 text-sm">
-                         <tr><td colspan="3" class="px-4 py-4 text-center text-gray-400 italic">Carregando dados...</td></tr>
-                         {# Dados preenchidos via AJAX aqui #}
+                    {# O tbody será preenchido pelo AJAX #}
+                    <tbody id="concessionaria-summary-tbody"> {# ID do tbody alterado #}
+                         <tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
+            {# (Opcional) Exibir erro inicial aqui #}
         </div>
     </div>
+    {# --- FIM NOVO Card --- #}
 
 </div> {# Fim dashboard-grid #}
 
 {% endblock %}
 
-{# Bloco de Scripts com AJAX e Ordenação (manter como estava) #}
+{# Bloco de Scripts com AJAX e Ordenação para AMBAS as tabelas #}
 {% block scripts_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -182,88 +176,398 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Elementos do DOM ---
     const monthSelect = document.getElementById('filter-month');
+    // Tabela Fornecedora
     const fornecedoraTableBody = document.getElementById('fornecedora-summary-tbody');
     const fornecedoraStatus = document.getElementById('fornecedora-summary-status');
-    const concessionariaTableBody = document.getElementById('concessionaria-summary-tbody');
-    const concessionariaStatus = document.getElementById('concessionaria-summary-status');
+    // NOVA Tabela Concessionaria
+    const concessionariaTableBody = document.getElementById('concessionaria-summary-tbody'); // << NOVO
+    const concessionariaStatus = document.getElementById('concessionaria-summary-status'); // << NOVO
+    // KPIs
     const kpiTotalKwhElement = document.getElementById('kpi-total-kwh');
     const kpiClientesAtivosElement = document.getElementById('kpi-clientes-ativos-count');
     const kpiClientesRegistradosElement = document.getElementById('kpi-clientes-registrados-count');
+    // Gráfico
     const chartCanvas = document.getElementById('remunerationChart');
     const yearSelectChart = document.getElementById('chart-year');
 
-    // --- Função para formatar número (manter) ---
-    function formatNumber(num, decimalPlaces = 0) { /* ...código formatNumber ... */ }
-
-    // --- Função para Atualizar Gráfico Mensal (manter) ---
-    async function updateChartData(year) { /* ...código updateChartData ... */ }
-
-    // --- Inicialização do Gráfico (manter, talvez ajustar cores no JS se não fez no config) ---
-    if (chartCanvas && yearSelectChart) {
-         // ... (código de inicialização do Chart.js) ...
-         // Exemplo: Pode ajustar cores aqui se não fez no config do Tailwind
-         // backgroundColor: 'rgba(0, 176, 52, 0.1)', // bg-igreen-light com opacidade
-         // borderColor: 'rgb(0, 176, 52)', // text-igreen
-         // pointBackgroundColor: 'rgb(0, 176, 52)',
-         // ... (restante do código de inicialização) ...
-         // updateChartData(initialYear);
-         // yearSelectChart.addEventListener('change', function() { updateChartData(this.value); });
-    } else { /* ... logs de erro ... */ }
-
-
-    // --- Função GERAL para buscar dados (KPIs e Resumos) (manter) ---
-    async function updateDashboardData(month) {
-         // ... (código AJAX para buscar dados e preencher KPIs/Tabelas) ...
-         // IMPORTANTE: O código que preenche as tabelas (ex: `fornecedoraTableBody.innerHTML = ''; ... tr.innerHTML = ...`)
-         // PRECISA ser atualizado para gerar TRs e TDs com as classes Tailwind corretas!
-
-         // Exemplo de atualização do innerHTML para tabela fornecedora:
-         if (fornecedoraTableBody && fornecedoraStatus) {
-             fornecedoraStatus.style.display = 'none';
-             fornecedoraTableBody.innerHTML = '';
-             if (dataSummaryForn && dataSummaryForn.length > 0) {
-                dataSummaryForn.forEach(row => {
-                    const tr = document.createElement('tr');
-                    // Adiciona classes Tailwind ao TR (zebrado/hover é feito pelo CSS no tbody)
-                    tr.classList.add('hover:bg-gray-50'); // Adiciona classe de hover dinamicamente
-                    if (fornecedoraTableBody.children.length % 2 !== 0) {
-                         tr.classList.add('bg-gray-50'); // Aplica zebrado dinamicamente
-                    }
-                    // Adiciona classes Tailwind aos TDs
-                    tr.innerHTML = `<td class="px-4 py-3 whitespace-nowrap text-gray-700">${row.fornecedora || 'N/A'}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-right font-mono text-gray-700">${formatNumber(row.qtd_clientes, 0)}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-right font-mono text-gray-700">${formatNumber(row.soma_consumo, 2)} kWh</td>`;
-                    fornecedoraTableBody.appendChild(tr);
-                 });
-                 reapplySort('fornecedora-summary-table');
-             } else {
-                 fornecedoraTableBody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-gray-400 italic">Nenhum dado de fornecedora.</td></tr>';
-             }
-         }
-         // FAZER O MESMO para a tabela de concessionária!!
-
-         // ... (restante do código AJAX) ...
+    // --- Função para formatar número ---
+    function formatNumber(num, decimalPlaces = 0) {
+        // Tratamento robusto para valores não numéricos
+        if (typeof num !== 'number' || isNaN(num)) {
+            // console.warn(`formatNumber recebeu valor inválido: ${num}`);
+            return '0'; // Ou talvez '-', 'N/A'
+        }
+        return num.toLocaleString('pt-BR', {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces
+        });
     }
 
-    // --- Listener para o filtro de MÊS (manter) ---
-    if (monthSelect) { /* ... código listener monthSelect ... */ }
+    // --- Função para Atualizar Gráfico Mensal ---
+    async function updateChartData(year) {
+         if (!monthlyChartInstance) { console.error("Instância do Chart não encontrada."); return; }
+         // console.log(`Atualizando gráfico para o ano: ${year}`); // Debug
+        try {
+            const apiUrl = "{{ url_for('api_chart_monthly_active_clients') }}";
+            const response = await fetch(`${apiUrl}?year=${year}`);
+            if (!response.ok) {
+                let errorMsg = `Erro ${response.status}`;
+                try { const d = await response.json(); errorMsg = d.error || errorMsg; } catch(e){}
+                throw new Error(errorMsg);
+            }
+            const chartData = await response.json();
+            if (chartData && Array.isArray(chartData.monthly_counts) && chartData.monthly_counts.length === 12) {
+                monthlyChartInstance.data.datasets[0].data = chartData.monthly_counts;
+                monthlyChartInstance.data.datasets[0].label = `Ativações ${year}`;
+                monthlyChartInstance.update();
+                // console.log(`Gráfico atualizado para ${year}:`, chartData.monthly_counts); // Debug
+            } else {
+                 console.warn(`Dados inválidos ou incompletos recebidos para o gráfico do ano ${year}:`, chartData);
+                 monthlyChartInstance.data.datasets[0].data = Array(12).fill(0);
+                 monthlyChartInstance.data.datasets[0].label = `Sem dados ${year}`;
+                 monthlyChartInstance.update();
+            }
+        } catch (error) {
+            console.error(`Erro ao buscar dados do gráfico para ${year}:`, error);
+             monthlyChartInstance.data.datasets[0].data = Array(12).fill(0);
+             monthlyChartInstance.data.datasets[0].label = `Erro ${year}`;
+             monthlyChartInstance.update();
+        }
+    }
 
-    // --- FUNÇÃO GENÉRICA PARA ORDENAÇÃO DE TABELA (manter) ---
-    const sortState = {};
-    function getCellValue(row, columnIndex, sortType) { /* ... código getCellValue ... */ }
-    function updateSortIcons(tableId, clickedHeader) { /* ... código updateSortIcons ... */ }
-    function sortTable(tableId, columnIndex, sortType) { /* ... código sortTable ... */ }
-    function reapplySort(tableId) { /* ... código reapplySort ... */ }
+    // --- Inicialização do Gráfico ---
+    if (chartCanvas && yearSelectChart) {
+         const initialYear = yearSelectChart.value || new Date().getFullYear(); // Pega ano selecionado ou atual
+         const labels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+         const initialData = {
+             labels: labels,
+             datasets: [{
+                 label: 'Carregando...',
+                 data: Array(12).fill(0),
+                 fill: true, // Preenchimento sutil
+                 backgroundColor: 'rgba(0, 201, 59, 0.1)', // Verde claro transparente
+                 borderColor: 'rgb(0, 201, 59)', // Verde principal
+                 borderWidth: 2,
+                 tension: 0.3, // Linha levemente curvada
+                 pointBackgroundColor: 'rgb(0, 201, 59)',
+                 pointRadius: 3,
+                 pointHoverRadius: 5
+             }]
+         };
+         const config = {
+             type: 'line',
+             data: initialData,
+             options: {
+                 responsive: true,
+                 maintainAspectRatio: false,
+                 plugins: { legend: { display: false } }, // Sem legenda
+                 scales: {
+                     y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, // Grid Y sutil
+                     x: { grid: { display: false } } // Sem grid X
+                 },
+                  interaction: { intersect: false, mode: 'index', }, // Tooltip aparece ao passar perto
+                  plugins: {
+                     tooltip: {
+                         backgroundColor: 'rgba(0, 0, 0, 0.7)', // Fundo tooltip
+                         titleFont: { weight: 'bold'},
+                         callbacks: { // Formata tooltip
+                             label: function(context) {
+                                 let label = context.dataset.label || '';
+                                 if (label) { label += ': '; }
+                                 if (context.parsed.y !== null) {
+                                     label += formatNumber(context.parsed.y);
+                                 }
+                                 return label;
+                             }
+                         }
+                     }
+                 }
+             }
+         };
+         monthlyChartInstance = new Chart(chartCanvas, config);
+         // console.log("Gráfico inicializado."); // Debug
+         updateChartData(initialYear); // Busca dados iniciais
+         yearSelectChart.addEventListener('change', function() { updateChartData(this.value); });
+    } else {
+        if(!chartCanvas) console.error("Elemento canvas do gráfico não encontrado.");
+        if(!yearSelectChart) console.error("Elemento select #chart-year não encontrado.");
+    }
 
-    // --- Adiciona Listeners de clique para os cabeçalhos (manter) ---
-    function addSortListeners(tableId, headerSelectorClass) { /* ... código addSortListeners ... */ }
 
-    // Adiciona listeners usando a classe 'sortable-header'
+    // --- Função GERAL para buscar dados (KPIs e AMBOS Resumos) ---
+    async function updateDashboardData(month) {
+        console.log(`Atualizando dados do dashboard para o mês: ${month}`); // Debug
+        // Mostra indicadores de carregamento
+        [fornecedoraStatus, concessionariaStatus].forEach(el => {
+            if(el) { el.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...'; el.style.display = 'block'; }
+        });
+        [fornecedoraTableBody, concessionariaTableBody].forEach(el => {
+            if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando...</td></tr>'; // Limpa e mostra carregando
+        });
+        [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => {
+             if(el) el.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        });
+
+        // APIs a serem chamadas
+        const endpoints = {
+            summaryForn: `{{ url_for('api_fornecedora_summary') }}?month=${month}`,
+            summaryConc: `{{ url_for('api_concessionaria_summary') }}?month=${month}`,
+            kpiKwh: `{{ url_for('api_kpi_total_kwh') }}?month=${month}`,
+            kpiAtivos: `{{ url_for('api_kpi_clientes_ativos') }}?month=${month}`,
+            kpiRegistrados: `{{ url_for('api_kpi_clientes_registrados') }}?month=${month}`
+        };
+
+        // Função auxiliar para fetch com tratamento de erro
+        async function fetchData(url, description) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    let errorMsg = `Erro ${response.status}`;
+                    try { const data = await response.json(); errorMsg = data.error || errorMsg; } catch (e) {}
+                    console.error(`Falha ao buscar ${description}: ${errorMsg} (URL: ${url})`);
+                    throw new Error(`Falha ao buscar ${description}: ${errorMsg}`); // Lança erro para Promise.all
+                }
+                return await response.json();
+            } catch (error) {
+                 console.error(`Erro de rede ou JSON ao buscar ${description}:`, error);
+                 throw error; // Re-lança para Promise.all
+            }
+        }
+
+        // Chama todas as APIs em paralelo
+        try {
+            const [
+                dataSummaryForn, dataSummaryConc, dataKpiKwh, dataKpiAtivos, dataKpiRegistrados
+            ] = await Promise.all([
+                fetchData(endpoints.summaryForn, "Resumo Fornecedora"),
+                fetchData(endpoints.summaryConc, "Resumo Concessionária"),
+                fetchData(endpoints.kpiKwh, "KPI Total kWh"),
+                fetchData(endpoints.kpiAtivos, "KPI Clientes Ativos"),
+                fetchData(endpoints.kpiRegistrados, "KPI Clientes Registrados")
+            ]);
+
+            // Processa Resumo Fornecedora
+            if (fornecedoraTableBody && fornecedoraStatus) {
+                 fornecedoraStatus.style.display = 'none'; // Esconde status
+                 fornecedoraTableBody.innerHTML = ''; // Limpa tbody
+                 if (dataSummaryForn && dataSummaryForn.length > 0) {
+                    dataSummaryForn.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${row.fornecedora || 'N/A'}</td>
+                                        <td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td>
+                                        <td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`;
+                        fornecedoraTableBody.appendChild(tr);
+                     });
+                     reapplySort('fornecedora-summary-table'); // Reordena
+                 } else {
+                     fornecedoraTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de fornecedora.</td></tr>';
+                 }
+            }
+
+            // Processa Resumo Concessionária
+            if (concessionariaTableBody && concessionariaStatus) {
+                 concessionariaStatus.style.display = 'none'; // Esconde status
+                 concessionariaTableBody.innerHTML = ''; // Limpa tbody
+                 if (dataSummaryConc && dataSummaryConc.length > 0) {
+                    dataSummaryConc.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${row.concessionaria || 'N/A'}</td>
+                                        <td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td>
+                                        <td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`;
+                        concessionariaTableBody.appendChild(tr);
+                     });
+                     reapplySort('concessionaria-summary-table'); // Reordena
+                 } else {
+                     concessionariaTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de concessionária.</td></tr>';
+                 }
+            }
+
+            // Processa KPIs
+            if (kpiTotalKwhElement && dataKpiKwh) kpiTotalKwhElement.textContent = formatNumber(dataKpiKwh.total_kwh, 0);
+            if (kpiClientesAtivosElement && dataKpiAtivos) kpiClientesAtivosElement.textContent = formatNumber(dataKpiAtivos.clientes_ativos_count, 0);
+            if (kpiClientesRegistradosElement && dataKpiRegistrados) kpiClientesRegistradosElement.textContent = formatNumber(dataKpiRegistrados.clientes_registrados_count, 0);
+
+            console.log("Dados do dashboard atualizados com sucesso."); // Debug
+
+        } catch (error) {
+            // Tratamento de erro unificado se qualquer API falhar
+            console.error('Erro ao buscar dados do dashboard (Promise.all falhou):', error);
+            // Mostra mensagem de erro genérica nas tabelas
+            [fornecedoraStatus, concessionariaStatus].forEach(el => {
+                 if(el) { el.innerHTML = `<span style="color: red; font-size: 0.9em;"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar</span>`; el.style.display = 'block'; }
+            });
+             [fornecedoraTableBody, concessionariaTableBody].forEach(el => {
+                 if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Falha ao buscar dados.</td></tr>';
+             });
+            // Mostra erro nos KPIs
+            [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => {
+                 if(el) el.innerHTML = `<span style="font-size: 0.7em; color: red;">Erro!</span>`;
+            });
+        }
+    }
+
+    // --- Listener para o filtro de MÊS ---
+    if (monthSelect) {
+        monthSelect.addEventListener('change', function() {
+            const selectedMonth = this.value;
+            // Atualiza URL sem recarregar a página (opcional, mas bom para UX)
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('month', selectedMonth);
+            window.history.replaceState({}, '', currentUrl);
+            // Chama a função para buscar TODOS os dados
+            updateDashboardData(selectedMonth);
+        });
+        // Chama para carregar dados iniciais via AJAX na primeira carga da página
+        updateDashboardData(monthSelect.value);
+    } else { console.error("Elemento #filter-month não encontrado."); }
+
+
+    // --- FUNÇÃO GENÉRICA PARA ORDENAÇÃO DE TABELA ---
+    const sortState = {}; // Guarda o estado da ordenação para cada tabela
+
+    function getCellValue(row, columnIndex, sortType) {
+        const cell = row.cells[columnIndex];
+        if (!cell) return sortType === 'number' ? 0 : ''; // Retorna valor padrão se célula não existir
+
+        let value = cell.textContent || cell.innerText || '';
+
+        if (sortType === 'number') {
+            // Limpa valor (remove pontos de milhar, ' kWh', espaços; troca vírgula decimal por ponto)
+            value = value.replace(/\./g, '').replace(/ kWh/gi, '').replace(/,/g, '.').trim();
+            const num = parseFloat(value);
+            return isNaN(num) ? -Infinity : num; // Trata NaN para ficar no início/fim consistentemente
+        }
+        // Para texto, retorna em minúsculas para ordenação case-insensitive
+        return value.trim().toLowerCase();
+    }
+
+    function updateSortIcons(tableId, clickedHeader) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        // Seleciona cabeçalhos pela presença do atributo data-column-index
+        const headers = table.querySelectorAll('thead th[data-column-index]');
+        const state = sortState[tableId] || { colIndex: -1, direction: 'none' };
+        // PADRONIZADO: Usa sempre .sort-icon, pois alteramos o HTML
+        const iconSelector = '.sort-icon';
+
+        headers.forEach(header => {
+            const iconSpan = header.querySelector(iconSelector);
+            if (iconSpan) {
+                if (header === clickedHeader) {
+                    iconSpan.textContent = state.direction === 'asc' ? ' ▲' : (state.direction === 'desc' ? ' ▼' : '');
+                } else {
+                    iconSpan.textContent = ''; // Limpa ícones de outros cabeçalhos
+                }
+            } else {
+                // console.warn(`Span de ícone ('${iconSelector}') não encontrado no header:`, header);
+            }
+        });
+    }
+
+    function sortTable(tableId, columnIndex, sortType) {
+        const table = document.getElementById(tableId);
+        const tbody = table ? table.querySelector('tbody') : null;
+        if (!tbody) {
+            console.error(`TBody não encontrado para a tabela ${tableId}`);
+            return;
+        }
+
+        // Atualiza o estado da ordenação para esta tabela
+        if (!sortState[tableId]) sortState[tableId] = { colIndex: -1, direction: 'none' };
+        const state = sortState[tableId];
+
+        if (columnIndex === state.colIndex) {
+            // Ciclo: none -> asc -> desc -> asc ... (ou remove 'none' se preferir)
+            state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            state.colIndex = columnIndex;
+            state.direction = 'asc'; // Direção padrão ao clicar numa nova coluna
+        }
+
+        // Pega as linhas TR atuais do tbody e converte para um Array
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        // Ordena o array de linhas TR
+        rows.sort((rowA, rowB) => {
+            const valueA = getCellValue(rowA, columnIndex, sortType);
+            const valueB = getCellValue(rowB, columnIndex, sortType);
+            let comparison = 0;
+
+            if (sortType === 'number') {
+                comparison = valueA - valueB; // Ordenação numérica
+            } else { // sortType === 'text'
+                comparison = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base' }); // Ordenação alfabética PT-BR, ignorando acentos/case
+            }
+
+            // Aplica a direção (ascendente ou descendente)
+            return state.direction === 'asc' ? comparison : comparison * -1;
+        });
+
+        // Limpa o corpo da tabela
+        tbody.innerHTML = '';
+
+        // Reanexa as linhas ordenadas
+        rows.forEach(row => tbody.appendChild(row));
+
+        // Atualiza ícones (passando o cabeçalho correto)
+        const clickedHeader = table.querySelector(`thead th[data-column-index="${columnIndex}"]`);
+        updateSortIcons(tableId, clickedHeader);
+        // console.log(`Tabela ${tableId} ordenada por coluna ${columnIndex}, tipo ${sortType}, direção ${state.direction}`); // Debug
+    }
+
+     // Função para reaplicar a ordenação atual após recarregar dados
+     function reapplySort(tableId) {
+         const state = sortState[tableId];
+         if (state && state.colIndex !== -1 && state.direction !== 'none') {
+             const table = document.getElementById(tableId);
+             const header = table ? table.querySelector(`thead th[data-column-index="${state.colIndex}"]`) : null;
+             if (header) {
+                 const sortType = header.getAttribute('data-sort-type');
+                 // Guarda a direção original
+                 const originalDirection = state.direction;
+                 // Força a redefinição para que sortTable aplique a direção correta
+                 state.colIndex = -1;
+                 state.direction = 'none';
+                 // Chama sortTable para reordenar com a direção original
+                 sortTable(tableId, parseInt(header.getAttribute('data-column-index')), sortType);
+                 // Garante que a direção correta seja aplicada (caso o ciclo de sortTable não termine onde esperamos)
+                 if (sortState[tableId].direction !== originalDirection) {
+                      sortTable(tableId, parseInt(header.getAttribute('data-column-index')), sortType);
+                 }
+                 // console.log(`Reaplicada ordenação para ${tableId}: Col ${state.colIndex}, Dir ${state.direction}`); // Debug
+             }
+         } else {
+             // Se não havia ordenação, limpa os ícones
+             updateSortIcons(tableId, null);
+         }
+     }
+
+    // --- Adiciona Listeners de clique para os cabeçalhos de AMBAS as tabelas ---
+    function addSortListeners(tableId, headerSelectorClass) {
+        const table = document.getElementById(tableId);
+        const headers = table ? table.querySelectorAll(`thead th.${headerSelectorClass}`) : [];
+        if (!headers.length) {
+             console.warn(`Nenhum cabeçalho com a classe '${headerSelectorClass}' encontrado na tabela '${tableId}'.`);
+             return;
+        }
+        headers.forEach(header => {
+            // Verifica se tem os atributos necessários
+            if (header.hasAttribute('data-column-index') && header.hasAttribute('data-sort-type')) {
+                header.style.cursor = 'pointer'; // Garante o cursor de clique
+                header.addEventListener('click', function() {
+                    const columnIndex = parseInt(this.getAttribute('data-column-index'), 10);
+                    const sortType = this.getAttribute('data-sort-type');
+                    sortTable(tableId, columnIndex, sortType);
+                });
+            } else {
+                 // console.warn(`Cabeçalho na tabela ${tableId} não possui atributos data-column-index ou data-sort-type:`, header);
+            }
+        });
+    }
+
+    // Adiciona listeners usando a MESMA classe 'sortable-header' para ambas
     addSortListeners('fornecedora-summary-table', 'sortable-header');
-    addSortListeners('concessionaria-summary-table', 'sortable-header');
-
-    // Chamar a atualização inicial dos dados via AJAX
-     if (monthSelect) { updateDashboardData(monthSelect.value); }
+    addSortListeners('concessionaria-summary-table', 'sortable-header'); // << USA A MESMA CLASSE
 
 }); // Fim DOMContentLoaded
 </script>
