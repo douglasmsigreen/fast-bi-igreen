@@ -1,8 +1,30 @@
-cd OneDrive\Documentos\Douglas\Nova Aplicação Web BI\exportador_web
-python -m venv venv
-source venv/bin/activate  # No Windows: venv\Scripts\activate
+Passo a Passo para Iniciar (Desenvolvimento):
+
+Abra o PRIMEIRO Terminal:
+
+cd "C:\Users\supor\OneDrive\Documentos\Douglas\Nova Aplicação Web BI\exportador_web"
+
+Inicie o Tailwind Watcher: Este comando ficará rodando, observando seus arquivos.
+
+npm run tailwind:watch
+
+Deixe este terminal aberto. Ele mostrará mensagens sempre que recompilar o CSS.
+Abra o SEGUNDO Terminal:
+
+Navegue até a mesma pasta raiz do seu projeto:
+
+cd C:\Users\supor\OneDrive\Documentos\Douglas\Nova Aplicação Web BI\exportador_web
+Ative o Ambiente Virtual Python (como no seu script original ):
+
+venv\Scripts\activate
+
+Inicie o Servidor Flask (como no seu script original ):
 
 python app.py
+
+__________________________________________________________________________
+
+Atualizar GitHub
 
 # 1. Verificar o que mudou (opcional)
 git status

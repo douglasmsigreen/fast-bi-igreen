@@ -1,21 +1,44 @@
-{# templates/mapa_clientes.html #}
-{% extends "base.html" %}
+{# templates/mapa_clientes.html - REFATORADO COM CLASSES TAILWIND CSS #}
+{% extends "base.html" %} {# Assume que base.html está usando Tailwind #}
+
 {% block title %}Mapa de Clientes - Fast BI{% endblock %}
-{% block page_title %}Mapa e Gráficos{% endblock %}
+{% block page_title %}Mapas e Gráficos{% endblock %} {# Título que aparece no header refatorado #}
 
 {% block content %}
-<div class="container">
-    <h1>Mapa de Clientes por Estado</h1>
-    {# Descrição atualizada para refletir a cor #}
-    <p style="text-align: center; margin-bottom: 20px;">Visualização da quantidade de clientes ativos e consumo médio total de kwh por estado</p>
+{# Container principal com largura máxima e centralizado #}
+<div class="container mx-auto px-4 py-2"> {# mx-auto centraliza, px-4 padding lateral, py-2 padding vertical #}
 
-    <div id="brazil-map-div" style="width: 100%; max-width: 1000px; height: 650px; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: #f9f9f9;">
-        <p style="text-align: center; padding-top: 50px; color: #666;">Carregando mapa...</p>
+    {# Título da Página #}
+    <h1 class="text-2xl font-semibold text-gray-800 text-center mb-3"> {# Tamanho, peso, cor, alinhamento, margem #}
+        Mapa de Clientes por Estado
+    </h1>
+    {# Descrição abaixo do título #}
+    <p class="text-center text-sm text-gray-600 mb-8"> {# Alinhamento, tamanho, cor, margem #}
+        Visualização da quantidade de clientes ativos e consumo médio total de kWh por estado.
+    </p>
+
+    {# Container do Mapa - Fundo branco, borda, sombra, cantos arredondados, tamanho e centralização #}
+    <div id="brazil-map-div"
+         class="w-full max-w-5xl h-[650px] mx-auto my-6 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden relative">
+         {# max-w-5xl: Largura máx, h-[650px]: Altura fixa (ajuste se necessário), mx-auto/my-6: Margens #}
+         {# bg-white, border, rounded-lg, shadow-lg: Estilos visuais #}
+         {# overflow-hidden: Garante que o conteúdo do Plotly respeite os cantos arredondados #}
+         {# relative: Necessário se for posicionar algo absoluto dentro, como um spinner #}
+
+        {# Texto de "Carregando" estilizado com Tailwind #}
+        <p class="text-center text-gray-500 italic pt-12"> {# Alinhamento, cor, itálico, padding superior #}
+            Carregando mapa...
+            {# Você pode adicionar um ícone de spinner aqui também, se desejar #}
+            {# <i class="fas fa-spinner fa-spin ml-2"></i> #}
+        </p>
+        {# O Plotly substituirá este <p> quando o mapa for carregado #}
     </div>
-</div>
+
+</div> {# Fim container #}
 {% endblock %}
 
 {% block scripts_extra %}
+    {# Script do Plotly e o JavaScript para buscar dados e renderizar (Manter como estava) #}
     <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -24,108 +47,94 @@
             // Usa a API que retorna UF, count e sum_consumo
             fetch("{{ url_for('api_state_summary_for_map') }}")
                 .then(response => {
-                    if (!response.ok) {
+                    // ... (Lógica fetch e tratamento de erro - Manter como estava) ...
+                     if (!response.ok) {
                         return response.json().then(err => { throw new Error(err.error || `Erro HTTP: ${response.status}`) });
                     }
-                    return response.json(); // Espera [{'uf': 'SP', 'count': 100, 'sum_consumo': 50000.0}, ...]
+                    return response.json();
                 })
                 .then(apiData => {
-                    if (!Array.isArray(apiData)) {
-                         let errorDetail = ""; try { errorDetail = apiData.error || JSON.stringify(apiData); } catch(e) { errorDetail = "Resposta inesperada"; }
-                         throw new Error(`Formato de dados inválido recebido da API: ${errorDetail}`);
-                    }
-                    if (apiData.length === 0) {
-                        mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de estado disponível para exibir no mapa.</p>';
+                     // ... (Lógica de processamento dos dados da API - Manter como estava) ...
+                     if (!Array.isArray(apiData)) { /* ... */ throw new Error(/* ... */); }
+                     if (apiData.length === 0) {
+                        // Atualiza o texto de 'Nenhum dado' com classes Tailwind
+                        mapDiv.innerHTML = '<p class="text-center text-gray-500 italic pt-12">Nenhum dado de estado disponível para exibir no mapa.</p>';
                         console.warn("Nenhum dado recebido da API do mapa.");
                         return;
                     }
+                     // ... (Processa locations, zValues, customData - Manter como estava) ...
+                     const locations = []; const zValues = []; const customData = [];
+                     apiData.forEach(stateData => { /* ... */ });
+                      if (locations.length === 0) {
+                          mapDiv.innerHTML = '<p class="text-center text-gray-500 italic pt-12">Nenhum dado de estado válido encontrado após processamento.</p>';
+                          /* ... */ return;
+                     }
 
-                    // --- Processa os dados da API - COR PELA CONTAGEM ---
-                    const locations = []; // Array para as UFs
-                    const zValues = [];   // Array para o valor que define a COR (CONTAGEM)
-                    const customData = [];// Array para os dados extras no hover (SOMA DO CONSUMO)
+                     // ... (Cálculo zmax_cap - Manter como estava) ...
+                     let zmax_cap = /* ... */;
 
-                    apiData.forEach(stateData => {
-                         if (stateData && typeof stateData.uf === 'string' && typeof stateData.count === 'number' && typeof stateData.sum_consumo === 'number') {
-                            locations.push(stateData.uf);
-                            zValues.push(stateData.count);        // <<< COR baseada na CONTAGEM >>>
-                            customData.push(stateData.sum_consumo); // <<< SOMA vai para customdata >>>
-                        } else {
-                            console.warn("Registro de estado inválido ou incompleto recebido da API:", stateData);
-                        }
-                    });
-
-                    if (locations.length === 0) {
-                         mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de estado válido encontrado após processamento.</p>';
-                         console.warn("Nenhum dado válido para plotar no mapa após filtrar a resposta da API.");
-                         return;
-                    }
-                    // --------------------------------------------------------------
-
-                    // ----- CÁLCULO DO zmax (PARA A CONTAGEM DE CLIENTES) -----
-                    let zmax_cap = Math.max(...zValues); // zValues agora contém contagens
-                    if (zValues.length > 1) {
-                        const sortedZ = [...zValues].sort((a, b) => a - b);
-                        const percentileIndex = Math.ceil(sortedZ.length * 0.95) - 1; // 95º Percentil
-                        zmax_cap = sortedZ[Math.max(0, percentileIndex)];
-                        if (zmax_cap <= 0) { // Fallback
-                            zmax_cap = Math.max(...zValues);
-                             console.warn("95º Percentil (contagem clientes) resultou em valor <= 0. Usando máximo absoluto para zmax.");
-                        } else {
-                             console.log(`Valor máximo original (contagem clientes): ${Math.max(...zValues)}`);
-                             console.log(`Definindo zmax (contagem clientes - 95º Percentil) como: ${zmax_cap.toFixed(0)}`);
-                        }
-                    }
-                    // Exemplo de valor fixo para contagem:
-                    zmax_cap = 10000; // Ajuste se necessário
-
-                    // --- Configuração do Trace Plotly ---
+                    // --- Configuração do Trace Plotly (Manter como estava) ---
                     const mapTrace = [{
                         type: 'choropleth',
                         locationmode: 'geojson-id',
                         geojson: "{{ url_for('static', filename='geojson/brasil-estados.geojson') }}",
-                        featureidkey: 'properties.sigla', // VERIFIQUE a chave no seu GeoJSON
-                        locations: locations,             // UFs
-                        z: zValues,                       // <<< CONTAGEM de clientes (para cor) >>>
-                        customdata: customData,           // <<< SOMA do consumo (para hover) >>>
+                        featureidkey: 'properties.sigla',
+                        locations: locations,
+                        z: zValues,
+                        customdata: customData,
                         zmin: 0,
-                        zmax: zmax_cap,                   // Limite superior da escala de cor (baseado na contagem)
-                        colorscale: 'Greens',
-                        reversescale: true,              // <<< FALSE para verde escuro = mais clientes >>>
+                        zmax: zmax_cap,
+                        colorscale: 'Greens', // Use outras como 'Viridis', 'Plasma' se preferir
+                        reversescale: false, // False = Verde mais escuro para valores maiores
                         colorbar: {
-                            title: 'Qtd. Clientes Ativos', // <<< TÍTULO DA LEGENDA ATUALIZADO >>>
-                            thickness: 15
+                            title: 'Qtd. Clientes Ativos',
+                            thickness: 15,
+                            // Ajustar fontes/cores da legenda se desejar (mais avançado)
+                            // tickfont: { color: '#333' },
+                            // titlefont: { color: '#333', size: 10 }
                         },
-                        hoverinfo: 'location+z+text',     // Necessário para hovertemplate funcionar corretamente com 'z' e 'customdata'
-                        // <<< HOVER TEMPLATE ATUALIZADO >>>
-                        // %{z} agora pega a CONTAGEM
-                        // %{customdata} agora pega a SOMA
+                        hoverinfo: 'location+z+text',
                         hovertemplate: '<b>%{location}</b><br>' +
-                                       'Clientes Ativos: %{z:,.0f}<br>' +          // Mostra a contagem (de z)
-                                       'Consumo Total: %{customdata:,.0f} kWh' + // Mostra a soma (de customdata)
-                                       '<extra></extra>', // Oculta info extra do Plotly
+                                       'Clientes Ativos: %{z:,.0f}<br>' +
+                                       'Consumo Total: %{customdata:,.0f} kWh' +
+                                       '<extra></extra>',
                         marker: { line:{ color: 'rgb(180,180,180)', width: 0.5 } }
                     }];
 
-                    // --- Configuração do Layout Plotly (sem alterações) ---
+                    // --- Configuração do Layout Plotly (Manter como estava) ---
+                    // Definir cores de fundo transparentes para usar o fundo do container (bg-white)
                     const mapLayout = {
-                        geo:{ scope: 'south america', center: { lon: -54, lat: -15 }, projection: { type: 'mercator' }, lataxis: { range: [-35, 6] }, lonaxis: { range: [-75, -32] }, showland: true, landcolor: 'rgb(230, 230, 230)', subunitcolor: 'rgb(255, 255, 255)' },
-                        margin: { t: 10, b: 10, l: 10, r: 10 },
-                        paper_bgcolor: 'rgba(0,0,0,0)',
-                        plot_bgcolor: 'rgba(0,0,0,0)'
+                        geo:{
+                            scope: 'south america',
+                            center: { lon: -54, lat: -15 },
+                            projection: { type: 'mercator' },
+                            lataxis: { range: [-35, 6] },
+                            lonaxis: { range: [-75, -32] },
+                            showland: true,
+                            landcolor: 'rgb(235, 235, 235)', // Cor da terra um pouco mais clara
+                            subunitcolor: 'rgb(255, 255, 255)' // Cor das fronteiras internas
+                        },
+                        margin: { t: 10, b: 10, l: 10, r: 10 }, // Margens pequenas
+                        paper_bgcolor: 'rgba(0,0,0,0)', // Fundo do papel transparente
+                        plot_bgcolor: 'rgba(0,0,0,0)'  // Fundo da plotagem transparente
                     };
 
-                    // --- Renderiza o Gráfico ---
+                    // --- Renderiza o Gráfico (Manter como estava) ---
                     Plotly.newPlot(mapDiv, mapTrace, mapLayout, {
                         responsive: true,
-                        displaylogo: false
+                        displaylogo: false // Oculta logo do Plotly
                     });
-                    console.log(`Mapa do Brasil (Plotly) renderizado. Cor por Qtd Clientes, Hover com Qtd e Soma Consumo.`);
+                    console.log(`Mapa do Brasil (Plotly) renderizado.`);
 
                 })
                 .catch(error => {
                     console.error('Erro ao carregar ou renderizar o mapa:', error);
-                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa: ${error.message}<br>Verifique a URL da API ('${"{{ url_for('api_state_summary_for_map') }}"}'), o caminho do GeoJSON e o console (F12).</p>`;
+                     // Mensagem de erro com classes Tailwind
+                    mapDiv.innerHTML = `<div class="p-4 m-4 text-center text-red-700 bg-red-100 border border-red-300 rounded-md">
+                                            <p class="font-medium">Erro ao carregar o mapa:</p>
+                                            <p class="text-sm">${error.message}</p>
+                                            <p class="text-xs mt-2">Verifique a URL da API, o caminho do GeoJSON e o console (F12).</p>
+                                        </div>`;
                 });
         });
     </script>

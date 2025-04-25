@@ -1,26 +1,53 @@
-/* static/css/style.css - VERSÃO ATUALIZADA */
+/* static/css/style.css - VERSÃO ATUALIZADA COM MELHORIAS VISUAIS */
 
-/* --- Reset Básico e Configurações Gerais --- */
+/* --- Reset Básico e Variáveis de Cor --- */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+:root {
+  --cor-primaria: #00B034; /* Verde ajustado */
+  --cor-primaria-hover: #00962C; /* Hover do verde */
+  --cor-primaria-texto: #FFFFFF; /* Texto sobre cor primária */
+  --cor-fundo-geral: #F8FAFC; /* Cinza muito claro para fundo */
+  --cor-fundo-elemento: #FFFFFF; /* Fundo branco para cards, inputs */
+  --cor-fundo-header-card: #F1F5F9; /* Fundo cabeçalho card/tabela */
+  --cor-fundo-hover: #F1F5F9; /* Fundo de hover suave */
+  --cor-fundo-zebrado: #F8FAFC; /* Zebrado sutil */
+  --cor-borda-suave: #E2E8F0; /* Borda suave padrão */
+  --cor-borda-forte: #CBD5E1; /* Borda um pouco mais forte */
+  --cor-texto-principal: #1E293B; /* Texto principal (escuro) */
+  --cor-texto-secundario: #64748B; /* Texto secundário (cinza) */
+  --cor-texto-link: #007bff; /* Link padrão */
+  --cor-texto-link-hover: #0056b3; /* Hover do link */
+  --cor-sucesso: #15803d; /* Verde para sucesso */
+  --cor-sucesso-fundo: #dcfce7;
+  --cor-erro: #b91c1c; /* Vermelho para erro */
+  --cor-erro-fundo: #fee2e2;
+  --cor-aviso: #b45309; /* Laranja/Amarelo para aviso */
+  --cor-aviso-fundo: #fef3c7;
+  --cor-info: #0369a1; /* Azul para info */
+  --cor-info-fundo: #e0f2fe;
+  --sombra-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* Sombra padrão */
+}
+
 /* --- Estilos Gerais para o BODY --- */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fonte mais moderna */
-    background-color: #F4F7FA; /* Fundo geral mais claro para páginas internas */
-    color: #333;
-    line-height: 1.5;
+    font-family: 'Inter', sans-serif; /* Nova fonte */
+    background-color: var(--cor-fundo-geral); /* Fundo geral mais claro */
+    color: var(--cor-texto-principal);
+    line-height: 1.6; /* Aumentar um pouco o espaçamento entre linhas */
+    -webkit-font-smoothing: antialiased; /* Melhora renderização em alguns browsers */
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* --- Estilo específico para o fundo branco da página de login --- */
 body.login-page-body {
-    background-color: #FFF !important; /* Garante fundo branco para login */
+    background-color: var(--cor-fundo-elemento) !important; /* Garante fundo branco para login */
     display: block;
 }
-
 
 /* --- Estrutura Principal (Sidebar + Main Content) --- */
 .page-wrapper {
@@ -32,8 +59,8 @@ body.login-page-body {
 /* --- Barra Lateral (Sidebar) --- */
 .sidebar {
     width: 250px;
-    background-color: #00c93b; /* Verde */
-    color: #ffffff;
+    background-color: var(--cor-primaria); /* Verde ajustado */
+    color: var(--cor-primaria-texto);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -48,28 +75,33 @@ body.login-page-body {
     padding: 15px 20px;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    height: 65px; /* Altura fixa para alinhar com header do conteúdo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .sidebar-header img { display: block; margin: 0 auto; max-height: 35px; }
 
-.sidebar-nav ul { list-style: none; padding: 0; margin: 0; flex-grow: 1; display: flex; flex-direction: column;}
+.sidebar-nav ul { list-style: none; padding: 0; margin: 10px 0 0 0; flex-grow: 1; display: flex; flex-direction: column;}
 .sidebar-nav li a {
     display: flex;
     align-items: center;
     padding: 12px 20px;
-    color: #ffffff;
+    color: var(--cor-primaria-texto);
     text-decoration: none;
-    font-size: 0.95em;
+    font-size: 0.9rem; /* Ajuste tamanho fonte menu */
+    font-weight: 500; /* Medium weight */
     transition: background-color 0.2s ease, color 0.2s ease;
-    border-left: 3px solid transparent;
+    border-left: 4px solid transparent; /* Borda mais grossa */
 }
 .sidebar-nav li a:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.15); /* Hover mais sutil */
 }
 .sidebar-nav li.active a {
-    color: #ffffff !important;
-    font-weight: 600;
-    border-left: 3px solid #00641e; /* Verde escuro na borda ativa */
-    background-color: rgba(0, 0, 0, 0.1); /* Fundo sutilmente mais escuro para ativo */
+    color: var(--cor-primaria-texto) !important;
+    font-weight: 600; /* Semi-bold para ativo */
+    border-left: 4px solid var(--cor-primaria-texto); /* Borda branca ativa */
+    background-color: rgba(0, 0, 0, 0.2); /* Fundo mais escuro sutil para ativo */
 }
 .sidebar-nav li a i {
     margin-right: 15px;
@@ -81,7 +113,7 @@ body.login-page-body {
     opacity: 0.5;
     cursor: not-allowed;
     background-color: transparent !important;
-    color: #a0a0a0 !important;
+    color: rgba(255, 255, 255, 0.6) !important; /* Texto desabilitado mais claro */
     border-left-color: transparent !important;
 }
 
@@ -98,322 +130,490 @@ body.login-page-body {
 }
 
 .content-header {
-    background-color: #ffffff;
-    padding: 15px 30px;
-    border-bottom: 1px solid #dee2e6;
+    background-color: var(--cor-fundo-elemento);
+    padding: 0 30px; /* Padding horizontal */
+    height: 65px; /* Mesma altura do sidebar header */
+    border-bottom: 1px solid var(--cor-borda-suave);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Sombra sutil */
 }
-.page-title { font-size: 1.5em; color: #343a40; margin: 0; font-weight: 600; }
-.header-user-info { color: #6c757d; font-size: 0.9em; display: flex; align-items: center;}
+.page-title {
+    font-size: 1.5rem; /* Tamanho H1 */
+    color: var(--cor-texto-principal);
+    margin: 0;
+    font-weight: 600; /* Semi-bold */
+}
+.header-user-info { color: var(--cor-texto-secundario); font-size: 0.875rem; display: flex; align-items: center;}
 .header-user-info span { margin-right: 10px; }
 .header-user-info .current-date { margin-left: auto; margin-right: 15px; }
-.header-user-info .btn-logout-alt { color: #dc3545; text-decoration: none; margin-left: 5px; font-size: 1.1em; }
-.header-user-info .btn-logout-alt:hover { color: #a71d2a; }
+.header-user-info .btn-logout-alt { color: var(--cor-erro); text-decoration: none; margin-left: 5px; font-size: 1.1em; }
+.header-user-info .btn-logout-alt:hover { color: #991b1b; } /* Vermelho mais escuro no hover */
 
 .content-area {
     padding: 30px;
     flex-grow: 1;
-    background-color: #F4F7FA;
+    background-color: var(--cor-fundo-geral);
 }
 
 /* --- Mensagens Flash --- */
 .flash-messages-container { margin-bottom: 20px; }
-.flash-messages-container .alert { padding: 12px 15px; margin-bottom: 10px; border: 1px solid transparent; border-radius: 4px; font-size: 0.95em; }
-.alert-danger, .alert-error { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
-.alert-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
-.alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
-.alert-info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb; }
+.flash-messages-container .alert {
+    padding: 12px 18px; /* Mais padding */
+    margin-bottom: 15px;
+    border: 1px solid transparent;
+    border-radius: 8px; /* Cantos arredondados */
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex; /* Para alinhar ícone se adicionar */
+    align-items: center;
+}
+.alert-danger, .alert-error { color: var(--cor-erro); background-color: var(--cor-erro-fundo); border-color: var(--cor-erro); }
+.alert-warning { color: var(--cor-aviso); background-color: var(--cor-aviso-fundo); border-color: var(--cor-aviso); }
+.alert-success { color: var(--cor-sucesso); background-color: var(--cor-sucesso-fundo); border-color: var(--cor-sucesso); }
+.alert-info { color: var(--cor-info); background-color: var(--cor-info-fundo); border-color: var(--cor-info); }
 
 /* --- Layout de Login --- */
 .login-wrapper { display: flex; min-height: 100vh; width: 100%; }
 .login-image-column { flex: 1; background-image: url('../img/telalogin.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; display: none; }
-.login-form-column { flex: 1; display: flex; justify-content: center; align-items: center; padding: 40px; background-color: #fff; }
+.login-form-column { flex: 1; display: flex; justify-content: center; align-items: center; padding: 40px; background-color: var(--cor-fundo-elemento); }
 @media (min-width: 992px) { .login-image-column { display: block; flex: 0 0 55%; } .login-form-column { flex: 0 0 45%; width: auto; } }
 .login-form-container { width: 100%; max-width: 400px; }
 .login-logo { text-align: center; margin-bottom: 30px; } .login-logo img { max-height: 50px; width: auto; }
-.login-title { text-align: center; font-size: 1.8em; font-weight: bold; color: #333; margin-top: 0; margin-bottom: 30px; } .login-title .crm-icon { font-size: 0.8em; vertical-align: middle; }
-.login-form .form-group { margin-bottom: 20px; } .login-form label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 0.9em; color: #555; } .login-form .form-control { width: 100%; padding: 12px 15px; font-size: 1em; border: 1px solid #ced4da; border-radius: 8px; background-color: #f8f9fa; box-sizing: border-box; transition: border-color 0.2s ease; } .login-form .form-control:focus { border-color: #80bdff; outline: none; background-color: #fff; } .login-form .invalid-feedback { color: #dc3545; font-size: 0.85em; margin-top: 5px; display: block; } .password-wrapper { position: relative; } .password-wrapper .password-toggle-icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; color: #aaa; } .form-check-group { display: flex; align-items: center; margin-bottom: 25px; } .form-check-input { margin-right: 8px; width: 16px; height: 16px; cursor: pointer; } .form-check-label { font-size: 0.9em; color: #555; cursor: pointer; }
-.btn-login-submit { width: 100%; padding: 12px 15px; font-size: 1.1em; font-weight: bold; color: #fff; background-color: #28a745; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; height: auto; line-height: normal; display: inline-flex; align-items: center; justify-content: center; } .btn-login-submit:hover { background-color: #218838; }
+.login-title { text-align: center; font-size: 1.8em; font-weight: 700; color: var(--cor-texto-principal); margin-top: 0; margin-bottom: 30px; } .login-title .crm-icon { font-size: 0.8em; vertical-align: middle; }
+.login-form .form-group { margin-bottom: 20px; }
+.login-form label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.875rem; color: var(--cor-texto-secundario); }
+.login-form .form-control {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: 8px;
+    background-color: var(--cor-fundo-geral); /* Fundo ligeiramente diferente */
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.login-form .form-control:focus {
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(0, 176, 52, 0.2); /* Foco verde */
+    outline: none;
+    background-color: var(--cor-fundo-elemento); /* Fundo branco no foco */
+}
+.login-form .invalid-feedback { color: var(--cor-erro); font-size: 0.85em; margin-top: 5px; display: block; }
+.password-wrapper { position: relative; }
+.password-wrapper .password-toggle-icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; color: #aaa; }
+.form-check-group { display: flex; align-items: center; margin-bottom: 25px; }
+.form-check-input { margin-right: 8px; width: 16px; height: 16px; cursor: pointer; border-radius: 4px; border: 1px solid var(--cor-borda-suave); }
+.form-check-label { font-size: 0.9em; color: var(--cor-texto-secundario); cursor: pointer; }
+
+.btn-login-submit {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cor-primaria-texto);
+    background-color: var(--cor-primaria);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    height: auto; line-height: normal; display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-login-submit:hover { background-color: var(--cor-primaria-hover); }
+
+/* --- ESTILOS GENÉRICOS PARA FORMULÁRIOS E BOTÕES --- */
+.form-control, select, input[type="text"], input[type="email"], input[type="password"] {
+    padding: 10px 15px;
+    font-size: 0.95rem;
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: 8px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    height: 42px; /* Altura padrão */
+    background-color: var(--cor-fundo-elemento);
+    color: var(--cor-texto-principal);
+    width: 100%; /* Ocupa largura por padrão, ajuste no container se necessário */
+    box-sizing: border-box;
+}
+.form-control:focus, select:focus, input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+     border-color: var(--cor-primaria);
+     box-shadow: 0 0 0 3px rgba(0, 176, 52, 0.2);
+     outline: none;
+}
+/* Estilo base para todos os botões */
+.btn {
+    padding: 10px 18px; /* Aumentar padding */
+    font-size: 0.9rem;
+    font-weight: 600; /* Semi-bold */
+    line-height: 1.5;
+    height: 42px; /* Mesma altura dos inputs */
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    text-align: center;
+    border: none;
+    border-radius: 8px; /* Mesmo radius */
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-primary { background-color: var(--cor-primaria); color: var(--cor-primaria-texto); }
+.btn-primary:hover { background-color: var(--cor-primaria-hover); }
+.btn-success { background-color: var(--cor-sucesso); color: white; }
+.btn-success:hover { background-color: #166534; } /* Verde mais escuro */
+/* Adicionar outros estilos de botões (secondary, danger, etc.) se necessário */
+
 
 /* --- ESTILOS DA PÁGINA DE RELATÓRIOS --- */
-.filter-form, .search-box { margin-bottom: 20px; padding: 15px; border: 1px solid #dee2e6; border-radius: 5px; background-color: #f8f9fa; display: flex; align-items: center; flex-wrap: wrap; gap: 15px; } .filter-form .form-group, .search-box .form-group { display: flex; align-items: center; } .filter-form label, .search-box label { margin-right: 8px; font-weight: bold; white-space: nowrap; font-size: 0.9em; } .filter-form select, .filter-form input[type="text"], .search-box input[type="text"] { padding: 8px 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; height: 38px; box-sizing: border-box; } .search-box input[type="text"] { min-width: 250px; }
-.btn { padding: 8px 15px; font-size: 14px; line-height: 1.5; height: 38px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; text-align: center; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; white-space: nowrap; transition: background-color 0.2s ease; } .btn-primary { background-color: #007bff; color: white; } .btn-primary:hover { background-color: #0056b3; } .btn-success { background-color: #28a745; color: white; } .btn-success:hover { background-color: #1e7e34; }
-hr { border: none; border-top: 1px solid #dee2e6; margin: 20px 0; }
-.table-responsive { overflow-x: auto; margin-top: 15px; border: 1px solid #dee2e6; border-radius: 4px; } table#dataTable { width: 100%; border-collapse: collapse; font-size: 0.9em; background-color: #fff; } table#dataTable th, table#dataTable td { border: 1px solid #dee2e6; padding: 10px 12px; text-align: left; white-space: nowrap; vertical-align: middle; } table#dataTable th { background-color: #008001; color: white; position: sticky; top: 0; z-index: 1; font-weight: 600; } table#dataTable tbody tr:nth-child(even) { background-color: #f8f9fa; } table#dataTable tbody tr:hover { background-color: #e9ecef; } .table-info { margin-top: 15px; margin-bottom: 10px; font-style: italic; color: #6c757d; font-size: 0.9em; }
-nav.pagination { margin-top: 25px; text-align: center; } nav.pagination ul { list-style: none; padding: 0; margin: 0; display: inline-block; } nav.pagination li { display: inline-block; margin: 0 3px; } nav.pagination a, nav.pagination span { display: inline-block; padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 4px; text-decoration: none; color: #007bff; background-color: #fff; transition: background-color 0.2s ease, color 0.2s ease; } nav.pagination a:hover { background-color: #e9ecef; border-color: #adb5bd; } nav.pagination li.active span { background-color: #007bff; color: white; border-color: #007bff; cursor: default; } nav.pagination li.disabled span { color: #6c757d; background-color: #e9ecef; border-color: #dee2e6; cursor: default; }
+.filter-form, .search-box {
+    margin-bottom: 25px;
+    padding: 20px;
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: 12px; /* Mesmo radius dos cards */
+    background-color: var(--cor-fundo-elemento);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px; /* Mais espaçamento */
+}
+.filter-form .form-group, .search-box .form-group { display: flex; align-items: center; gap: 8px; /* Gap entre label e input */ }
+.filter-form label, .search-box label { margin-right: 0; font-weight: 600; white-space: nowrap; font-size: 0.875rem; color: var(--cor-texto-secundario); }
+.filter-form select, .filter-form input[type="text"], .search-box input[type="text"] {
+    /* Estilos já definidos em .form-control, mas podemos ajustar largura aqui */
+    min-width: 200px; /* Largura mínima para selects/inputs de filtro */
+    width: auto; /* Permitir que cresçam mas não 100% por padrão */
+}
+.search-box input[type="text"] { min-width: 300px; } /* Caixa de pesquisa maior */
+
+hr { border: none; border-top: 1px solid var(--cor-borda-suave); margin: 25px 0; }
+
+.table-responsive {
+    overflow-x: auto;
+    margin-top: 15px;
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: 12px; /* Consistente */
+    background-color: var(--cor-fundo-elemento);
+    box-shadow: var(--sombra-card); /* Aplicar sombra de card */
+}
+/* Estilos de Tabela (Exemplo para #dataTable - Refinados) */
+table#dataTable {
+     border-collapse: separate; /* Permite border-radius em células */
+     border-spacing: 0;
+     width: 100%;
+     font-size: 0.875rem; /* Leve ajuste no tamanho da fonte */
+}
+table#dataTable th, table#dataTable td {
+     padding: 12px 15px; /* Mais padding */
+     border: none; /* Remover bordas internas */
+     border-bottom: 1px solid var(--cor-borda-suave); /* Apenas borda inferior */
+     text-align: left;
+     white-space: nowrap;
+     vertical-align: middle;
+}
+table#dataTable thead th {
+     background-color: var(--cor-fundo-header-card); /* Fundo claro para header */
+     color: var(--cor-texto-secundario);
+     font-weight: 600;
+     border-bottom-width: 2px; /* Linha inferior mais grossa no header */
+     border-color: var(--cor-borda-forte); /* Borda do header mais forte */
+     position: sticky; top: 0; z-index: 1; /* Manter sticky */
+}
+/* Remover borda da última linha */
+table#dataTable tbody tr:last-child td {
+      border-bottom: none;
+}
+/* Zebrado sutil */
+table#dataTable tbody tr:nth-child(even) {
+     background-color: var(--cor-fundo-zebrado);
+}
+table#dataTable tbody tr:hover {
+     background-color: var(--cor-fundo-hover); /* Hover suave */
+}
+.table-info { margin-top: 20px; margin-bottom: 10px; font-style: italic; color: var(--cor-texto-secundario); font-size: 0.85rem; }
+
+/* Paginação */
+nav.pagination { margin-top: 30px; text-align: center; }
+nav.pagination ul { list-style: none; padding: 0; margin: 0; display: inline-block; }
+nav.pagination li { display: inline-block; margin: 0 3px; }
+nav.pagination a, nav.pagination span {
+    display: inline-flex; /* Usar flex para centralizar */
+    align-items: center;
+    justify-content: center;
+    min-width: 36px; /* Largura mínima */
+    height: 36px; /* Altura fixa */
+    padding: 0 12px; /* Padding horizontal */
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: 8px; /* Mesmo radius */
+    text-decoration: none;
+    color: var(--cor-texto-link);
+    background-color: var(--cor-fundo-elemento);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+nav.pagination a:hover { background-color: var(--cor-fundo-hover); border-color: var(--cor-borda-forte); }
+nav.pagination li.active span { background-color: var(--cor-primaria); color: var(--cor-primaria-texto); border-color: var(--cor-primaria); cursor: default; }
+nav.pagination li.disabled span { color: var(--cor-texto-secundario); background-color: var(--cor-fundo-geral); border-color: var(--cor-borda-suave); cursor: default; opacity: 0.7; }
+
 
 /* --- ESTILOS DO DASHBOARD --- */
-.filter-row { margin-bottom: 25px; display: flex; align-items: center; gap: 20px; } .filter-group { display: flex; align-items: center; gap: 8px; } .filter-group label { font-weight: bold; font-size: 0.9em; color: #555; } .filter-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background-color: #fff; font-size: 0.9em; }
+.filter-row { margin-bottom: 25px; display: flex; align-items: center; gap: 20px; }
+.filter-group { display: flex; align-items: center; gap: 8px; }
+.filter-group label { font-weight: 600; font-size: 0.875rem; color: var(--cor-texto-secundario); }
+.filter-group select {
+    /* Usa estilos base de select */
+    min-width: 180px; /* Largura mínima */
+    width: auto;
+}
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* Mantém 4 colunas */
+    grid-template-columns: repeat(4, 1fr);
     gap: 25px;
-    /* align-items: end; */ /* REMOVIDO para usar o padrão 'stretch' */
     align-items: stretch; /* Garante que os cards na mesma linha tenham a mesma altura */
 }
 
 .card {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e9ecef;
-    overflow: hidden; /* Evita conteúdo transbordando do card arredondado */
-    display: flex; /* Essencial para stretch e layout interno */
-    flex-direction: column; /* Conteúdo do card empilha verticalmente */
+    background-color: var(--cor-fundo-elemento);
+    border-radius: 12px; /* Mais arredondado */
+    box-shadow: var(--sombra-card); /* Sombra suave padrão */
+    border: 1px solid var(--cor-borda-suave);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .card-header {
     padding: 12px 18px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    font-weight: 600; color: #495057;
-    font-size: 0.95em;
+    background-color: var(--cor-fundo-header-card); /* Fundo de header de card */
+    border-bottom: 1px solid var(--cor-borda-suave);
+    font-weight: 500; /* Medium weight */
+    color: var(--cor-texto-secundario);
+    font-size: 0.85rem; /* Menor */
+    text-transform: uppercase; /* Maiúsculas */
+    letter-spacing: 0.5px; /* Leve espaçamento */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-shrink: 0; /* Impede que o header encolha */
+    flex-shrink: 0;
 }
-.card-header .tooltip-icon { color: #6c757d; cursor: help; margin-left: 5px; }
-.card-header select { font-size: 0.9em; border: none; background: transparent; font-weight: bold; margin-right: 10px; }
+.card-header .tooltip-icon { color: var(--cor-texto-secundario); cursor: help; margin-left: 5px; }
+.card-header select { font-size: 0.9em; border: none; background: transparent; font-weight: bold; margin-right: 10px; color: var(--cor-texto-principal); }
 
 .card-body {
-    padding: 18px;
+    padding: 20px; /* Aumentar padding interno */
     flex-grow: 1;
-    display: flex; /* Mantém flex para controle interno */
-    flex-direction: column; /* Conteúdo empilha verticalmente */
-    /* Não centralizar globalmente aqui */
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- Estilos específicos por tipo de card --- */
 
 /* Card KPI (Resultado do Mês) */
 .kpi-card .card-body {
-    justify-content: center; /* Centraliza verticalmente o conteúdo dentro do body */
-    align-items: center;     /* << ADICIONADO: Centraliza horizontalmente o bloco valor/label */
+    justify-content: center;
+    align-items: center;
 }
 .kpi-card .kpi-main-value {
-    font-size: 2.8em;
-    font-weight: bold;
-    color: #00c93b;
-    text-align: center; /* Já estava centralizado */
+    font-size: 2.6em; /* Leve ajuste */
+    font-weight: 700; /* Bold */
+    color: var(--cor-primaria); /* Usa cor primária */
+    text-align: center;
     margin-bottom: 5px;
     line-height: 1.1;
 }
 .kpi-card .kpi-sub-label {
-    text-align: center; /* Já estava centralizado */
+    text-align: center;
     display: block;
-    color: #6c757d;
-    font-size: 0.9em;
-    margin-bottom: 0; /* Removido margin-bottom para melhor centralização vertical */
+    color: var(--cor-texto-secundario);
+    font-size: 0.9rem;
+    margin-bottom: 0;
 }
-/* ... (outros estilos .kpi-card se houver) ... */
-
 
 /* Card Qualification (Clientes do Mês) */
 .qualification-card .card-body {
-    justify-content: center; /* Centraliza verticalmente o .qualification-numbers */
-    align-items: center;     /* << ADICIONADO: Centraliza horizontalmente o .qualification-numbers */
+    justify-content: center;
+    align-items: center;
 }
 .qualification-card .qualification-numbers {
     display: flex;
-    /* justify-content: space-around; */ /* << ALTERADO de space-around */
-    justify-content: center;          /* << PARA center */
+    justify-content: center;
     text-align: center;
-    gap: 30px; /* Aumentado o gap para dar mais espaço entre os itens centralizados */
-    align-items: flex-start; /* Mantém alinhamento no topo */
-    width: 100%; /* Garante que o container flex use a largura disponível para centralizar */
+    gap: 35px; /* Mais espaço */
+    align-items: center; /* Alinhar itens verticalmente */
+    width: 100%;
 }
-/* .qualification-card .qual-item { } */ /* Não precisa mais de estilos específicos aqui */
 .qualification-card .qual-item .qual-number {
-    font-size: 2.2em;
-    font-weight: bold;
-    color: #00c93b;
+    font-size: 2em; /* Leve ajuste */
+    font-weight: 700; /* Bold */
+    color: var(--cor-primaria); /* Usa cor primária */
     display: block;
     line-height: 1.1;
     min-height: 1.2em;
 }
 .qualification-card .qual-item .qual-label {
-    font-size: 0.85em;
-    color: #6c757d;
+    font-size: 0.8rem; /* Um pouco menor */
+    color: var(--cor-texto-secundario);
     line-height: 1.3;
     margin-top: 3px;
 }
 
 /* Card Chart */
 .chart-card .card-body {
-    min-height: 250px; /* Altura mínima para o gráfico */
+    min-height: 280px; /* Aumentar altura mínima */
     position: relative;
-    flex-grow: 1; /* Garante que ele possa crescer */
+    flex-grow: 1;
 }
 .chart-card canvas {
     position: absolute;
-    top: 10px; left: 10px; right: 10px; bottom: 10px;
-    width: calc(100% - 20px) !important; height: calc(100% - 20px) !important;
+    top: 15px; left: 15px; right: 15px; bottom: 15px; /* Mais margem interna */
+    width: calc(100% - 30px) !important; height: calc(100% - 30px) !important;
 }
 
 /* Card que ocupa 2 colunas */
 .grid-span-2 {
      grid-column: span 2;
-     /* Garante que cards com span 2 também possam ter altura flexível */
      display: flex;
      flex-direction: column;
 }
 
+/* Rodapé Principal */
 .main-footer {
     text-align: center;
     padding: 15px 30px;
-    border-top: 1px solid #dee2e6;
-    color: #6c757d;
-    font-size: 0.85em;
-    background-color: #ffffff;
+    border-top: 1px solid var(--cor-borda-suave);
+    color: var(--cor-texto-secundario);
+    font-size: 0.85rem;
+    background-color: var(--cor-fundo-elemento);
     margin-top: auto; /* Empurra para o final */
-    flex-shrink: 0; /* Impede que o footer encolha */
+    flex-shrink: 0;
 }
 
-
-/* --- >> ESTILOS ATUALIZADOS PARA AMBAS AS TABELAS DE RESUMO << --- */
-/* Aplica a todas as tabelas dentro de cards com a classe .summary-table-card */
+/* --- Estilos para TABELAS RESUMO (Dashboard) --- */
 .summary-table-card .table-responsive {
-    border: none;
+    border: none; /* Remove borda da div */
     margin-top: 5px;
-    flex-grow: 1; /* Permite que a div da tabela cresça */
-    overflow-y: auto; /* Garante scroll se necessário */
-    max-height: 250px; /* Limita a altura máxima da tabela */
+    flex-grow: 1;
+    overflow-y: auto;
+    max-height: 250px;
 }
 
 .summary-table-card table {
     width: 100%;
     margin-bottom: 0;
-    color: #495057; /* Cor do texto padrão */
-    border-collapse: collapse;
-    font-size: 0.88em; /* Tamanho da fonte */
+    color: var(--cor-texto-principal);
+    border-collapse: separate; /* Permite border-radius */
+    border-spacing: 0;
+    font-size: 0.85rem; /* Um pouco menor */
 }
 
 .summary-table-card th,
 .summary-table-card td {
-    padding: 8px 10px; /* Espaçamento interno */
-    vertical-align: middle; /* Alinhamento vertical */
-    border: 1px solid #dee2e6; /* Borda sutil */
-    white-space: nowrap; /* Evita quebra de linha */
+    padding: 10px 12px; /* Ajustar padding */
+    vertical-align: middle;
+    border: none; /* Sem bordas internas */
+    border-bottom: 1px solid var(--cor-borda-suave); /* Apenas borda inferior */
+    white-space: nowrap;
 }
 
 .summary-table-card thead th {
-    background-color: #f8f9fa; /* Fundo do cabeçalho */
-    font-weight: 600; /* Negrito */
-    text-align: left; /* Alinhamento padrão do cabeçalho */
-    border-bottom-width: 2px; /* Borda inferior mais grossa */
-    color: #343a40; /* Cor do texto do cabeçalho */
-    position: sticky; /* Mantém o cabeçalho fixo na rolagem */
-    top: 0; /* Necessário para sticky */
-    z-index: 1; /* Garante que fique acima do conteúdo */
+    background-color: var(--cor-fundo-header-card);
+    font-weight: 600;
+    text-align: left;
+    border-bottom-width: 2px;
+    border-color: var(--cor-borda-forte); /* Borda mais forte */
+    color: var(--cor-texto-secundario);
+    position: sticky; top: 0; z-index: 1;
 }
 
 /* Alinhamento específico para cabeçalhos numéricos (colunas 2 e 3) */
 .summary-table-card thead th:nth-child(2),
-.summary-table-card thead th:nth-child(3) {
-    text-align: right;
-}
+.summary-table-card thead th:nth-child(3) { text-align: right; }
 
 /* Alinhamento para células do corpo */
-.summary-table-card tbody td:nth-child(1) { /* Primeira coluna (texto) */
-    text-align: left;
-}
-.summary-table-card tbody td:nth-child(2), /* Segunda coluna (número) */
-.summary-table-card tbody td:nth-child(3) { /* Terceira coluna (número) */
-    text-align: right;
-    font-family: Consolas, monaco, monospace; /* Fonte monoespaçada para números */
-}
+.summary-table-card tbody td:nth-child(1) { text-align: left; }
+.summary-table-card tbody td:nth-child(2),
+.summary-table-card tbody td:nth-child(3) { text-align: right; font-family: Consolas, monaco, monospace; }
+
+/* Remover borda da última linha */
+.summary-table-card tbody tr:last-child td { border-bottom: none; }
 
 /* Estilo zebrado e hover */
-.summary-table-card tbody tr:nth-child(even) {
-    background-color: #e8f5e9;
-}
-.summary-table-card tbody tr:hover {
-    background-color: #d1e7dd; /* Fundo levemente mais escuro no hover */
-}
-/* --- >> FIM ESTILOS TABELAS RESUMO << --- */
-
+.summary-table-card tbody tr:nth-child(even) { background-color: var(--cor-fundo-zebrado); }
+.summary-table-card tbody tr:hover { background-color: var(--cor-fundo-hover); }
 
 /* --- ESTILOS PARA CABEÇALHOS ORDENÁVEIS (Aplicáveis a ambas as tabelas) --- */
-/* Usamos a mesma classe 'sortable-header' para ambas as tabelas no HTML */
 th.sortable-header {
     cursor: pointer;
     position: relative;
-    user-select: none; /* Evita seleção de texto */
+    user-select: none;
+    transition: background-color 0.2s ease;
 }
 th.sortable-header:hover {
-    background-color: #e9ecef; /* Destaque sutil */
+    background-color: var(--cor-fundo-hover); /* Destaque sutil */
 }
-th.sortable-header .sort-icon { /* Aplica-se ao span dentro do TH */
+th.sortable-header .sort-icon {
     font-size: 0.8em;
     margin-left: 5px;
-    color: #333;
-    opacity: 0.7;
+    color: var(--cor-texto-secundario); /* Cor do ícone */
+    opacity: 0.8;
     display: inline-block;
-    width: 1em; /* Reserva espaço mínimo para o ícone */
+    width: 1em;
     text-align: center;
-    font-weight: normal; /* Ícone não precisa ser negrito */
+    font-weight: normal;
 }
-/* --- FIM ESTILOS ORDENAÇÃO --- */
 
 /* --- Responsividade --- */
-@media (max-width: 1200px) { /* Ajuste para telas médias/tablets */
-    .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr); /* 2 colunas */
-        /* align-items: stretch; */ /* Mantém o stretch (padrão) */
-    }
-    .grid-span-2 {
-        grid-column: span 2; /* Ocupa a linha inteira (2 de 2 colunas) */
-    }
+@media (max-width: 1200px) { /* Telas médias/tablets */
+    .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid-span-2 { grid-column: span 2; }
 }
 
-@media (max-width: 992px) { /* Ajuste para sidebar recolhida */
+@media (max-width: 992px) { /* Sidebar recolhida */
     .sidebar { width: 70px; }
     .sidebar-header img { max-height: 30px; }
     .sidebar-nav li a span { display: none; }
     .sidebar-nav li a { justify-content: center; padding-left: 10px; padding-right: 10px; }
     .sidebar-nav li a i { margin-right: 0; }
     .main-content { margin-left: 70px; }
-    /* Grid continua com 2 colunas do breakpoint anterior */
+    .page-title { font-size: 1.3rem; } /* Reduzir título */
+    /* Grid continua com 2 colunas */
 }
 
-@media (max-width: 768px) { /* Ajuste para mobile */
+@media (max-width: 768px) { /* Mobile */
     .page-wrapper { flex-direction: column; }
-    .sidebar { position: static; width: 100%; height: auto; flex-direction: row; align-items: center; position: sticky; top: 0; z-index: 1001; /* Acima do conteúdo */}
-    .sidebar-header { padding: 5px 15px; border-bottom: none; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;}
+    .sidebar { position: static; width: 100%; height: auto; flex-direction: row; align-items: center; position: sticky; top: 0; z-index: 1001; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .sidebar-header { padding: 5px 15px; border-bottom: none; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; height: 55px; /* Altura reduzida */ }
     .sidebar-nav { flex-grow: 1; }
-    .sidebar-nav ul { flex-direction: row; justify-content: flex-start; height: 100%; overflow-x: auto; /* Permite scroll horizontal se itens não couberem */ }
-    .sidebar-nav li { flex-grow: 0; flex-shrink: 0; /* Impede que itens encolham */ border-left: none; border-right: 1px solid rgba(255,255,255,0.1); height: 100%; display: flex; align-items: center;}
+    .sidebar-nav ul { flex-direction: row; justify-content: flex-start; height: 55px; /* Mesma altura do header */ overflow-x: auto; }
+    .sidebar-nav li { flex-grow: 0; flex-shrink: 0; border-left: none; border-right: 1px solid rgba(255,255,255,0.1); height: 100%; display: flex; align-items: center;}
     .sidebar-nav li a { padding: 10px 15px; justify-content: center; height: 100%; border-left: none;}
-    .sidebar-nav li.active a { border-bottom: 3px solid #00641e; border-left: none; background-color: transparent; /* Remove fundo escuro no mobile ativo */}
+    .sidebar-nav li.active a { border-bottom: 3px solid var(--cor-primaria-texto); border-left: none; background-color: transparent; }
     .sidebar-nav li a i { margin-right: 0; font-size: 1.3em; }
     .sidebar-nav li a span { display: none; }
     .sidebar-nav li.sidebar-logout { margin-top: 0; flex-grow: 0; margin-left: auto; border-right: none; border-left: 1px solid rgba(255,255,255,0.1); }
     .main-content { margin-left: 0; }
-    .content-header { flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 15px; }
-    .page-title { font-size: 1.2em; }
+    .content-header { flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 15px; height: auto; }
+    .page-title { font-size: 1.2rem; }
     .header-user-info { font-size: 0.8em; width: 100%; justify-content: space-between; }
     .header-user-info .current-date { margin-left: 0; }
     .content-area { padding: 15px; }
-    .dashboard-grid {
-        grid-template-columns: 1fr; /* 1 coluna */
-        gap: 15px;
-        /* align-items: stretch; */ /* Mantém o stretch (padrão) */
-     }
-    .grid-span-2 {
-        grid-column: span 1; /* Ocupa a linha toda (1 de 1 coluna) */
-    }
-    /* Ajuste fonte tabelas resumo em mobile se necessário */
-    .summary-table-card table { font-size: 0.8em; }
-    .summary-table-card th, .summary-table-card td { padding: 6px 8px; }
-
-    /* Ajuste kpi cards em mobile */
-     .kpi-card .kpi-main-value { font-size: 2.2em; }
-     .qualification-card .qual-item .qual-number { font-size: 1.8em; }
-     .qualification-card .qual-item .qual-label { font-size: 0.8em; }
-     .qualification-card .qualification-numbers { gap: 20px; }
+    .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
+    .grid-span-2 { grid-column: span 1; }
+    /* Tabelas Resumo em mobile */
+    .summary-table-card table, table#dataTable { font-size: 0.8rem; }
+    .summary-table-card th, .summary-table-card td, table#dataTable th, table#dataTable td { padding: 8px 10px; }
+    /* KPI cards em mobile */
+    .kpi-card .kpi-main-value { font-size: 2rem; }
+    .qualification-card .qual-item .qual-number { font-size: 1.6rem; }
+    .qualification-card .qual-item .qual-label { font-size: 0.75rem; }
+    .qualification-card .qualification-numbers { gap: 20px; }
+    /* Ajuste filtros mobile */
+    .filter-form, .search-box { gap: 10px; padding: 15px; }
+    .filter-form .form-group, .search-box .form-group { width: 100%; gap: 5px; flex-direction: column; align-items: flex-start;}
+    .filter-form label, .search-box label { margin-bottom: 3px; }
+    .filter-form select, .filter-form input[type="text"], .search-box input[type="text"] { width: 100%; min-width: 0; }
 }

@@ -1,141 +1,186 @@
-{# templates/base.html - MODIFICADO #}
+{# templates/base.html - REFATORADO COM CLASSES TAILWIND CSS #}
 <!doctype html>
 <html lang="pt-br">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Fast BI{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-    {# --- Adicionar link para Font Awesome (ou outra biblioteca de ícones) --- #}
+
+    {# --- Link para Font Awesome (Manter se usar ícones FA) --- #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    {# --- Link para o CSS compilado do Tailwind --- #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dist/output.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+
     {% block head_extra %}{% endblock %}
 </head>
-<body>
+{# Estilo base para o body - ajuste cores e fontes conforme seu tailwind.config.js #}
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
 
-    <div class="page-wrapper"> {# Novo wrapper para sidebar + content #}
+    {# Wrapper principal usando Flexbox #}
+    <div class="flex min-h-screen">
 
         {# --- Barra Lateral (Sidebar) --- #}
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                 {# Logo menor para a sidebar #}
-                <a href="{{ url_for('dashboard') }}" title="Ir para o Dashboard">
-                    <img src="{{ url_for('static', filename='img/logo_igreen_branco.png') }}" alt="Logo iGreen" height="35"> {# Ajuste nome/tamanho se necessário #}
+        {# w-64: Largura fixa, bg-igreen: Cor customizada, text-white: Cor texto, flex/flex-col: Layout coluna, fixed/h-screen: Posicionamento #}
+        <aside class="w-64 bg-igreen text-white flex flex-col fixed top-0 left-0 h-screen z-40">
+            {# Cabeçalho da Sidebar: Altura fixa, centralização, borda inferior #}
+            <div class="h-[65px] flex items-center justify-center border-b border-white/10 flex-shrink-0">
+                 <a href="{{ url_for('dashboard') }}" title="Ir para o Painel de Controle">
+                    {# Ajuste altura/estilo da imagem com classes Tailwind #}
+                    <img src="{{ url_for('static', filename='img/logo_igreen_branco.png') }}" alt="Logo iGreen" class="h-9">
                 </a>
             </div>
-            <nav class="sidebar-nav">
-              <ul>
-                  {# 1. Painel de Controle (Dashboard) #}
-                  <li class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
-                      <a href="{{ url_for('dashboard') }}">
-                          <i class="fas fa-tachometer-alt fa-fw"></i> {# Ícone de Dashboard #}
-                          <span>Painel de Controle</span>
-                      </a>
-                  </li>
+            {# Navegação da Sidebar: Ocupa espaço restante, scroll vertical se necessário #}
+            <nav class="flex-grow mt-2.5 overflow-y-auto">
+                <ul class="flex flex-col space-y-1 px-2"> {# px-2: Padding lateral para itens, space-y-1: Espaço vertical entre LIs #}
 
-                  {# 2. Relatórios #}
-                  <li class="{{ 'active' if request.endpoint == 'relatorios' else '' }}">
-                       <a href="{{ url_for('relatorios') }}">
-                          <i class="fas fa-file-alt fa-fw"></i> {# Ícone de Relatório/Documento #}
+                    {# Item de Menu Padrão (Ex: Dashboard) #}
+                    {# Usa grupo para aplicar hover no container LI #}
+                    <li class="group rounded-md {{ 'bg-black/20' if request.endpoint == 'dashboard' else 'hover:bg-white/15' }}">
+                         {# flex/items-center: Alinhamento ícone/texto, px/py: Padding, text-sm: Tamanho, font-medium: Peso #}
+                         <a href="{{ url_for('dashboard') }}"
+                            class="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md
+                                   {{ 'text-white' if request.endpoint == 'dashboard' else 'text-indigo-100 group-hover:text-white' }}">
+                             {# w-5: Largura fixa ícone, text-center: Centralizado, mr-3: Margem direita #}
+                             <i class="fas fa-tachometer-alt fa-fw w-5 text-center mr-3 flex-shrink-0"></i>
+                             <span>Painel de Controle</span>
+                         </a>
+                    </li>
+
+                     {# Item de Menu (Ex: Relatórios) #}
+                    <li class="group rounded-md {{ 'bg-black/20' if request.endpoint == 'relatorios' else 'hover:bg-white/15' }}">
+                       <a href="{{ url_for('relatorios') }}"
+                          class="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md
+                                 {{ 'text-white' if request.endpoint == 'relatorios' else 'text-indigo-100 group-hover:text-white' }}">
+                          <i class="fas fa-file-alt fa-fw w-5 text-center mr-3 flex-shrink-0"></i>
                           <span>Relatórios</span>
                       </a>
                   </li>
 
-                  {# 3. Mapas e Gráficos #}
-                   <li class="{{ 'active' if request.endpoint == 'mapa_clientes' else '' }}">
-                      <a href="{{ url_for('mapa_clientes') }}">
-                           <i class="fas fa-chart-bar fa-fw"></i> {# Ícone de Gráfico de Barras (ou fa-map-marked-alt) #}
+                  {# Item de Menu (Ex: Mapas e Gráficos) #}
+                   <li class="group rounded-md {{ 'bg-black/20' if request.endpoint == 'mapa_clientes' else 'hover:bg-white/15' }}">
+                      <a href="{{ url_for('mapa_clientes') }}"
+                         class="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md
+                                {{ 'text-white' if request.endpoint == 'mapa_clientes' else 'text-indigo-100 group-hover:text-white' }}">
+                           <i class="fas fa-map-marked-alt fa-fw w-5 text-center mr-3 flex-shrink-0"></i> {# Ícone de mapa #}
                           <span>Mapas e Gráficos</span>
                       </a>
                   </li>
 
-                  {# 4. Upload (Link desabilitado/placeholder por enquanto) #}
-                   <li class="disabled"> {# Adiciona classe 'disabled' para estilo opcional #}
-                      <a href="#"> {# Link '#' indica sem destino por enquanto #}
-                          <i class="fas fa-upload fa-fw"></i> {# Ícone de Upload #}
+                  {# Item Desabilitado (Ex: Upload) #}
+                   <li class="opacity-50 cursor-not-allowed rounded-md">
+                      <a href="#"
+                         class="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md text-indigo-100">
+                          <i class="fas fa-upload fa-fw w-5 text-center mr-3 flex-shrink-0"></i>
                           <span>Upload</span>
                       </a>
                   </li>
 
-                   {# --- Manter Logout no final --- #}
-                   {% if current_user.is_authenticated %}
-                   <li class="sidebar-logout">
-                       <a href="{{ url_for('logout') }}">
-                           <i class="fas fa-sign-out-alt fa-fw"></i>
-                           <span>Sair</span>
-                       </a>
-                   </li>
-                   {% endif %}
-              </ul>
-          </nav>
+                </ul>
+            </nav>
+             {# Item de Logout (fora da lista principal, fixo na parte inferior) #}
+            {% if current_user.is_authenticated %}
+            <div class="mt-auto border-t border-white/10 p-2 flex-shrink-0"> {# p-2 adiciona padding ao redor #}
+                 <li class="group rounded-md hover:bg-white/15 list-none"> {# list-none remove marcador #}
+                     <a href="{{ url_for('logout') }}"
+                        title="Sair do sistema"
+                        class="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-md text-indigo-100 group-hover:text-white">
+                         <i class="fas fa-sign-out-alt fa-fw w-5 text-center mr-3 flex-shrink-0"></i>
+                         <span>Sair</span>
+                     </a>
+                 </li>
+            </div>
+            {% endif %}
         </aside>
         {# --- Fim da Barra Lateral --- #}
 
         {# --- Área de Conteúdo Principal --- #}
-        <main class="main-content">
-            {# (Opcional) Barra Superior dentro do conteúdo para título da página ou infos do usuário #}
-            <header class="content-header">
-                 {# Exemplo: Título dinâmico ou Saudação #}
-                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
-                 <div class="header-user-info">
+        {# flex-grow: Ocupa espaço restante, ml-64: Margem para compensar sidebar, flex/flex-col: Layout #}
+        <main class="flex-grow ml-64 flex flex-col min-h-screen">
+            {# Cabeçalho do Conteúdo: Altura fixa, Fundo, Borda, Sombra, Padding, Flex para alinhamento #}
+            <header class="h-[65px] bg-white border-b border-gray-200 flex-shrink-0 flex items-center justify-between px-6 shadow-sm">
+                 {# Título da Página: Tamanho, Peso, Cor #}
+                 <h1 class="text-lg font-semibold text-gray-900">
+                     {% block page_title %}Dashboard{% endblock %}
+                 </h1>
+                 {# Informações do Usuário: Flex para alinhamento, Tamanho texto, Cor #}
+                 <div class="flex items-center text-sm text-gray-600 space-x-4"> {# space-x-4: Espaço entre itens #}
                     {% if current_user.is_authenticated %}
-                         <span>{{ current_user.nome | default('Utilizador', true) }} |</span>
-                         <span class="current-date">quarta-Feira, 23 de abril de 2025</span> {# Exemplo - gerar dinamicamente #}
-                         <a href="{{ url_for('logout') }}" class="btn-logout-alt" title="Sair"><i class="fas fa-sign-out-alt"></i></a>
+                         {# Ícone opcional: <i class="fas fa-user-circle text-gray-500 mr-1"></i> #}
+                         <span class="font-medium">{{ current_user.nome | default('Utilizador', true) }}</span>
+                         {# Separador visual: <span class="text-gray-300">|</span> #}
+                         <span class="current-date text-gray-500"></span> {# Data JS #}
+                         <a href="{{ url_for('logout') }}" class="text-red-600 hover:text-red-800 transition-colors duration-150" title="Sair">
+                             <i class="fas fa-sign-out-alt"></i>
+                             {# <span class="ml-1 hidden sm:inline">Sair</span> #} {# Texto opcional em telas maiores #}
+                         </a>
                     {% endif %}
                  </div>
             </header>
 
-            {# Container para o conteúdo específico da página (o bloco content original) #}
-            <div class="content-area">
-              {# --- BLOCO DE MENSAGENS FLASH COMENTADO ---
+            {# Área Principal para o Conteúdo Específico da Página: Padding, Cresce para ocupar espaço #}
+            <div class="flex-grow p-6"> {# p-6: Padding padrão da área de conteúdo #}
+
+              {# --- Bloco para Mensagens Flash (Estilizado com Tailwind) --- #}
               {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                  <div class="flash-messages-container">
+                  <div class="mb-6 space-y-3"> {# Margem inferior e espaço entre alertas #}
                     {% for category, message in messages %}
-                      <div class="alert alert-{{ category or 'info' }}">{{ message }}</div>
+                      {# Mapeia categoria Flask para cores Tailwind (ajuste conforme necessário) #}
+                      {% set alert_color = 'blue' %} {# Default info #}
+                      {% if category == 'danger' or category == 'error' %}{% set alert_color = 'red' %}
+                      {% elif category == 'warning' %}{% set alert_color = 'yellow' %}
+                      {% elif category == 'success' %}{% set alert_color = 'green' %}
+                      {% endif %}
+                      {# Estrutura do Alerta com Tailwind #}
+                      <div class="border-l-4 border-{{ alert_color }}-500 bg-{{ alert_color }}-50 p-4 rounded-r-md shadow-sm" role="alert">
+                        <p class="text-sm font-medium text-{{ alert_color }}-800">{{ message }}</p>
+                        {# Adicionar botão de fechar se desejar (requer JS) #}
+                      </div>
                     {% endfor %}
                   </div>
                 {% endif %}
               {% endwith %}
-              --- FIM DO BLOCO COMENTADO --- #}
- 
-             {% block content %}
-             {# O conteúdo específico da página será inserido aqui #}
-             {% endblock %}
-         </div>
+              {# --- Fim do Bloco de Mensagens Flash --- #}
 
-            {# Rodapé (pode ficar dentro ou fora do main-content) #}
-            <footer class="main-footer">
-                © {{ now().year }} - Todos direitos reservados
+             {% block content %}
+             {# O conteúdo específico da página (dashboard, relatórios, etc.) será inserido aqui #}
+             {% endblock %}
+            </div>
+
+            {# Rodapé Principal: Padding, Borda superior, Fundo, Estilo texto #}
+            <footer class="flex-shrink-0 text-center py-4 px-6 border-t border-gray-200 bg-white text-xs text-gray-500">
+                 &copy; {{ now().year }} Fast BI - Todos os direitos reservados.
             </footer>
         </main>
         {# --- Fim da Área de Conteúdo Principal --- #}
 
-    </div> {# Fim page-wrapper #}
+    </div> {# Fim Flex Wrapper #}
 
-    {# Scripts JS Globais (se houver) #}
-    {# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
+    {# --- Scripts JS --- #}
     {# Bloco para adicionar scripts JS específicos da página #}
     {% block scripts_extra %}{% endblock %}
 
-    {# Script para atualizar data (exemplo) #}
+    {# Script para atualizar data (manter como estava) #}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const dateElement = document.querySelector('.current-date');
             if (dateElement) {
                 const now = new Date();
-                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                // Ajuste para locale pt-BR para formatar corretamente
-                 try {
-                    dateElement.textContent = now.toLocaleDateString('pt-BR', options);
-                 } catch (e) { // Fallback simples
+                const options = { /* weekday: 'long', */ year: 'numeric', month: 'long', day: 'numeric' }; // Formato um pouco mais curto
+                try {
+                    let formattedDate = now.toLocaleDateString('pt-BR', options);
+                     // Capitaliza primeira letra do mês
+                     formattedDate = formattedDate.replace(/\b\w/g, (l, idx) => (idx > 3 && formattedDate[idx-2] !== ' ' && formattedDate[idx-2] !== '-') ? l : l.toUpperCase());
+                    dateElement.textContent = formattedDate;
+                } catch (e) { // Fallback simples
                      const day = String(now.getDate()).padStart(2, '0');
-                     const month = String(now.getMonth() + 1).padStart(2, '0'); // Meses são 0-indexed
+                     const month = String(now.getMonth() + 1).padStart(2, '0');
                      const year = now.getFullYear();
                      dateElement.textContent = `${day}/${month}/${year}`;
                      console.warn("toLocaleDateString('pt-BR') não suportado ou falhou, usando fallback DD/MM/YYYY.");
-                 }
+                }
             }
         });
     </script>
