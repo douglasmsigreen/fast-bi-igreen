@@ -29,6 +29,7 @@ log_handler.setFormatter(log_formatter)
 logger = logging.getLogger()
 if logger.hasHandlers(): logger.handlers.clear()
 logger.addHandler(log_handler)
+logger.setLevel(logging.INFO) # Nível padrão INFO
 logging.getLogger('werkzeug').setLevel(logging.INFO)
 
 # --- Criação da App Flask ---
@@ -99,49 +100,67 @@ def logout():
 @login_required
 def dashboard():
     """Rota para a página inicial do dashboard."""
-    # Os dados agora são carregados principalmente via AJAX,
-    # mas podemos manter a busca inicial para placeholders ou fallback.
-    fornecedora_summary_data = None
+    # Dados iniciais para placeholders (a maioria é carregada via AJAX)
     total_kwh_mes = 0.0
     clientes_ativos_count = 0
     clientes_registrados_count = 0
     error_dashboard = None
 
+    # Valida e define o mês selecionado (padrão: mês atual)
     selected_month_str = request.args.get('month')
     if not selected_month_str or not re.match(r'^\d{4}-\d{2}$', selected_month_str):
         selected_month_str = datetime.now().strftime('%Y-%m')
+        logger.debug(f"Mês não fornecido ou inválido, usando padrão: {selected_month_str}")
 
-    # Busca inicial (opcional, mas útil para preencher antes do AJAX)
+    # Busca inicial de placeholders (opcional, mas pode melhorar UX)
     try:
-        fornecedora_summary_data = database.get_fornecedora_summary(month_str=selected_month_str)
+        # Não vamos mais buscar o resumo aqui, será via AJAX
+        # fornecedora_summary_data = database.get_fornecedora_summary(month_str=selected_month_str) # REMOVIDO
+        # concessionaria_summary_data = database.get_concessionaria_summary(month_str=selected_month_str) # REMOVIDO
         total_kwh_mes = database.get_total_consumo_medio_by_month(month_str=selected_month_str)
         clientes_ativos_count = database.count_clientes_ativos_by_month(month_str=selected_month_str)
         clientes_registrados_count = database.count_clientes_registrados_by_month(month_str=selected_month_str)
-        if fornecedora_summary_data is None:
-            error_dashboard = f"Erro ao buscar resumo por fornecedora para {selected_month_str}."
-            fornecedora_summary_data = []
+        # if fornecedora_summary_data is None or concessionaria_summary_data is None: # Verificação REMOVIDA
+        #     error_dashboard = f"Erro ao buscar resumos iniciais para {selected_month_str}."
     except Exception as e:
-        logger.error(f"Erro dashboard (carga inicial) para {selected_month_str}: {e}", exc_info=True)
-        error_dashboard = "Erro ao carregar dados iniciais do dashboard."
-        fornecedora_summary_data = []; total_kwh_mes = 0.0; clientes_ativos_count = 0; clientes_registrados_count = 0
+        logger.error(f"Erro dashboard (carga inicial KPIs) para {selected_month_str}: {e}", exc_info=True)
+        error_dashboard = "Erro ao carregar KPIs iniciais do dashboard."
+        total_kwh_mes = 0.0; clientes_ativos_count = 0; clientes_registrados_count = 0
     if error_dashboard: flash(error_dashboard, "warning")
 
+    # Gera opções para o dropdown de mês
     month_options = []
     current_date = datetime.now()
-    for i in range(12):
-        dt = current_date - timedelta(days=i * 30); month_val = dt.strftime('%Y-%m'); month_text = dt.strftime('%b/%Y').upper()
+    for i in range(12): # Gera opções para os últimos 12 meses
+        dt = current_date - timedelta(days=i * 30) # Aproximação
+        month_val = dt.strftime('%Y-%m')
+        # Formato de texto mais amigável
+        month_text = dt.strftime('%b/%Y').upper().replace('JAN','JAN').replace('FEV','FEV').replace('MAR','MAR').replace('ABR','ABR').replace('MAI','MAI').replace('JUN','JUN').replace('JUL','JUL').replace('AGO','AGO').replace('SET','SET').replace('OUT','OUT').replace('NOV','NOV').replace('DEZ','DEZ')
         month_options.append({'value': month_val, 'text': month_text})
+    # Garante que o mês selecionado esteja na lista, mesmo se for antigo
     if selected_month_str not in [m['value'] for m in month_options]:
          try:
             sel_dt = datetime.strptime(selected_month_str + '-01', '%Y-%m-%d')
-            month_options.insert(0, {'value': selected_month_str, 'text': sel_dt.strftime('%b/%Y').upper()})
-         except ValueError: pass
+            sel_text = sel_dt.strftime('%b/%Y').upper().replace('JAN','JAN').replace('FEV','FEV').replace('MAR','MAR').replace('ABR','ABR').replace('MAI','MAI').replace('JUN','JUN').replace('JUL','JUL').replace('AGO','AGO').replace('SET','SET').replace('OUT','OUT').replace('NOV','NOV').replace('DEZ','DEZ')
+            month_options.insert(0, {'value': selected_month_str, 'text': sel_text}) # Adiciona no início
+         except ValueError:
+             logger.warning(f"Não foi possível formatar o mês selecionado fora do padrão: {selected_month_str}")
+             # Adiciona com o formato YYYY-MM se a formatação falhar
+             month_options.insert(0, {'value': selected_month_str, 'text': selected_month_str})
+
 
     return render_template(
-        'dashboard.html', title="Dashboard - Fast BI", total_kwh=total_kwh_mes,
-        clientes_ativos_count=clientes_ativos_count, clientes_registrados_count=clientes_registrados_count,
-        fornecedora_summary=fornecedora_summary_data, month_options=month_options,
-        selected_month=selected_month_str, error_summary=error_dashboard
+        'dashboard.html',
+        title="Dashboard - Fast BI",
+        total_kwh=total_kwh_mes, # Placeholder
+        clientes_ativos_count=clientes_ativos_count, # Placeholder
+        clientes_registrados_count=clientes_registrados_count, # Placeholder
+        # Não passamos mais os resumos aqui, serão carregados via AJAX
+        # fornecedora_summary=None, # REMOVIDO
+        # concessionaria_summary=None, # REMOVIDO
+        month_options=month_options,
+        selected_month=selected_month_str,
+        error_summary=error_dashboard # Apenas para erros de KPIs iniciais
     )
 # --- FIM Rota Dashboard ---
 
@@ -310,6 +329,36 @@ def api_fornecedora_summary():
         elif not summary_data: return jsonify([])
         else: data_as_dicts = [{"fornecedora": r[0], "qtd_clientes": r[1], "soma_consumo": r[2]} for r in summary_data]; return jsonify(data_as_dicts)
      except Exception as e: logger.error(f"API Fornecedora Summary: Erro inesperado para o mês {month_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
+
+# --- NOVA Rota API para Resumo por Concessionária ---
+@app.route('/api/summary/concessionaria')
+@login_required
+def api_concessionaria_summary():
+     """Retorna dados de resumo (qtd, kwh) agrupados por Concessionária."""
+     month_str = request.args.get('month')
+     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
+         logger.warning(f"API Concessionaria Summary: Formato de mês inválido recebido '{month_str}'")
+         return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
+     logger.debug(f"API Concessionaria Summary: Recebida requisição para mês '{month_str}'.")
+     try:
+        summary_data = database.get_concessionaria_summary(month_str=month_str) # Chama a nova função
+        if summary_data is None:
+            # Erro interno durante a busca no DB
+            logger.error(f"API Concessionaria Summary: Erro interno (DB retornou None) para o mês {month_str}.")
+            return jsonify({"error": "Erro interno ao buscar dados por concessionária."}), 500
+        elif not summary_data:
+             # Nenhum dado encontrado para o mês
+             logger.debug(f"API Concessionaria Summary: Nenhum dado encontrado para o mês {month_str}.")
+             return jsonify([]) # Retorna lista vazia
+        else:
+             # Formata como lista de dicionários para o JS
+             data_as_dicts = [{"concessionaria": r[0], "qtd_clientes": r[1], "soma_consumo": r[2]} for r in summary_data]
+             logger.debug(f"API Concessionaria Summary: Enviando {len(data_as_dicts)} registros para o mês {month_str}.")
+             return jsonify(data_as_dicts)
+     except Exception as e:
+         logger.error(f"API Concessionaria Summary: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
+         return jsonify({"error": "Erro inesperado no servidor."}), 500
+# --- FIM DA NOVA Rota API ---
 
 
 # --- Rota API para KPI Total kWh ---

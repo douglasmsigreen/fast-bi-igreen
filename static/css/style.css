@@ -147,47 +147,273 @@ nav.pagination { margin-top: 25px; text-align: center; } nav.pagination ul { lis
 
 /* --- ESTILOS DO DASHBOARD --- */
 .filter-row { margin-bottom: 25px; display: flex; align-items: center; gap: 20px; } .filter-group { display: flex; align-items: center; gap: 8px; } .filter-group label { font-weight: bold; font-size: 0.9em; color: #555; } .filter-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; background-color: #fff; font-size: 0.9em; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; align-items: end; }
-.card { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); border: 1px solid #e9ecef; overflow: hidden; display: flex; flex-direction: column; }
-.card-header { padding: 12px 18px; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef; font-weight: 600; color: #495057; font-size: 0.95em; display: flex; justify-content: space-between; align-items: center; } .card-header .tooltip-icon { color: #6c757d; cursor: help; margin-left: 5px; } .card-header select { font-size: 0.9em; border: none; background: transparent; font-weight: bold; margin-right: 10px; }
-.card-body { padding: 18px; flex-grow: 1; }
-.kpi-card .kpi-main-value { font-size: 2.8em; font-weight: bold; color: #00c93b; text-align: center; margin-bottom: 5px; line-height: 1.1;} .kpi-card .kpi-sub-label { text-align: center; display: block; color: #6c757d; font-size: 0.9em; margin-bottom: 15px; } .kpi-card .kpi-divider { border: none; border-top: 1px solid #eee; margin: 15px 0; } .kpi-card .kpi-secondary-values div { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.9em; gap: 10px; } .kpi-card .kpi-secondary-label { color: #555; flex-shrink: 0;} .kpi-card .kpi-secondary-value { font-weight: bold; color: #333; text-align: right; } .kpi-card .kpi-secondary-values .tooltip-icon { font-size: 0.85em; margin-left: 5px; flex-shrink: 0;}
-.qualification-card .qualification-numbers { display: flex; justify-content: space-around; text-align: center; margin-bottom: 10px; gap: 15px; align-items: flex-start; /* Alinha itens no topo */} .qualification-card .qual-item .qual-number { font-size: 2.2em; /* Reduzido ligeiramente */ font-weight: bold; color: #00c93b; display: block; line-height: 1.1; min-height: 1.2em; /* Garante espaço mesmo com spinner */} .qualification-card .qual-item .qual-label { font-size: 0.85em; /* Reduzido ligeiramente */ color: #6c757d; line-height: 1.3; margin-top: 3px;}
-.chart-card .card-body { min-height: 250px; position: relative; } .chart-card canvas { position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px; width: calc(100% - 20px) !important; height: calc(100% - 20px) !important;}
-.grid-span-2 { grid-column: span 2; }
-.main-footer { text-align: center; padding: 15px 30px; border-top: 1px solid #dee2e6; color: #6c757d; font-size: 0.85em; background-color: #ffffff; margin-top: auto; }
 
-/* --- Estilos para Tabela no Card Resumo Fornecedora --- */
-.fornecedora-summary-card .table-responsive { border: none; margin-top: 5px; }
-.fornecedora-summary-card table { width: 100%; margin-bottom: 0; color: #495057; border-collapse: collapse; font-size: 0.88em; }
-.fornecedora-summary-card th, .fornecedora-summary-card td { padding: 8px 10px; vertical-align: middle; border: 1px solid #dee2e6; white-space: nowrap; }
-.fornecedora-summary-card thead th { background-color: #f8f9fa; font-weight: 600; text-align: left; /* Alinha cabeçalho à esquerda por padrão */ border-bottom-width: 2px; color: #343a40; }
-/* Alinhamento específico para cabeçalhos numéricos */
-.fornecedora-summary-card thead th:nth-child(2), .fornecedora-summary-card thead th:nth-child(3) { text-align: right; }
-.fornecedora-summary-card tbody td:nth-child(1) { text-align: left; } .fornecedora-summary-card tbody td:nth-child(2), .fornecedora-summary-card tbody td:nth-child(3) { text-align: right; font-family: Consolas, monaco, monospace; }
-.fornecedora-summary-card tbody tr:nth-child(even) { background-color: rgba(0, 0, 0, 0.03); }
-.fornecedora-summary-card tbody tr:hover { background-color: rgba(0, 0, 0, 0.06); }
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* Mantém 4 colunas */
+    gap: 25px;
+    /* align-items: end; */ /* REMOVIDO para usar o padrão 'stretch' */
+    align-items: stretch; /* Garante que os cards na mesma linha tenham a mesma altura */
+}
 
-/* --- >> NOVOS ESTILOS PARA TABELA ORDENÁVEL << --- */
+.card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden; /* Evita conteúdo transbordando do card arredondado */
+    display: flex; /* Essencial para stretch e layout interno */
+    flex-direction: column; /* Conteúdo do card empilha verticalmente */
+}
+
+.card-header {
+    padding: 12px 18px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 600; color: #495057;
+    font-size: 0.95em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0; /* Impede que o header encolha */
+}
+.card-header .tooltip-icon { color: #6c757d; cursor: help; margin-left: 5px; }
+.card-header select { font-size: 0.9em; border: none; background: transparent; font-weight: bold; margin-right: 10px; }
+
+.card-body {
+    padding: 18px;
+    flex-grow: 1;
+    display: flex; /* Mantém flex para controle interno */
+    flex-direction: column; /* Conteúdo empilha verticalmente */
+    /* Não centralizar globalmente aqui */
+}
+
+/* --- Estilos específicos por tipo de card --- */
+
+/* Card KPI (Resultado do Mês) */
+.kpi-card .card-body {
+    justify-content: center; /* Centraliza verticalmente o conteúdo dentro do body */
+    align-items: center;     /* << ADICIONADO: Centraliza horizontalmente o bloco valor/label */
+}
+.kpi-card .kpi-main-value {
+    font-size: 2.8em;
+    font-weight: bold;
+    color: #00c93b;
+    text-align: center; /* Já estava centralizado */
+    margin-bottom: 5px;
+    line-height: 1.1;
+}
+.kpi-card .kpi-sub-label {
+    text-align: center; /* Já estava centralizado */
+    display: block;
+    color: #6c757d;
+    font-size: 0.9em;
+    margin-bottom: 0; /* Removido margin-bottom para melhor centralização vertical */
+}
+/* ... (outros estilos .kpi-card se houver) ... */
+
+
+/* Card Qualification (Clientes do Mês) */
+.qualification-card .card-body {
+    justify-content: center; /* Centraliza verticalmente o .qualification-numbers */
+    align-items: center;     /* << ADICIONADO: Centraliza horizontalmente o .qualification-numbers */
+}
+.qualification-card .qualification-numbers {
+    display: flex;
+    /* justify-content: space-around; */ /* << ALTERADO de space-around */
+    justify-content: center;          /* << PARA center */
+    text-align: center;
+    gap: 30px; /* Aumentado o gap para dar mais espaço entre os itens centralizados */
+    align-items: flex-start; /* Mantém alinhamento no topo */
+    width: 100%; /* Garante que o container flex use a largura disponível para centralizar */
+}
+/* .qualification-card .qual-item { } */ /* Não precisa mais de estilos específicos aqui */
+.qualification-card .qual-item .qual-number {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: #00c93b;
+    display: block;
+    line-height: 1.1;
+    min-height: 1.2em;
+}
+.qualification-card .qual-item .qual-label {
+    font-size: 0.85em;
+    color: #6c757d;
+    line-height: 1.3;
+    margin-top: 3px;
+}
+
+/* Card Chart */
+.chart-card .card-body {
+    min-height: 250px; /* Altura mínima para o gráfico */
+    position: relative;
+    flex-grow: 1; /* Garante que ele possa crescer */
+}
+.chart-card canvas {
+    position: absolute;
+    top: 10px; left: 10px; right: 10px; bottom: 10px;
+    width: calc(100% - 20px) !important; height: calc(100% - 20px) !important;
+}
+
+/* Card que ocupa 2 colunas */
+.grid-span-2 {
+     grid-column: span 2;
+     /* Garante que cards com span 2 também possam ter altura flexível */
+     display: flex;
+     flex-direction: column;
+}
+
+.main-footer {
+    text-align: center;
+    padding: 15px 30px;
+    border-top: 1px solid #dee2e6;
+    color: #6c757d;
+    font-size: 0.85em;
+    background-color: #ffffff;
+    margin-top: auto; /* Empurra para o final */
+    flex-shrink: 0; /* Impede que o footer encolha */
+}
+
+
+/* --- >> ESTILOS ATUALIZADOS PARA AMBAS AS TABELAS DE RESUMO << --- */
+/* Aplica a todas as tabelas dentro de cards com a classe .summary-table-card */
+.summary-table-card .table-responsive {
+    border: none;
+    margin-top: 5px;
+    flex-grow: 1; /* Permite que a div da tabela cresça */
+    overflow-y: auto; /* Garante scroll se necessário */
+    max-height: 250px; /* Limita a altura máxima da tabela */
+}
+
+.summary-table-card table {
+    width: 100%;
+    margin-bottom: 0;
+    color: #495057; /* Cor do texto padrão */
+    border-collapse: collapse;
+    font-size: 0.88em; /* Tamanho da fonte */
+}
+
+.summary-table-card th,
+.summary-table-card td {
+    padding: 8px 10px; /* Espaçamento interno */
+    vertical-align: middle; /* Alinhamento vertical */
+    border: 1px solid #dee2e6; /* Borda sutil */
+    white-space: nowrap; /* Evita quebra de linha */
+}
+
+.summary-table-card thead th {
+    background-color: #f8f9fa; /* Fundo do cabeçalho */
+    font-weight: 600; /* Negrito */
+    text-align: left; /* Alinhamento padrão do cabeçalho */
+    border-bottom-width: 2px; /* Borda inferior mais grossa */
+    color: #343a40; /* Cor do texto do cabeçalho */
+    position: sticky; /* Mantém o cabeçalho fixo na rolagem */
+    top: 0; /* Necessário para sticky */
+    z-index: 1; /* Garante que fique acima do conteúdo */
+}
+
+/* Alinhamento específico para cabeçalhos numéricos (colunas 2 e 3) */
+.summary-table-card thead th:nth-child(2),
+.summary-table-card thead th:nth-child(3) {
+    text-align: right;
+}
+
+/* Alinhamento para células do corpo */
+.summary-table-card tbody td:nth-child(1) { /* Primeira coluna (texto) */
+    text-align: left;
+}
+.summary-table-card tbody td:nth-child(2), /* Segunda coluna (número) */
+.summary-table-card tbody td:nth-child(3) { /* Terceira coluna (número) */
+    text-align: right;
+    font-family: Consolas, monaco, monospace; /* Fonte monoespaçada para números */
+}
+
+/* Estilo zebrado e hover */
+.summary-table-card tbody tr:nth-child(even) {
+    background-color: #e8f5e9;
+}
+.summary-table-card tbody tr:hover {
+    background-color: #d1e7dd; /* Fundo levemente mais escuro no hover */
+}
+/* --- >> FIM ESTILOS TABELAS RESUMO << --- */
+
+
+/* --- ESTILOS PARA CABEÇALHOS ORDENÁVEIS (Aplicáveis a ambas as tabelas) --- */
+/* Usamos a mesma classe 'sortable-header' para ambas as tabelas no HTML */
 th.sortable-header {
     cursor: pointer;
     position: relative;
     user-select: none; /* Evita seleção de texto */
 }
 th.sortable-header:hover {
-    background-color: #e9ecef; /* Leve destaque no hover */
+    background-color: #e9ecef; /* Destaque sutil */
 }
-th.sortable-header .sort-icon {
+th.sortable-header .sort-icon { /* Aplica-se ao span dentro do TH */
     font-size: 0.8em;
-    margin-left: 5px; /* Espaço entre texto e ícone */
+    margin-left: 5px;
     color: #333;
     opacity: 0.7;
-    display: inline-block; /* Garante que o espaço seja aplicado */
-    width: 1em; /* Reserva um espaço mínimo para o ícone */
+    display: inline-block;
+    width: 1em; /* Reserva espaço mínimo para o ícone */
     text-align: center;
+    font-weight: normal; /* Ícone não precisa ser negrito */
 }
-/* --- >> FIM NOVOS ESTILOS << --- */
+/* --- FIM ESTILOS ORDENAÇÃO --- */
 
 /* --- Responsividade --- */
-@media (max-width: 992px) { .sidebar { width: 70px; } .sidebar-header img { max-height: 30px; } .sidebar-nav li a span { display: none; } .sidebar-nav li a { justify-content: center; padding-left: 10px; padding-right: 10px; } .sidebar-nav li a i { margin-right: 0; } .main-content { margin-left: 70px; } .dashboard-grid { grid-template-columns: 1fr; } .grid-span-2 { grid-column: 1 / -1; } }
-@media (max-width: 768px) { .page-wrapper { flex-direction: column; } .sidebar { position: static; width: 100%; height: auto; flex-direction: row; align-items: center; position: sticky; top: 0; } .sidebar-header { padding: 5px 15px; border-bottom: none; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;} .sidebar-nav { flex-grow: 1; } .sidebar-nav ul { flex-direction: row; justify-content: flex-start; height: 100%; } .sidebar-nav li { flex-grow: 0; border-left: none; border-right: 1px solid rgba(255,255,255,0.1); height: 100%; display: flex; align-items: center;} .sidebar-nav li a { padding: 10px 15px; justify-content: center; height: 100%; border-left: none;} .sidebar-nav li.active a { border-bottom: 3px solid #00641e; border-left: none; background-color: transparent; /* Remove fundo escuro no mobile ativo */} .sidebar-nav li a i { margin-right: 0; font-size: 1.3em; } .sidebar-nav li a span { display: none; } .sidebar-nav li.sidebar-logout { margin-top: 0; flex-grow: 0; margin-left: auto; border-right: none; border-left: 1px solid rgba(255,255,255,0.1); } .main-content { margin-left: 0; } .content-header { flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 15px; } .page-title { font-size: 1.2em; } .header-user-info { font-size: 0.8em; width: 100%; justify-content: space-between; } .header-user-info .current-date { margin-left: 0; } .content-area { padding: 15px; } .dashboard-grid { gap: 15px; } .grid-span-2 { grid-column: 1 / -1; } }
+@media (max-width: 1200px) { /* Ajuste para telas médias/tablets */
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 colunas */
+        /* align-items: stretch; */ /* Mantém o stretch (padrão) */
+    }
+    .grid-span-2 {
+        grid-column: span 2; /* Ocupa a linha inteira (2 de 2 colunas) */
+    }
+}
+
+@media (max-width: 992px) { /* Ajuste para sidebar recolhida */
+    .sidebar { width: 70px; }
+    .sidebar-header img { max-height: 30px; }
+    .sidebar-nav li a span { display: none; }
+    .sidebar-nav li a { justify-content: center; padding-left: 10px; padding-right: 10px; }
+    .sidebar-nav li a i { margin-right: 0; }
+    .main-content { margin-left: 70px; }
+    /* Grid continua com 2 colunas do breakpoint anterior */
+}
+
+@media (max-width: 768px) { /* Ajuste para mobile */
+    .page-wrapper { flex-direction: column; }
+    .sidebar { position: static; width: 100%; height: auto; flex-direction: row; align-items: center; position: sticky; top: 0; z-index: 1001; /* Acima do conteúdo */}
+    .sidebar-header { padding: 5px 15px; border-bottom: none; border-right: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;}
+    .sidebar-nav { flex-grow: 1; }
+    .sidebar-nav ul { flex-direction: row; justify-content: flex-start; height: 100%; overflow-x: auto; /* Permite scroll horizontal se itens não couberem */ }
+    .sidebar-nav li { flex-grow: 0; flex-shrink: 0; /* Impede que itens encolham */ border-left: none; border-right: 1px solid rgba(255,255,255,0.1); height: 100%; display: flex; align-items: center;}
+    .sidebar-nav li a { padding: 10px 15px; justify-content: center; height: 100%; border-left: none;}
+    .sidebar-nav li.active a { border-bottom: 3px solid #00641e; border-left: none; background-color: transparent; /* Remove fundo escuro no mobile ativo */}
+    .sidebar-nav li a i { margin-right: 0; font-size: 1.3em; }
+    .sidebar-nav li a span { display: none; }
+    .sidebar-nav li.sidebar-logout { margin-top: 0; flex-grow: 0; margin-left: auto; border-right: none; border-left: 1px solid rgba(255,255,255,0.1); }
+    .main-content { margin-left: 0; }
+    .content-header { flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 15px; }
+    .page-title { font-size: 1.2em; }
+    .header-user-info { font-size: 0.8em; width: 100%; justify-content: space-between; }
+    .header-user-info .current-date { margin-left: 0; }
+    .content-area { padding: 15px; }
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* 1 coluna */
+        gap: 15px;
+        /* align-items: stretch; */ /* Mantém o stretch (padrão) */
+     }
+    .grid-span-2 {
+        grid-column: span 1; /* Ocupa a linha toda (1 de 1 coluna) */
+    }
+    /* Ajuste fonte tabelas resumo em mobile se necessário */
+    .summary-table-card table { font-size: 0.8em; }
+    .summary-table-card th, .summary-table-card td { padding: 6px 8px; }
+
+    /* Ajuste kpi cards em mobile */
+     .kpi-card .kpi-main-value { font-size: 2.2em; }
+     .qualification-card .qual-item .qual-number { font-size: 1.8em; }
+     .qualification-card .qual-item .qual-label { font-size: 0.8em; }
+     .qualification-card .qualification-numbers { gap: 20px; }
+}

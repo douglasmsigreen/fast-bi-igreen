@@ -500,6 +500,78 @@ def get_fornecedora_summary(month_str: Optional[str] = None) -> List[Tuple[str, 
     except Exception as e: logger.error(f"Erro ao buscar resumo por fornecedora (Mês: {month_str or 'Todos'}): {e}", exc_info=True); return None
 # --- FIM DA FUNÇÃO ---
 
+# --- NOVA FUNÇÃO: Resumo por Concessionária (baseado em data_ativo) ---
+def get_concessionaria_summary(month_str: Optional[str] = None) -> List[Tuple[str, int, float]] or None:
+    """
+    Busca um resumo (qtd clientes, soma consumo) por CONCESSIONÁRIA,
+    filtrando por clientes cuja data_ativo cai dentro do mês especificado.
+
+    Args:
+        month_str: O mês para filtrar no formato 'YYYY-MM'.
+                   Se None, busca de todos os clientes com data_ativo.
+
+    Returns:
+        Lista de tuplas (concessionaria, qtd, soma_consumo) ou None em caso de erro.
+    """
+    base_query = """
+        SELECT
+            -- Trata concessionária vazia ou nula e combina com UF se disponível
+            CASE
+                WHEN c.concessionaria IS NULL OR TRIM(c.concessionaria) = '' THEN COALESCE(UPPER(TRIM(c.ufconsumo)), 'NÃO ESPECIFICADA')
+                WHEN c.ufconsumo IS NULL OR TRIM(c.ufconsumo) = '' THEN UPPER(TRIM(c.concessionaria))
+                ELSE (UPPER(TRIM(c.ufconsumo)) || '-' || UPPER(TRIM(c.concessionaria)))
+            END AS regiao_concessionaria,
+            COUNT(c.idcliente) AS qtd_clientes,
+            SUM(COALESCE(c.consumomedio, 0)) AS soma_consumo_medio
+        FROM public."CLIENTES" c
+        WHERE
+            (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+            AND {date_filter} -- Placeholder para o filtro de data
+        GROUP BY regiao_concessionaria -- Agrupa pela coluna calculada
+        ORDER BY regiao_concessionaria;
+    """
+    params = []
+    date_filter_sql = "c.data_ativo IS NOT NULL"
+    if month_str:
+        try:
+            start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
+            # Calcula o fim do mês corretamente
+            if start_date.month == 12:
+                end_date_exclusive = start_date.replace(year=start_date.year + 1, month=1, day=1)
+            else:
+                end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
+            date_filter_sql = "(c.data_ativo >= %s AND c.data_ativo < %s)"
+            params.extend([start_date, end_date_exclusive])
+        except ValueError:
+            logger.warning(f"[CONCESSIONARIA SUMMARY] Formato de mês inválido: '{month_str}'. Usando data_ativo IS NOT NULL.")
+            date_filter_sql = "c.data_ativo IS NOT NULL"
+            params = [] # Reseta params se o mês for inválido
+
+    final_query = base_query.format(date_filter=date_filter_sql)
+    # logger.info(f"Buscando resumo por concessionária (Mês: {month_str or 'Todos'})...") # Log menos verboso
+    try:
+        results = execute_query(final_query, tuple(params))
+        if results:
+            # Formata garantindo que os tipos estão corretos
+            formatted_results = [
+                (
+                    str(row[0]), # regiao_concessionaria (string)
+                    int(row[1]), # qtd_clientes (int)
+                    float(row[2]) if row[2] is not None else 0.0 # soma_consumo (float)
+                )
+                for row in results
+            ]
+            # logger.info(f"Resumo por concessionária (Mês: {month_str or 'Todos'}) encontrado: {len(formatted_results)} registros.") # Log menos verboso
+            return formatted_results
+        else:
+            # logger.info(f"Nenhum dado encontrado para o resumo por concessionária (Mês: {month_str or 'Todos'}).") # Log menos verboso
+            return [] # Retorna lista vazia se não houver resultados
+    except Exception as e:
+        logger.error(f"Erro ao buscar resumo por concessionária (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
+        return None # Retorna None em caso de erro
+# --- FIM DA NOVA FUNÇÃO ---
+
+
 # --- FUNÇÃO para Contagem Mensal de Clientes Ativados por Ano (Gráfico) ---
 def get_monthly_active_clients_by_year(year: int) -> List[int]:
     """
