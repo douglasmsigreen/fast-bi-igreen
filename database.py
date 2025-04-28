@@ -177,10 +177,16 @@ def count_clientes_por_licenciado() -> int:
 # --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' ---
 def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, fornecedora: Optional[str] = None) -> List[tuple]:
     """Busca os dados para 'Quantidade de Boletos por Cliente'."""
+    # MODIFICADO PARA INCLUIR dias_ativo
     base_query = """
         SELECT c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade,
                CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN '' ELSE (c.uf || '-' || c.concessionaria) END AS regiao,
                c.fornecedora, TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo,
+               -- >>> NOVA COLUNA CALCULADA AQUI <<<
+               CASE
+                   WHEN c.data_ativo IS NOT NULL THEN EXTRACT(DAY FROM (NOW() - c.data_ativo))::INTEGER
+                   ELSE NULL -- Ou 0 se preferir, mas NULL indica que não há data_ativo
+               END AS dias_ativo,
                COUNT(rcb.numinstalacao) AS quantidade_registros_rcb
         FROM public."CLIENTES" c
         LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao """
@@ -189,7 +195,8 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
     if fornecedora and fornecedora.lower() != 'consolidado':
         where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-    group_by = " GROUP BY c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, c.fornecedora, data_ativo "
+    # MODIFICADO PARA INCLUIR dias_ativo no GROUP BY
+    group_by = " GROUP BY c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, c.fornecedora, data_ativo, dias_ativo "
     order_by = "ORDER BY c.idcliente"
     limit_clause = "LIMIT %s" if limit is not None else ""; offset_clause = ""
     if limit is not None: params.append(limit)
@@ -645,12 +652,39 @@ def get_fornecedoras() -> List[str]:
 
 def get_headers(report_type: str) -> List[str]:
      report_type = report_type.lower()
-     header_map = { "c.idcliente": "Código Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular", "c.cidade": "Cidade", "regiao": "Região (UF-Conc)", "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas", "c.consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ", "c.numcliente": "Número Cliente", "dtultalteracao": "Última Alteração", "c.celular_2": "Celular 2", "c.email": "Email", "c.rg": "RG", "c.emissor": "Emissor", "datainjecao": "Data Injeção", "c.idconsultor": "ID Consultor", "consultor_nome": "Representante", "consultor_celular": "Celular Consultor", "c.cep": "CEP", "c.endereco": "Endereço", "c.numero": "Número", "c.bairro": "Bairro", "c.complemento": "Complemento", "c.cnpj": "CNPJ (Empresa)", "c.razao": "Razão Social", "c.fantasia": "Nome Fantasia", "c.ufconsumo": "UF Consumo", "c.classificacao": "Classificação", "c.keycontrato": "Key Contrato", "c.keysigner": "Key Signer", "c.leadidsolatio": "Lead ID Solatio", "c.indcli": "Ind CLI", "c.enviadocomerc": "Enviado Comerci", "c.obs": "Observação", "c.posvenda": "Pós-venda", "c.retido": "Retido", "c.contrato_verificado": "Contrato Verificado", "c.rateio": "Rateio (S/N)", "c.validadosucesso": "Validação Sucesso (S/N)", "status_sucesso": "Status Validação", "c.documentos_enviados": "Documentos Enviados", "c.link_documento": "Link Documento", "c.caminhoarquivo": "Link Conta Energia", "c.caminhoarquivocnpj": "Link Cartão CNPJ", "c.caminhoarquivodoc1": "Link Doc Ident. 1", "c.caminhoarquivodoc2": "Link Doc Ident. 2", "c.caminhoarquivoenergia2": "Link Conta Energia 2", "c.caminhocontratosocial": "Link Contrato Social", "c.caminhocomprovante": "Link Comprovante", "c.caminhoarquivoestatutoconvencao": "Link Estatuto/Convenção", "c.senhapdf": "Senha PDF", "c.codigo": "Código Interno", "c.elegibilidade": "Elegibilidade", "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelamento", "data_ativo_original": "Data Ativo Original", "c.fornecedora": "Fornecedora", "c.desconto_cliente": "Desconto Cliente", "dtnasc": "Data Nasc.", "c.origem": "Origem", "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro", "c.logindistribuidora": "Login Distribuidora", "c.senhadistribuidora": "Senha Distribuidora", "c.nacionalidade": "Nacionalidade", "c.profissao": "Profissão", "c.estadocivil": "Estado Civil", "c.obs_compartilhada": "Observação Compartilhada", "c.linkassinatura1": "Link Assinatura", "c.cpf": "CPF Consultor", "c.uf": "UF Consultor", "quantidade_clientes_ativos": "Qtd. Clientes Ativos", "quantidade_registros_rcb": "Qtd. Boletos (RCB)", "nome_cliente_rateio": "Cliente Rateio", "devolutiva": "Devolutiva", "licenciado": "Licenciado", "chave_contrato": "Chave Contrato" }
+     # MODIFICADO PARA INCLUIR dias_ativo
+     header_map = {
+         "c.idcliente": "Código Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular",
+         "c.cidade": "Cidade", "regiao": "Região (UF-Conc)", "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas",
+         "c.consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ",
+         "c.numcliente": "Número Cliente", "dtultalteracao": "Última Alteração", "c.celular_2": "Celular 2", "c.email": "Email",
+         "c.rg": "RG", "c.emissor": "Emissor", "datainjecao": "Data Injeção", "c.idconsultor": "ID Consultor",
+         "consultor_nome": "Representante", "consultor_celular": "Celular Consultor", "c.cep": "CEP", "c.endereco": "Endereço",
+         "c.numero": "Número", "c.bairro": "Bairro", "c.complemento": "Complemento", "c.cnpj": "CNPJ (Empresa)",
+         "c.razao": "Razão Social", "c.fantasia": "Nome Fantasia", "c.ufconsumo": "UF Consumo", "c.classificacao": "Classificação",
+         "c.keycontrato": "Key Contrato", "c.keysigner": "Key Signer", "c.leadidsolatio": "Lead ID Solatio", "c.indcli": "Ind CLI",
+         "c.enviadocomerc": "Enviado Comerci", "c.obs": "Observação", "c.posvenda": "Pós-venda", "c.retido": "Retido",
+         "c.contrato_verificado": "Contrato Verificado", "c.rateio": "Rateio (S/N)", "c.validadosucesso": "Validação Sucesso (S/N)",
+         "status_sucesso": "Status Validação", "c.documentos_enviados": "Documentos Enviados", "c.link_documento": "Link Documento",
+         "c.caminhoarquivo": "Link Conta Energia", "c.caminhoarquivocnpj": "Link Cartão CNPJ", "c.caminhoarquivodoc1": "Link Doc Ident. 1",
+         "c.caminhoarquivodoc2": "Link Doc Ident. 2", "c.caminhoarquivoenergia2": "Link Conta Energia 2", "c.caminhocontratosocial": "Link Contrato Social",
+         "c.caminhocomprovante": "Link Comprovante", "c.caminhoarquivoestatutoconvencao": "Link Estatuto/Convenção", "c.senhapdf": "Senha PDF",
+         "c.codigo": "Código Interno", "c.elegibilidade": "Elegibilidade", "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelamento",
+         "data_ativo_original": "Data Ativo Original", "c.fornecedora": "Fornecedora", "c.desconto_cliente": "Desconto Cliente",
+         "dtnasc": "Data Nasc.", "c.origem": "Origem", "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro",
+         "c.logindistribuidora": "Login Distribuidora", "c.senhadistribuidora": "Senha Distribuidora", "c.nacionalidade": "Nacionalidade",
+         "c.profissao": "Profissão", "c.estadocivil": "Estado Civil", "c.obs_compartilhada": "Observação Compartilhada",
+         "c.linkassinatura1": "Link Assinatura", "c.cpf": "CPF Consultor", "c.uf": "UF Consultor",
+         "quantidade_clientes_ativos": "Qtd. Clientes Ativos", "quantidade_registros_rcb": "Qtd. Boletos (RCB)",
+         "nome_cliente_rateio": "Cliente Rateio", "devolutiva": "Devolutiva", "licenciado": "Licenciado", "chave_contrato": "Chave Contrato",
+         "dias_ativo": "Dias Ativo" # <<< NOVO MAPEAMENTO ADICIONADO AQUI
+     }
      base_clientes_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ]
      base_rateio_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ]
      rateio_rzk_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "devolutiva", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ]
      clientes_por_licenciado_keys = [ "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos" ]
-     boletos_por_cliente_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "c.fornecedora", "data_ativo", "quantidade_registros_rcb" ]
+     # MODIFICADO PARA INCLUIR dias_ativo na posição 9 (índice 8)
+     boletos_por_cliente_keys = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "c.fornecedora", "data_ativo", "dias_ativo", "quantidade_registros_rcb" ]
      keys_for_report = []
      if report_type == "base_clientes": keys_for_report = base_clientes_keys
      elif report_type == "clientes_por_licenciado": keys_for_report = clientes_por_licenciado_keys

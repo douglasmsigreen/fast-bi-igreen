@@ -1,4 +1,4 @@
-{# templates/dashboard.html - Final com ordenação na tabela fornecedora #}
+{# templates/dashboard.html - Final com gráfico de pizza fornecedora #}
 {% extends "base.html" %}
 
 {# Define o título que pode aparecer na barra superior interna #}
@@ -85,22 +85,19 @@
         </div>
     </div>
 
-    {# --- LINHA INFERIOR COM AS DUAS TABELAS --- #}
+    {# --- LINHA COM AS DUAS TABELAS RESUMO --- #}
 
-    {# Card Resumo por Fornecedora - COM CLASSE COMUM e SPAN 2 #}
-    <div class="card summary-table-card fornecedora-summary-card grid-span-2"> {# << Classe comum adicionada #}
+    {# Card Resumo por Fornecedora #}
+    <div class="card summary-table-card fornecedora-summary-card grid-span-2">
         <div class="card-header">
             Resumo por Fornecedora (Ativos)
             <i class="fas fa-info-circle tooltip-icon" title="Contagem e consumo dos clientes com data_ativo no mês selecionado. Clique nos cabeçalhos para ordenar."></i>
         </div>
         <div class="card-body">
-            {# Status de Carregamento/Erro #}
             <div id="fornecedora-summary-status" style="text-align: center; padding: 10px; display: none;">
                 <i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...
             </div>
-            {# Tabela #}
             <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                {# Tabela Fornecedora - Classes de cabeçalho/ícone mantidas #}
                 <table id="fornecedora-summary-table" class="table table-sm table-striped table-hover">
                     <thead>
                         <tr>
@@ -110,93 +107,102 @@
                         </tr>
                     </thead>
                     <tbody id="fornecedora-summary-tbody">
-                        {# Dados preenchidos via AJAX. Placeholder opcional #}
                         <tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
-            {# Exibe erro inicial do Flask aqui se houver (pouco provável agora) #}
             {% if error_summary %}
                  <p class="text-danger" style="text-align: center; margin-top: 10px; font-size: 0.9em;">{{ error_summary }}</p>
             {% endif %}
         </div>
     </div>
 
-    {# --- NOVO Card Resumo por Concessionária --- #}
-    <div class="card summary-table-card concessionaria-summary-card grid-span-2"> {# << Classe comum adicionada #}
+    {# Card Resumo por Concessionária #}
+    <div class="card summary-table-card concessionaria-summary-card grid-span-2">
         <div class="card-header">
             Resumo por Região/Concessionária (Ativos)
             <i class="fas fa-info-circle tooltip-icon" title="Contagem e consumo dos clientes com data_ativo no mês selecionado. Clique nos cabeçalhos para ordenar."></i>
         </div>
         <div class="card-body">
-            {# Status de Carregamento/Erro #}
             <div id="concessionaria-summary-status" style="text-align: center; padding: 10px; display: none;">
                 <i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...
             </div>
-            {# Nova Tabela com IDs diferentes #}
             <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                 {# Tabela Concessionaria - Classes de cabeçalho/ícone PADRONIZADAS #}
-                <table id="concessionaria-summary-table" class="table table-sm table-striped table-hover"> {# ID da tabela alterado #}
+                <table id="concessionaria-summary-table" class="table table-sm table-striped table-hover">
                     <thead>
                         <tr>
-                            <th scope="col" class="sortable-header" data-column-index="0" data-sort-type="text"> {# << Classe padronizada #}
-                                Região/Conc. <span class="sort-icon"></span> {# << Classe padronizada #}
+                            <th scope="col" class="sortable-header" data-column-index="0" data-sort-type="text">
+                                Região/Conc. <span class="sort-icon"></span>
                             </th>
-                            <th scope="col" class="sortable-header" data-column-index="1" data-sort-type="number" style="text-align: right;"> {# << Classe padronizada #}
-                                Clientes <span class="sort-icon"></span> {# << Classe padronizada #}
+                            <th scope="col" class="sortable-header" data-column-index="1" data-sort-type="number" style="text-align: right;">
+                                Clientes <span class="sort-icon"></span>
                             </th>
-                            <th scope="col" class="sortable-header" data-column-index="2" data-sort-type="number" style="text-align: right;"> {# << Classe padronizada #}
-                                Total kWh <span class="sort-icon"></span> {# << Classe padronizada #}
+                            <th scope="col" class="sortable-header" data-column-index="2" data-sort-type="number" style="text-align: right;">
+                                Total kWh <span class="sort-icon"></span>
                             </th>
                         </tr>
                     </thead>
-                    {# O tbody será preenchido pelo AJAX #}
-                    <tbody id="concessionaria-summary-tbody"> {# ID do tbody alterado #}
+                    <tbody id="concessionaria-summary-tbody">
                          <tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
-            {# (Opcional) Exibir erro inicial aqui #}
         </div>
     </div>
-    {# --- FIM NOVO Card --- #}
+
+    {# --- ADD START: Card Gráfico Pizza Fornecedora --- #}
+    <div class="card chart-card grid-span-2"> {# Ocupa 2 colunas #}
+        <div class="card-header">
+            Clientes Ativos por Fornecedora
+            <i class="fas fa-info-circle tooltip-icon" title="Distribuição percentual dos clientes com data_ativo no mês selecionado, por fornecedora."></i>
+        </div>
+        <div class="card-body" style="position: relative; min-height: 300px;"> {# Altura mínima para o gráfico #}
+            {# Status de Carregamento/Erro para o gráfico #}
+            <div id="fornecedora-pie-chart-status" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999; display: none;">
+                <i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...
+            </div>
+            {# Canvas para o gráfico #}
+            <canvas id="fornecedoraPieChart" style="display: block; width: 100%; height: 100%;"></canvas>
+        </div>
+    </div>
+    {# --- ADD END: Card Gráfico Pizza Fornecedora --- #}
 
 </div> {# Fim dashboard-grid #}
 
 {% endblock %}
 
-{# Bloco de Scripts com AJAX e Ordenação para AMBAS as tabelas #}
+{# Bloco de Scripts com AJAX e Ordenação para AMBAS as tabelas + Gráfico Pizza #}
 {% block scripts_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-    // --- Variável para guardar a instância do gráfico ---
+    // --- Variáveis para guardar as instâncias dos gráficos ---
     let monthlyChartInstance = null;
+    let fornecedoraPieChartInstance = null; // <<< ADICIONADO
 
     // --- Elementos do DOM ---
     const monthSelect = document.getElementById('filter-month');
     // Tabela Fornecedora
     const fornecedoraTableBody = document.getElementById('fornecedora-summary-tbody');
     const fornecedoraStatus = document.getElementById('fornecedora-summary-status');
-    // NOVA Tabela Concessionaria
-    const concessionariaTableBody = document.getElementById('concessionaria-summary-tbody'); // << NOVO
-    const concessionariaStatus = document.getElementById('concessionaria-summary-status'); // << NOVO
+    // Tabela Concessionaria
+    const concessionariaTableBody = document.getElementById('concessionaria-summary-tbody');
+    const concessionariaStatus = document.getElementById('concessionaria-summary-status');
     // KPIs
     const kpiTotalKwhElement = document.getElementById('kpi-total-kwh');
     const kpiClientesAtivosElement = document.getElementById('kpi-clientes-ativos-count');
     const kpiClientesRegistradosElement = document.getElementById('kpi-clientes-registrados-count');
-    // Gráfico
+    // Gráfico Linha
     const chartCanvas = document.getElementById('remunerationChart');
     const yearSelectChart = document.getElementById('chart-year');
+    // Gráfico Pizza Fornecedora
+    const fornecedoraPieCanvas = document.getElementById('fornecedoraPieChart'); // <<< ADICIONADO
+    const fornecedoraPieStatus = document.getElementById('fornecedora-pie-chart-status'); // <<< ADICIONADO
 
     // --- Função para formatar número ---
     function formatNumber(num, decimalPlaces = 0) {
-        // Tratamento robusto para valores não numéricos
-        if (typeof num !== 'number' || isNaN(num)) {
-            // console.warn(`formatNumber recebeu valor inválido: ${num}`);
-            return '0'; // Ou talvez '-', 'N/A'
-        }
+        if (typeof num !== 'number' || isNaN(num)) { return '0'; }
         return num.toLocaleString('pt-BR', {
             minimumFractionDigits: decimalPlaces,
             maximumFractionDigits: decimalPlaces
@@ -205,8 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Função para Atualizar Gráfico Mensal ---
     async function updateChartData(year) {
-         if (!monthlyChartInstance) { console.error("Instância do Chart não encontrada."); return; }
-         // console.log(`Atualizando gráfico para o ano: ${year}`); // Debug
+         if (!monthlyChartInstance) { console.error("Instância do Chart de Linha não encontrada."); return; }
         try {
             const apiUrl = "{{ url_for('api_chart_monthly_active_clients') }}";
             const response = await fetch(`${apiUrl}?year=${year}`);
@@ -220,7 +225,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 monthlyChartInstance.data.datasets[0].data = chartData.monthly_counts;
                 monthlyChartInstance.data.datasets[0].label = `Ativações ${year}`;
                 monthlyChartInstance.update();
-                // console.log(`Gráfico atualizado para ${year}:`, chartData.monthly_counts); // Debug
             } else {
                  console.warn(`Dados inválidos ou incompletos recebidos para o gráfico do ano ${year}:`, chartData);
                  monthlyChartInstance.data.datasets[0].data = Array(12).fill(0);
@@ -235,74 +239,166 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- Inicialização do Gráfico ---
+    // --- Inicialização do Gráfico de Linha ---
     if (chartCanvas && yearSelectChart) {
-         const initialYear = yearSelectChart.value || new Date().getFullYear(); // Pega ano selecionado ou atual
+         const initialYear = yearSelectChart.value || new Date().getFullYear();
          const labels = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
          const initialData = {
              labels: labels,
              datasets: [{
                  label: 'Carregando...',
                  data: Array(12).fill(0),
-                 fill: true, // Preenchimento sutil
-                 backgroundColor: 'rgba(0, 201, 59, 0.1)', // Verde claro transparente
-                 borderColor: 'rgb(0, 201, 59)', // Verde principal
-                 borderWidth: 2,
-                 tension: 0.3, // Linha levemente curvada
-                 pointBackgroundColor: 'rgb(0, 201, 59)',
-                 pointRadius: 3,
-                 pointHoverRadius: 5
+                 fill: true, backgroundColor: 'rgba(0, 201, 59, 0.1)', borderColor: 'rgb(0, 201, 59)',
+                 borderWidth: 2, tension: 0.3, pointBackgroundColor: 'rgb(0, 201, 59)', pointRadius: 3, pointHoverRadius: 5
              }]
          };
          const config = {
-             type: 'line',
-             data: initialData,
+             type: 'line', data: initialData,
              options: {
-                 responsive: true,
-                 maintainAspectRatio: false,
-                 plugins: { legend: { display: false } }, // Sem legenda
-                 scales: {
-                     y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, // Grid Y sutil
-                     x: { grid: { display: false } } // Sem grid X
-                 },
-                  interaction: { intersect: false, mode: 'index', }, // Tooltip aparece ao passar perto
-                  plugins: {
+                 responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                 scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } },
+                 interaction: { intersect: false, mode: 'index', },
+                 plugins: {
                      tooltip: {
-                         backgroundColor: 'rgba(0, 0, 0, 0.7)', // Fundo tooltip
-                         titleFont: { weight: 'bold'},
-                         callbacks: { // Formata tooltip
-                             label: function(context) {
-                                 let label = context.dataset.label || '';
-                                 if (label) { label += ': '; }
-                                 if (context.parsed.y !== null) {
-                                     label += formatNumber(context.parsed.y);
-                                 }
-                                 return label;
-                             }
-                         }
+                         backgroundColor: 'rgba(0, 0, 0, 0.7)', titleFont: { weight: 'bold'},
+                         callbacks: { label: function(context) { return (context.dataset.label || '') + ': ' + formatNumber(context.parsed.y); } }
                      }
                  }
              }
          };
          monthlyChartInstance = new Chart(chartCanvas, config);
-         // console.log("Gráfico inicializado."); // Debug
-         updateChartData(initialYear); // Busca dados iniciais
+         updateChartData(initialYear);
          yearSelectChart.addEventListener('change', function() { updateChartData(this.value); });
     } else {
-        if(!chartCanvas) console.error("Elemento canvas do gráfico não encontrado.");
+        if(!chartCanvas) console.error("Elemento canvas do gráfico de linha não encontrado.");
         if(!yearSelectChart) console.error("Elemento select #chart-year não encontrado.");
     }
 
+    // --- ADD START: Função para Atualizar Gráfico Pizza Fornecedora ---
+    async function updateFornecedoraPieChart(month) {
+        if (!fornecedoraPieCanvas || !fornecedoraPieStatus) {
+            console.error("Elementos do canvas ou status do gráfico de pizza não encontrados.");
+            return;
+        }
 
-    // --- Função GERAL para buscar dados (KPIs e AMBOS Resumos) ---
+        // Mostra carregando e esconde canvas antigo
+        fornecedoraPieStatus.innerHTML = '<i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...'; // Reseta status
+        fornecedoraPieStatus.style.display = 'block';
+        fornecedoraPieCanvas.style.display = 'none';
+        if (fornecedoraPieChartInstance) {
+            // Limpa dados antigos se já existe
+            fornecedoraPieChartInstance.data.labels = [];
+            fornecedoraPieChartInstance.data.datasets[0].data = [];
+            fornecedoraPieChartInstance.update();
+        }
+
+        const apiUrl = `{{ url_for('api_clientes_fornecedora_pie') }}?month=${month}`;
+        console.debug(`Buscando dados para gráfico pizza: ${apiUrl}`);
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                let errorMsg = `Erro ${response.status}`;
+                try { const data = await response.json(); errorMsg = data.error || errorMsg; } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            const apiData = await response.json(); // Espera {labels: [...], data: [...]}
+
+            // Esconde carregando
+            fornecedoraPieStatus.style.display = 'none';
+
+            if (apiData && Array.isArray(apiData.labels) && Array.isArray(apiData.data) && apiData.labels.length > 0) {
+                // Define uma paleta de cores
+                const backgroundColors = [
+                    '#00B034', '#FFC107', '#2196F3', '#E91E63', '#9C27B0',
+                    '#4CAF50', '#FF9800', '#03A9F4', '#F44336', '#673AB7',
+                    '#8BC34A', '#FF5722', '#00BCD4', '#CDDC39', '#795548'
+                ];
+                const numDataPoints = apiData.data.length;
+                const pieColors = Array.from({ length: numDataPoints }, (_, i) => backgroundColors[i % backgroundColors.length]);
+
+
+                if (fornecedoraPieChartInstance) {
+                    // Atualiza gráfico existente
+                    fornecedoraPieChartInstance.data.labels = apiData.labels;
+                    fornecedoraPieChartInstance.data.datasets[0].data = apiData.data;
+                    fornecedoraPieChartInstance.data.datasets[0].backgroundColor = pieColors;
+                    fornecedoraPieChartInstance.update();
+                    console.debug("Gráfico pizza fornecedora atualizado.");
+                } else {
+                    // Cria novo gráfico
+                    const config = {
+                        type: 'pie', // ou 'doughnut'
+                        data: {
+                            labels: apiData.labels,
+                            datasets: [{
+                                label: 'Clientes Ativos',
+                                data: apiData.data,
+                                backgroundColor: pieColors,
+                                // borderColor: '#ffffff', // Opcional: borda branca
+                                // borderWidth: 1        // Opcional: largura da borda
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom', // Posição da legenda
+                                     labels: { boxWidth: 15, padding: 15 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.label || '';
+                                            let value = context.parsed || 0;
+                                            let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                            let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                            return ` ${label}: ${formatNumber(value)} (${percentage}%)`;
+                                        }
+                                    }
+                                },
+                                title: { display: false } // Não mostra título padrão
+                            }
+                        }
+                    };
+                    fornecedoraPieChartInstance = new Chart(fornecedoraPieCanvas, config);
+                    console.debug("Gráfico pizza fornecedora criado.");
+                }
+                 fornecedoraPieCanvas.style.display = 'block'; // Mostra o canvas
+            } else {
+                // Nenhum dado retornado
+                fornecedoraPieStatus.innerHTML = '<i class="fas fa-info-circle"></i><br>Nenhum dado para exibir.';
+                fornecedoraPieStatus.style.display = 'block';
+                 if (fornecedoraPieChartInstance) {
+                     fornecedoraPieChartInstance.destroy(); // Destroi instância antiga se não há dados
+                     fornecedoraPieChartInstance = null;
+                }
+                console.debug("Nenhum dado recebido para gráfico pizza fornecedora.");
+            }
+
+        } catch (error) {
+            console.error(`Erro ao buscar ou renderizar gráfico pizza fornecedora para ${month}:`, error);
+            fornecedoraPieStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar gráfico</span>`;
+            fornecedoraPieStatus.style.display = 'block';
+             if (fornecedoraPieChartInstance) {
+                fornecedoraPieChartInstance.destroy();
+                fornecedoraPieChartInstance = null;
+            }
+        }
+    }
+    // --- ADD END: Função para Atualizar Gráfico Pizza Fornecedora ---
+
+
+    // --- Função GERAL para buscar dados (KPIs, Resumos e Gráfico Pizza) ---
     async function updateDashboardData(month) {
-        console.log(`Atualizando dados do dashboard para o mês: ${month}`); // Debug
+        console.log(`Atualizando dados do dashboard para o mês: ${month}`);
         // Mostra indicadores de carregamento
         [fornecedoraStatus, concessionariaStatus].forEach(el => {
             if(el) { el.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...'; el.style.display = 'block'; }
         });
         [fornecedoraTableBody, concessionariaTableBody].forEach(el => {
-            if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando...</td></tr>'; // Limpa e mostra carregando
+            if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando...</td></tr>';
         });
         [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => {
              if(el) el.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
@@ -317,21 +413,15 @@ document.addEventListener('DOMContentLoaded', function() {
             kpiRegistrados: `{{ url_for('api_kpi_clientes_registrados') }}?month=${month}`
         };
 
-        // Função auxiliar para fetch com tratamento de erro
+        // Função auxiliar para fetch
         async function fetchData(url, description) {
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
-                    let errorMsg = `Erro ${response.status}`;
-                    try { const data = await response.json(); errorMsg = data.error || errorMsg; } catch (e) {}
-                    console.error(`Falha ao buscar ${description}: ${errorMsg} (URL: ${url})`);
-                    throw new Error(`Falha ao buscar ${description}: ${errorMsg}`); // Lança erro para Promise.all
-                }
-                return await response.json();
-            } catch (error) {
-                 console.error(`Erro de rede ou JSON ao buscar ${description}:`, error);
-                 throw error; // Re-lança para Promise.all
-            }
+                    let errorMsg = `Erro ${response.status}`; try { const data = await response.json(); errorMsg = data.error || errorMsg; } catch (e) {}
+                    console.error(`Falha ao buscar ${description}: ${errorMsg} (URL: ${url})`); throw new Error(`Falha: ${description}: ${errorMsg}`);
+                } return await response.json();
+            } catch (error) { console.error(`Erro de rede/JSON ${description}:`, error); throw error; }
         }
 
         // Chama todas as APIs em paralelo
@@ -346,40 +436,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetchData(endpoints.kpiRegistrados, "KPI Clientes Registrados")
             ]);
 
+            // <<< ADICIONAR CHAMADA AQUI >>>
+            updateFornecedoraPieChart(month); // Chama a atualização do gráfico de pizza
+
             // Processa Resumo Fornecedora
             if (fornecedoraTableBody && fornecedoraStatus) {
-                 fornecedoraStatus.style.display = 'none'; // Esconde status
-                 fornecedoraTableBody.innerHTML = ''; // Limpa tbody
+                 fornecedoraStatus.style.display = 'none'; fornecedoraTableBody.innerHTML = '';
                  if (dataSummaryForn && dataSummaryForn.length > 0) {
                     dataSummaryForn.forEach(row => {
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${row.fornecedora || 'N/A'}</td>
-                                        <td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td>
-                                        <td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`;
-                        fornecedoraTableBody.appendChild(tr);
-                     });
-                     reapplySort('fornecedora-summary-table'); // Reordena
-                 } else {
-                     fornecedoraTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de fornecedora.</td></tr>';
-                 }
+                        tr.innerHTML = `<td>${row.fornecedora || 'N/A'}</td><td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td><td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`;
+                        fornecedoraTableBody.appendChild(tr); });
+                     reapplySort('fornecedora-summary-table');
+                 } else { fornecedoraTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de fornecedora.</td></tr>'; }
             }
 
             // Processa Resumo Concessionária
             if (concessionariaTableBody && concessionariaStatus) {
-                 concessionariaStatus.style.display = 'none'; // Esconde status
-                 concessionariaTableBody.innerHTML = ''; // Limpa tbody
+                 concessionariaStatus.style.display = 'none'; concessionariaTableBody.innerHTML = '';
                  if (dataSummaryConc && dataSummaryConc.length > 0) {
                     dataSummaryConc.forEach(row => {
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${row.concessionaria || 'N/A'}</td>
-                                        <td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td>
-                                        <td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`;
-                        concessionariaTableBody.appendChild(tr);
-                     });
-                     reapplySort('concessionaria-summary-table'); // Reordena
-                 } else {
-                     concessionariaTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de concessionária.</td></tr>';
-                 }
+                        tr.innerHTML = `<td>${row.concessionaria || 'N/A'}</td><td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td><td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`;
+                        concessionariaTableBody.appendChild(tr); });
+                     reapplySort('concessionaria-summary-table');
+                 } else { concessionariaTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de concessionária.</td></tr>'; }
             }
 
             // Processa KPIs
@@ -387,22 +468,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiClientesAtivosElement && dataKpiAtivos) kpiClientesAtivosElement.textContent = formatNumber(dataKpiAtivos.clientes_ativos_count, 0);
             if (kpiClientesRegistradosElement && dataKpiRegistrados) kpiClientesRegistradosElement.textContent = formatNumber(dataKpiRegistrados.clientes_registrados_count, 0);
 
-            console.log("Dados do dashboard atualizados com sucesso."); // Debug
+            console.log("Dados do dashboard atualizados com sucesso (exceto pizza, que é separada).");
 
         } catch (error) {
-            // Tratamento de erro unificado se qualquer API falhar
             console.error('Erro ao buscar dados do dashboard (Promise.all falhou):', error);
-            // Mostra mensagem de erro genérica nas tabelas
-            [fornecedoraStatus, concessionariaStatus].forEach(el => {
-                 if(el) { el.innerHTML = `<span style="color: red; font-size: 0.9em;"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar</span>`; el.style.display = 'block'; }
-            });
-             [fornecedoraTableBody, concessionariaTableBody].forEach(el => {
-                 if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Falha ao buscar dados.</td></tr>';
-             });
-            // Mostra erro nos KPIs
-            [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => {
-                 if(el) el.innerHTML = `<span style="font-size: 0.7em; color: red;">Erro!</span>`;
-            });
+            [fornecedoraStatus, concessionariaStatus].forEach(el => { if(el) { el.innerHTML = `<span style="color: red; font-size: 0.9em;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; el.style.display = 'block'; }});
+            [fornecedoraTableBody, concessionariaTableBody].forEach(el => { if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Falha.</td></tr>'; });
+            [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => { if(el) el.innerHTML = `<span style="font-size: 0.7em; color: red;">Erro!</span>`; });
+            // Mostra erro no status da pizza também se o fetch principal falhar
+             if (fornecedoraPieStatus) {
+                 fornecedoraPieStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro geral</span>`;
+                 fornecedoraPieStatus.style.display = 'block';
+                 fornecedoraPieCanvas.style.display = 'none';
+                 if (fornecedoraPieChartInstance) { fornecedoraPieChartInstance.destroy(); fornecedoraPieChartInstance = null;}
+             }
         }
     }
 
@@ -410,12 +489,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (monthSelect) {
         monthSelect.addEventListener('change', function() {
             const selectedMonth = this.value;
-            // Atualiza URL sem recarregar a página (opcional, mas bom para UX)
             const currentUrl = new URL(window.location);
             currentUrl.searchParams.set('month', selectedMonth);
             window.history.replaceState({}, '', currentUrl);
-            // Chama a função para buscar TODOS os dados
-            updateDashboardData(selectedMonth);
+            updateDashboardData(selectedMonth); // Chama a função que busca TUDO (incluindo a pizza)
         });
         // Chama para carregar dados iniciais via AJAX na primeira carga da página
         updateDashboardData(monthSelect.value);
@@ -423,151 +500,76 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // --- FUNÇÃO GENÉRICA PARA ORDENAÇÃO DE TABELA ---
-    const sortState = {}; // Guarda o estado da ordenação para cada tabela
+    const sortState = {};
 
     function getCellValue(row, columnIndex, sortType) {
         const cell = row.cells[columnIndex];
-        if (!cell) return sortType === 'number' ? 0 : ''; // Retorna valor padrão se célula não existir
-
+        if (!cell) return sortType === 'number' ? 0 : '';
         let value = cell.textContent || cell.innerText || '';
-
         if (sortType === 'number') {
-            // Limpa valor (remove pontos de milhar, ' kWh', espaços; troca vírgula decimal por ponto)
             value = value.replace(/\./g, '').replace(/ kWh/gi, '').replace(/,/g, '.').trim();
-            const num = parseFloat(value);
-            return isNaN(num) ? -Infinity : num; // Trata NaN para ficar no início/fim consistentemente
-        }
-        // Para texto, retorna em minúsculas para ordenação case-insensitive
-        return value.trim().toLowerCase();
+            const num = parseFloat(value); return isNaN(num) ? -Infinity : num;
+        } return value.trim().toLowerCase();
     }
 
     function updateSortIcons(tableId, clickedHeader) {
-        const table = document.getElementById(tableId);
-        if (!table) return;
-        // Seleciona cabeçalhos pela presença do atributo data-column-index
+        const table = document.getElementById(tableId); if (!table) return;
         const headers = table.querySelectorAll('thead th[data-column-index]');
         const state = sortState[tableId] || { colIndex: -1, direction: 'none' };
-        // PADRONIZADO: Usa sempre .sort-icon, pois alteramos o HTML
         const iconSelector = '.sort-icon';
-
         headers.forEach(header => {
             const iconSpan = header.querySelector(iconSelector);
-            if (iconSpan) {
-                if (header === clickedHeader) {
-                    iconSpan.textContent = state.direction === 'asc' ? ' ▲' : (state.direction === 'desc' ? ' ▼' : '');
-                } else {
-                    iconSpan.textContent = ''; // Limpa ícones de outros cabeçalhos
-                }
-            } else {
-                // console.warn(`Span de ícone ('${iconSelector}') não encontrado no header:`, header);
-            }
+            if (iconSpan) { iconSpan.textContent = (header === clickedHeader) ? (state.direction === 'asc' ? ' ▲' : (state.direction === 'desc' ? ' ▼' : '')) : ''; }
         });
     }
 
     function sortTable(tableId, columnIndex, sortType) {
-        const table = document.getElementById(tableId);
-        const tbody = table ? table.querySelector('tbody') : null;
-        if (!tbody) {
-            console.error(`TBody não encontrado para a tabela ${tableId}`);
-            return;
-        }
-
-        // Atualiza o estado da ordenação para esta tabela
+        const table = document.getElementById(tableId); const tbody = table ? table.querySelector('tbody') : null;
+        if (!tbody) { console.error(`TBody não encontrado para ${tableId}`); return; }
         if (!sortState[tableId]) sortState[tableId] = { colIndex: -1, direction: 'none' };
         const state = sortState[tableId];
-
-        if (columnIndex === state.colIndex) {
-            // Ciclo: none -> asc -> desc -> asc ... (ou remove 'none' se preferir)
-            state.direction = state.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            state.colIndex = columnIndex;
-            state.direction = 'asc'; // Direção padrão ao clicar numa nova coluna
-        }
-
-        // Pega as linhas TR atuais do tbody e converte para um Array
+        state.direction = (columnIndex === state.colIndex && state.direction === 'asc') ? 'desc' : 'asc';
+        state.colIndex = columnIndex;
         const rows = Array.from(tbody.querySelectorAll('tr'));
-
-        // Ordena o array de linhas TR
         rows.sort((rowA, rowB) => {
-            const valueA = getCellValue(rowA, columnIndex, sortType);
-            const valueB = getCellValue(rowB, columnIndex, sortType);
-            let comparison = 0;
-
-            if (sortType === 'number') {
-                comparison = valueA - valueB; // Ordenação numérica
-            } else { // sortType === 'text'
-                comparison = valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base' }); // Ordenação alfabética PT-BR, ignorando acentos/case
-            }
-
-            // Aplica a direção (ascendente ou descendente)
-            return state.direction === 'asc' ? comparison : comparison * -1;
-        });
-
-        // Limpa o corpo da tabela
-        tbody.innerHTML = '';
-
-        // Reanexa as linhas ordenadas
-        rows.forEach(row => tbody.appendChild(row));
-
-        // Atualiza ícones (passando o cabeçalho correto)
+            const valueA = getCellValue(rowA, columnIndex, sortType); const valueB = getCellValue(rowB, columnIndex, sortType);
+            let comparison = (sortType === 'number') ? valueA - valueB : valueA.localeCompare(valueB, 'pt-BR', { sensitivity: 'base' });
+            return state.direction === 'asc' ? comparison : comparison * -1; });
+        tbody.innerHTML = ''; rows.forEach(row => tbody.appendChild(row));
         const clickedHeader = table.querySelector(`thead th[data-column-index="${columnIndex}"]`);
         updateSortIcons(tableId, clickedHeader);
-        // console.log(`Tabela ${tableId} ordenada por coluna ${columnIndex}, tipo ${sortType}, direção ${state.direction}`); // Debug
     }
 
-     // Função para reaplicar a ordenação atual após recarregar dados
      function reapplySort(tableId) {
          const state = sortState[tableId];
          if (state && state.colIndex !== -1 && state.direction !== 'none') {
              const table = document.getElementById(tableId);
              const header = table ? table.querySelector(`thead th[data-column-index="${state.colIndex}"]`) : null;
              if (header) {
-                 const sortType = header.getAttribute('data-sort-type');
-                 // Guarda a direção original
-                 const originalDirection = state.direction;
-                 // Força a redefinição para que sortTable aplique a direção correta
-                 state.colIndex = -1;
-                 state.direction = 'none';
-                 // Chama sortTable para reordenar com a direção original
+                 const sortType = header.getAttribute('data-sort-type'); const originalDirection = state.direction;
+                 state.colIndex = -1; state.direction = 'none'; // Reset before sort
                  sortTable(tableId, parseInt(header.getAttribute('data-column-index')), sortType);
-                 // Garante que a direção correta seja aplicada (caso o ciclo de sortTable não termine onde esperamos)
-                 if (sortState[tableId].direction !== originalDirection) {
-                      sortTable(tableId, parseInt(header.getAttribute('data-column-index')), sortType);
-                 }
-                 // console.log(`Reaplicada ordenação para ${tableId}: Col ${state.colIndex}, Dir ${state.direction}`); // Debug
+                 if (sortState[tableId].direction !== originalDirection) { // Ensure correct final direction
+                      sortTable(tableId, parseInt(header.getAttribute('data-column-index')), sortType); }
              }
-         } else {
-             // Se não havia ordenação, limpa os ícones
-             updateSortIcons(tableId, null);
-         }
+         } else { updateSortIcons(tableId, null); } // Clear icons if no sort state
      }
 
-    // --- Adiciona Listeners de clique para os cabeçalhos de AMBAS as tabelas ---
     function addSortListeners(tableId, headerSelectorClass) {
-        const table = document.getElementById(tableId);
-        const headers = table ? table.querySelectorAll(`thead th.${headerSelectorClass}`) : [];
-        if (!headers.length) {
-             console.warn(`Nenhum cabeçalho com a classe '${headerSelectorClass}' encontrado na tabela '${tableId}'.`);
-             return;
-        }
+        const table = document.getElementById(tableId); const headers = table ? table.querySelectorAll(`thead th.${headerSelectorClass}`) : [];
+        if (!headers.length) { console.warn(`Cabeçalhos .${headerSelectorClass} não achados em #${tableId}.`); return; }
         headers.forEach(header => {
-            // Verifica se tem os atributos necessários
             if (header.hasAttribute('data-column-index') && header.hasAttribute('data-sort-type')) {
-                header.style.cursor = 'pointer'; // Garante o cursor de clique
+                header.style.cursor = 'pointer';
                 header.addEventListener('click', function() {
                     const columnIndex = parseInt(this.getAttribute('data-column-index'), 10);
-                    const sortType = this.getAttribute('data-sort-type');
-                    sortTable(tableId, columnIndex, sortType);
-                });
-            } else {
-                 // console.warn(`Cabeçalho na tabela ${tableId} não possui atributos data-column-index ou data-sort-type:`, header);
-            }
+                    const sortType = this.getAttribute('data-sort-type'); sortTable(tableId, columnIndex, sortType); }); }
         });
     }
 
-    // Adiciona listeners usando a MESMA classe 'sortable-header' para ambas
+    // Adiciona listeners usando a MESMA classe 'sortable-header'
     addSortListeners('fornecedora-summary-table', 'sortable-header');
-    addSortListeners('concessionaria-summary-table', 'sortable-header'); // << USA A MESMA CLASSE
+    addSortListeners('concessionaria-summary-table', 'sortable-header');
 
 }); // Fim DOMContentLoaded
 </script>

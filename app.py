@@ -114,14 +114,11 @@ def dashboard():
 
     # Busca inicial de placeholders (opcional, mas pode melhorar UX)
     try:
-        # Não vamos mais buscar o resumo aqui, será via AJAX
-        # fornecedora_summary_data = database.get_fornecedora_summary(month_str=selected_month_str) # REMOVIDO
-        # concessionaria_summary_data = database.get_concessionaria_summary(month_str=selected_month_str) # REMOVIDO
+        # Não vamos mais buscar os resumos aqui, será via AJAX
         total_kwh_mes = database.get_total_consumo_medio_by_month(month_str=selected_month_str)
         clientes_ativos_count = database.count_clientes_ativos_by_month(month_str=selected_month_str)
         clientes_registrados_count = database.count_clientes_registrados_by_month(month_str=selected_month_str)
-        # if fornecedora_summary_data is None or concessionaria_summary_data is None: # Verificação REMOVIDA
-        #     error_dashboard = f"Erro ao buscar resumos iniciais para {selected_month_str}."
+
     except Exception as e:
         logger.error(f"Erro dashboard (carga inicial KPIs) para {selected_month_str}: {e}", exc_info=True)
         error_dashboard = "Erro ao carregar KPIs iniciais do dashboard."
@@ -155,9 +152,6 @@ def dashboard():
         total_kwh=total_kwh_mes, # Placeholder
         clientes_ativos_count=clientes_ativos_count, # Placeholder
         clientes_registrados_count=clientes_registrados_count, # Placeholder
-        # Não passamos mais os resumos aqui, serão carregados via AJAX
-        # fornecedora_summary=None, # REMOVIDO
-        # concessionaria_summary=None, # REMOVIDO
         month_options=month_options,
         selected_month=selected_month_str,
         error_summary=error_dashboard # Apenas para erros de KPIs iniciais
@@ -267,10 +261,16 @@ def exportar_excel_route():
             elif selected_report_type == 'boletos_por_cliente':
                  filename=f"Qtd_Boletos_Cliente_{forn_fn}_{timestamp}.xlsx"
                  dados_completos = database.get_boletos_por_cliente_data(limit=None, fornecedora=selected_fornecedora)
-                 sheet_title=f"Boletos por Cliente ({selected_fornecedora})"
+                 sheet_title=f"Boletos Cliente ({forn_fn})" # <<< NOME ENCURTADO AQUI
+                 # Garante que não ultrapasse 31 chars mesmo com forn_fn longo
+                 if len(sheet_title) > 31: sheet_title = sheet_title[:31]
                  headers = database.get_headers(selected_report_type)
             elif selected_report_type == 'base_clientes':
-                 filename=f"Clientes_Base_{forn_fn}_{timestamp}.xlsx"; data_query, data_params = database.build_query(selected_report_type, selected_fornecedora, 0, None); dados_completos = database.execute_query(data_query, data_params) or []; sheet_title=f"Base Clientes ({selected_fornecedora})"; headers = database.get_headers(selected_report_type)
+                 filename=f"Clientes_Base_{forn_fn}_{timestamp}.xlsx"; data_query, data_params = database.build_query(selected_report_type, selected_fornecedora, 0, None); dados_completos = database.execute_query(data_query, data_params) or [];
+                 sheet_title=f"Base Clientes ({forn_fn})" # <<< NOME ENCURTADO AQUI
+                 # Garante que não ultrapasse 31 chars mesmo com forn_fn longo
+                 if len(sheet_title) > 31: sheet_title = sheet_title[:31]
+                 headers = database.get_headers(selected_report_type)
             if not dados_completos: flash(f"Nenhum dado para exportar ({sheet_title}).", "warning"); return redirect(url_for('relatorios', **request.args))
             excel_bytes = excel_exp.export_to_excel_bytes(dados_completos, headers, sheet_name=sheet_title)
         else:
@@ -410,6 +410,36 @@ def api_chart_monthly_active_clients():
     except Exception as e: logger.error(f"API Chart Mensal: Erro inesperado para o ano {year_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
 # --- FIM Rota API ---
 
+# --- ADD START: API para Gráfico Pizza Fornecedora ---
+@app.route('/api/pie/clientes-fornecedora')
+@login_required
+def api_clientes_fornecedora_pie():
+    """Retorna dados para o gráfico de pizza de clientes ativos por fornecedora."""
+    month_str = request.args.get('month')
+    if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
+        logger.warning(f"API Pizza Fornecedora: Formato de mês inválido recebido '{month_str}'")
+        return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
+
+    logger.debug(f"API Pizza Fornecedora: Recebida requisição para mês '{month_str}'.")
+    try:
+        data_from_db = database.get_active_clients_count_by_fornecedora_month(month_str=month_str)
+
+        if not data_from_db:
+            logger.debug(f"API Pizza Fornecedora: Nenhum dado encontrado para o mês {month_str}.")
+            # Retorna estrutura vazia esperada pelo Chart.js
+            return jsonify({"labels": [], "data": []})
+
+        # Separa os dados em listas para o Chart.js
+        labels = [item[0] for item in data_from_db] # Nomes das fornecedoras
+        data_values = [item[1] for item in data_from_db] # Contagens
+
+        logger.debug(f"API Pizza Fornecedora: Enviando {len(labels)} fornecedoras para o mês {month_str}.")
+        return jsonify({"labels": labels, "data": data_values})
+
+    except Exception as e:
+        logger.error(f"API Pizza Fornecedora: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
+        return jsonify({"error": "Erro inesperado no servidor ao buscar dados do gráfico."}), 500
+# --- ADD END: API para Gráfico Pizza Fornecedora ---
 
 # --- Execução da Aplicação ---
 if __name__ == '__main__':

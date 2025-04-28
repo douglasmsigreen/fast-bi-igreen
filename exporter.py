@@ -35,8 +35,10 @@ class ExcelExporter:
         logger.info(f"Adicionando {len(data)} linhas de dados à aba '{ws.title}'...")
         for i, row in enumerate(data):
             # Converte tudo para string para evitar problemas de tipo com openpyxl
-            ws.append([str(v) if v is not None else "" for v in row])
-        # logger.info(f"Dados adicionados à aba '{ws.title}'.") # Log menos verboso
+            ws.append([
+                v if isinstance(v, (int, float)) else (str(v) if v is not None else "")
+                for v in row
+            ])        # logger.info(f"Dados adicionados à aba '{ws.title}'.") # Log menos verboso
 
     def _apply_formattings(self, ws, num_rows: int, headers: List[str]) -> None:
         """Aplica formatações (largura, filtro, congela painéis, condicional) a uma planilha."""
