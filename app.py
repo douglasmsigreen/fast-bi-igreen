@@ -20,6 +20,7 @@ from urllib.parse import urlparse, urljoin
 import math
 from datetime import datetime, timedelta # Adicionar timedelta
 import re # Para validar o formato do mês
+from typing import Optional, List, Tuple # Adicionado para type hinting em database
 
 
 # --- Configuração de Logging ---
@@ -330,7 +331,7 @@ def api_fornecedora_summary():
         else: data_as_dicts = [{"fornecedora": r[0], "qtd_clientes": r[1], "soma_consumo": r[2]} for r in summary_data]; return jsonify(data_as_dicts)
      except Exception as e: logger.error(f"API Fornecedora Summary: Erro inesperado para o mês {month_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
 
-# --- NOVA Rota API para Resumo por Concessionária ---
+# --- Rota API para Resumo por Concessionária ---
 @app.route('/api/summary/concessionaria')
 @login_required
 def api_concessionaria_summary():
@@ -358,7 +359,7 @@ def api_concessionaria_summary():
      except Exception as e:
          logger.error(f"API Concessionaria Summary: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
          return jsonify({"error": "Erro inesperado no servidor."}), 500
-# --- FIM DA NOVA Rota API ---
+# --- FIM DA Rota API Concessionária ---
 
 
 # --- Rota API para KPI Total kWh ---
@@ -408,9 +409,9 @@ def api_chart_monthly_active_clients():
         return jsonify({"monthly_counts": monthly_data})
     except ValueError: logger.warning(f"API Chart Mensal: Ano inválido (não inteiro) '{year_str}'."); return jsonify({"error": "Ano inválido."}), 400
     except Exception as e: logger.error(f"API Chart Mensal: Erro inesperado para o ano {year_str}: {e}", exc_info=True); return jsonify({"error": "Erro inesperado no servidor."}), 500
-# --- FIM Rota API ---
+# --- FIM Rota API Gráfico Mensal ---
 
-# --- ADD START: API para Gráfico Pizza Fornecedora ---
+# --- Rota API para Gráfico Pizza Fornecedora ---
 @app.route('/api/pie/clientes-fornecedora')
 @login_required
 def api_clientes_fornecedora_pie():
@@ -422,16 +423,21 @@ def api_clientes_fornecedora_pie():
 
     logger.debug(f"API Pizza Fornecedora: Recebida requisição para mês '{month_str}'.")
     try:
-        data_from_db = database.get_active_clients_count_by_fornecedora_month(month_str=month_str)
+        # Reutiliza a função get_fornecedora_summary pois ela já retorna o que precisamos (fornecedora, contagem, soma)
+        # Apenas precisamos extrair a fornecedora e a contagem
+        data_from_db = database.get_fornecedora_summary(month_str=month_str)
 
-        if not data_from_db:
+        if data_from_db is None: # Erro no DB
+            logger.error(f"API Pizza Fornecedora: Erro interno (DB retornou None) para o mês {month_str}.")
+            return jsonify({"error": "Erro interno ao buscar dados por fornecedora."}), 500
+        elif not data_from_db:
             logger.debug(f"API Pizza Fornecedora: Nenhum dado encontrado para o mês {month_str}.")
             # Retorna estrutura vazia esperada pelo Chart.js
             return jsonify({"labels": [], "data": []})
 
         # Separa os dados em listas para o Chart.js
-        labels = [item[0] for item in data_from_db] # Nomes das fornecedoras
-        data_values = [item[1] for item in data_from_db] # Contagens
+        labels = [item[0] for item in data_from_db] # Nomes das fornecedoras (item[0])
+        data_values = [item[1] for item in data_from_db] # Contagens de clientes (item[1])
 
         logger.debug(f"API Pizza Fornecedora: Enviando {len(labels)} fornecedoras para o mês {month_str}.")
         return jsonify({"labels": labels, "data": data_values})
@@ -439,7 +445,46 @@ def api_clientes_fornecedora_pie():
     except Exception as e:
         logger.error(f"API Pizza Fornecedora: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado no servidor ao buscar dados do gráfico."}), 500
-# --- ADD END: API para Gráfico Pizza Fornecedora ---
+# --- FIM API para Gráfico Pizza Fornecedora ---
+
+
+# --- API para Gráfico Barras Concessionária ---
+@app.route('/api/bar/clientes-concessionaria')
+@login_required
+def api_clientes_concessionaria_bar():
+    """Retorna dados para o gráfico de barras de clientes ativos por Região/Concessionária."""
+    month_str = request.args.get('month')
+    if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
+        logger.warning(f"API Barra Concessionária: Formato de mês inválido recebido '{month_str}'")
+        return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
+
+    logger.debug(f"API Barra Concessionária: Recebida requisição para mês '{month_str}'.")
+    try:
+        # Chama a nova função que retorna (regiao, contagem)
+        data_from_db = database.get_active_clients_count_by_concessionaria_month(month_str=month_str)
+
+        if data_from_db is None: # Erro no DB
+             logger.error(f"API Barra Concessionária: Erro interno (DB retornou None) para o mês {month_str}.")
+             return jsonify({"error": "Erro interno ao buscar dados por concessionária."}), 500
+        elif not data_from_db:
+            logger.debug(f"API Barra Concessionária: Nenhum dado encontrado para o mês {month_str}.")
+            # Retorna estrutura vazia esperada pelo Chart.js
+            return jsonify({"labels": [], "data": []})
+
+        # Separa os dados em listas para o Chart.js
+        # Limita aos TOP 15 para não poluir o gráfico (opcional)
+        limit = 15
+        labels = [item[0] for item in data_from_db[:limit]] # Nomes das Regiões/Concessionárias
+        data_values = [item[1] for item in data_from_db[:limit]] # Contagens
+
+        logger.debug(f"API Barra Concessionária: Enviando {len(labels)} concessionárias (limitado a {limit}) para o mês {month_str}.")
+        return jsonify({"labels": labels, "data": data_values})
+
+    except Exception as e:
+        logger.error(f"API Barra Concessionária: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
+        return jsonify({"error": "Erro inesperado no servidor ao buscar dados do gráfico."}), 500
+# --- FIM API para Gráfico Barras Concessionária ---
+
 
 # --- Execução da Aplicação ---
 if __name__ == '__main__':

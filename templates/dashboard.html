@@ -1,4 +1,4 @@
-{# templates/dashboard.html - Final com gráfico de pizza fornecedora #}
+{# templates/dashboard.html - Final com gráfico de pizza fornecedora e barras concessionária (Top 8) #}
 {% extends "base.html" %}
 
 {# Define o título que pode aparecer na barra superior interna #}
@@ -150,7 +150,7 @@
         </div>
     </div>
 
-    {# --- ADD START: Card Gráfico Pizza Fornecedora --- #}
+    {# --- Card Gráfico Pizza Fornecedora --- #}
     <div class="card chart-card grid-span-2"> {# Ocupa 2 colunas #}
         <div class="card-header">
             Clientes Ativos por Fornecedora
@@ -165,13 +165,30 @@
             <canvas id="fornecedoraPieChart" style="display: block; width: 100%; height: 100%;"></canvas>
         </div>
     </div>
-    {# --- ADD END: Card Gráfico Pizza Fornecedora --- #}
+    {# --- FIM Card Gráfico Pizza Fornecedora --- #}
+
+    {# --- Card Gráfico Barras Concessionária (Top 8) --- #}
+    <div class="card chart-card grid-span-2"> {# Ocupa 2 colunas #}
+        <div class="card-header">
+            Top 8 Regiões/Concessionárias (Clientes Ativos)  {# <<< MODIFICADO AQUI #}
+            <i class="fas fa-info-circle tooltip-icon" title="Quantidade de clientes com data_ativo no mês selecionado, agrupados por Região/Concessionária (Top 8)."></i> {# <<< E AQUI (opcional) #}
+        </div>
+        <div class="card-body" style="position: relative; min-height: 300px;"> {# Altura mínima para o gráfico #}
+            {# Status de Carregamento/Erro para o gráfico #}
+            <div id="concessionaria-bar-chart-status" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999; display: none;">
+                <i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...
+            </div>
+            {# Canvas para o gráfico #}
+            <canvas id="concessionariaBarChart" style="display: block; width: 100%; height: 100%;"></canvas>
+        </div>
+    </div>
+    {# --- FIM Card Gráfico Barras Concessionária --- #}
 
 </div> {# Fim dashboard-grid #}
 
 {% endblock %}
 
-{# Bloco de Scripts com AJAX e Ordenação para AMBAS as tabelas + Gráfico Pizza #}
+{# Bloco de Scripts com AJAX e Ordenação para AMBAS as tabelas + Gráfico Pizza + Gráfico Barras (Top 8) #}
 {% block scripts_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -179,7 +196,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Variáveis para guardar as instâncias dos gráficos ---
     let monthlyChartInstance = null;
-    let fornecedoraPieChartInstance = null; // <<< ADICIONADO
+    let fornecedoraPieChartInstance = null;
+    let concessionariaBarChartInstance = null; // <<< ADICIONADO para gráfico de barras
 
     // --- Elementos do DOM ---
     const monthSelect = document.getElementById('filter-month');
@@ -197,8 +215,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const chartCanvas = document.getElementById('remunerationChart');
     const yearSelectChart = document.getElementById('chart-year');
     // Gráfico Pizza Fornecedora
-    const fornecedoraPieCanvas = document.getElementById('fornecedoraPieChart'); // <<< ADICIONADO
-    const fornecedoraPieStatus = document.getElementById('fornecedora-pie-chart-status'); // <<< ADICIONADO
+    const fornecedoraPieCanvas = document.getElementById('fornecedoraPieChart');
+    const fornecedoraPieStatus = document.getElementById('fornecedora-pie-chart-status');
+    // Gráfico Barras Concessionária
+    const concessionariaBarCanvas = document.getElementById('concessionariaBarChart'); // <<< ADICIONADO
+    const concessionariaBarStatus = document.getElementById('concessionaria-bar-chart-status'); // <<< ADICIONADO
 
     // --- Função para formatar número ---
     function formatNumber(num, decimalPlaces = 0) {
@@ -274,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(!yearSelectChart) console.error("Elemento select #chart-year não encontrado.");
     }
 
-    // --- ADD START: Função para Atualizar Gráfico Pizza Fornecedora ---
+    // --- Função para Atualizar Gráfico Pizza Fornecedora ---
     async function updateFornecedoraPieChart(month) {
         if (!fornecedoraPieCanvas || !fornecedoraPieStatus) {
             console.error("Elementos do canvas ou status do gráfico de pizza não encontrados.");
@@ -387,10 +408,136 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    // --- ADD END: Função para Atualizar Gráfico Pizza Fornecedora ---
+    // --- FIM Função para Atualizar Gráfico Pizza Fornecedora ---
 
 
-    // --- Função GERAL para buscar dados (KPIs, Resumos e Gráfico Pizza) ---
+    // --- Função para Atualizar Gráfico Barras Concessionária (Top 8) ---
+    async function updateConcessionariaBarChart(month) {
+        if (!concessionariaBarCanvas || !concessionariaBarStatus) {
+            console.error("Elementos do canvas ou status do gráfico de barras Concessionária não encontrados.");
+            return;
+        }
+
+        // Mostra carregando e esconde canvas antigo
+        concessionariaBarStatus.innerHTML = '<i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...';
+        concessionariaBarStatus.style.display = 'block';
+        concessionariaBarCanvas.style.display = 'none';
+        if (concessionariaBarChartInstance) {
+            // Limpa dados antigos se já existe
+            concessionariaBarChartInstance.data.labels = [];
+            concessionariaBarChartInstance.data.datasets[0].data = [];
+            concessionariaBarChartInstance.update();
+        }
+
+        const apiUrl = `{{ url_for('api_clientes_concessionaria_bar') }}?month=${month}`;
+        console.debug(`Buscando dados para gráfico barras concessionária: ${apiUrl}`);
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                let errorMsg = `Erro ${response.status}`;
+                try { const data = await response.json(); errorMsg = data.error || errorMsg; } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            const apiData = await response.json(); // Espera {labels: [...], data: [...]}
+
+            // Esconde carregando
+            concessionariaBarStatus.style.display = 'none';
+
+            if (apiData && Array.isArray(apiData.labels) && Array.isArray(apiData.data) && apiData.labels.length > 0) {
+                // Define cores para as barras (pode usar uma cor ou gerar uma paleta)
+                const barBackgroundColor = 'rgba(33, 150, 243, 0.6)'; // Azul com transparência
+                const barBorderColor = 'rgba(33, 150, 243, 1)'; // Azul sólido
+
+                // <<< INÍCIO DA MODIFICAÇÃO >>>
+                // Limita aos TOP 8 para não poluir o gráfico (opcional) // <<< COMENTÁRIO ATUALIZADO
+                const limit = 8; // <<< VALOR ALTERADO AQUI
+                const labels = apiData.labels.slice(0, limit); // Pega os primeiros 8 labels
+                const data_values = apiData.data.slice(0, limit); // Pega os primeiros 8 valores
+                console.debug(`Gráfico Barras Concessionária: Exibindo ${labels.length} concessionárias (limitado a ${limit}) para o mês ${month}.`); // Log atualizado
+                // <<< FIM DA MODIFICAÇÃO >>>
+
+
+                if (concessionariaBarChartInstance) {
+                    // Atualiza gráfico existente com dados limitados
+                    concessionariaBarChartInstance.data.labels = labels; // Usa labels limitados
+                    concessionariaBarChartInstance.data.datasets[0].data = data_values; // Usa data_values limitados
+                    concessionariaBarChartInstance.update();
+                    console.debug("Gráfico barras concessionária atualizado (Top 8).");
+                } else {
+                    // Cria novo gráfico com dados limitados
+                    const config = {
+                        type: 'bar',
+                        data: {
+                            labels: labels, // Usa labels limitados
+                            datasets: [{
+                                label: 'Clientes Ativos',
+                                data: data_values, // Usa data_values limitados
+                                backgroundColor: barBackgroundColor,
+                                borderColor: barBorderColor,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y', // <<< Barras Horizontais para melhor leitura dos labels
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { // Eixo X (valores)
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(0,0,0,0.05)' },
+                                    ticks: { precision: 0 } // Sem casas decimais
+                                },
+                                y: { // Eixo Y (labels/categorias)
+                                    grid: { display: false }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false // Oculta legenda (label já diz o que é)
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            let value = context.parsed.x || 0; // .x para barras horizontais
+                                            return ` ${label}: ${formatNumber(value)}`;
+                                        }
+                                    }
+                                },
+                                title: { display: false }
+                            }
+                        }
+                    };
+                    concessionariaBarChartInstance = new Chart(concessionariaBarCanvas, config);
+                    console.debug("Gráfico barras concessionária criado (Top 8).");
+                }
+                concessionariaBarCanvas.style.display = 'block';
+            } else {
+                // Nenhum dado retornado
+                concessionariaBarStatus.innerHTML = '<i class="fas fa-info-circle"></i><br>Nenhum dado para exibir.';
+                concessionariaBarStatus.style.display = 'block';
+                if (concessionariaBarChartInstance) {
+                    concessionariaBarChartInstance.destroy(); // Destroi instância antiga se não há dados
+                    concessionariaBarChartInstance = null;
+                }
+                console.debug("Nenhum dado recebido para gráfico barras concessionária.");
+            }
+
+        } catch (error) {
+             console.error(`Erro ao buscar ou renderizar gráfico barras concessionária para ${month}:`, error);
+             concessionariaBarStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar gráfico</span>`;
+             concessionariaBarStatus.style.display = 'block';
+             if (concessionariaBarChartInstance) {
+                concessionariaBarChartInstance.destroy();
+                concessionariaBarChartInstance = null;
+            }
+        }
+    }
+    // --- FIM Função para Atualizar Gráfico Barras Concessionária ---
+
+
+    // --- Função GERAL para buscar dados (KPIs, Resumos, Gráfico Pizza e Gráfico Barras) ---
     async function updateDashboardData(month) {
         console.log(`Atualizando dados do dashboard para o mês: ${month}`);
         // Mostra indicadores de carregamento
@@ -424,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) { console.error(`Erro de rede/JSON ${description}:`, error); throw error; }
         }
 
-        // Chama todas as APIs em paralelo
+        // Chama todas as APIs em paralelo (exceto gráficos que são chamados separadamente)
         try {
             const [
                 dataSummaryForn, dataSummaryConc, dataKpiKwh, dataKpiAtivos, dataKpiRegistrados
@@ -436,8 +583,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetchData(endpoints.kpiRegistrados, "KPI Clientes Registrados")
             ]);
 
-            // <<< ADICIONAR CHAMADA AQUI >>>
+            // <<< CHAMADAS PARA OS GRÁFICOS >>>
             updateFornecedoraPieChart(month); // Chama a atualização do gráfico de pizza
+            updateConcessionariaBarChart(month); // Chama a atualização do gráfico de barras
 
             // Processa Resumo Fornecedora
             if (fornecedoraTableBody && fornecedoraStatus) {
@@ -468,19 +616,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiClientesAtivosElement && dataKpiAtivos) kpiClientesAtivosElement.textContent = formatNumber(dataKpiAtivos.clientes_ativos_count, 0);
             if (kpiClientesRegistradosElement && dataKpiRegistrados) kpiClientesRegistradosElement.textContent = formatNumber(dataKpiRegistrados.clientes_registrados_count, 0);
 
-            console.log("Dados do dashboard atualizados com sucesso (exceto pizza, que é separada).");
+            console.log("Dados do dashboard atualizados com sucesso (exceto gráficos, chamados separadamente).");
 
         } catch (error) {
             console.error('Erro ao buscar dados do dashboard (Promise.all falhou):', error);
             [fornecedoraStatus, concessionariaStatus].forEach(el => { if(el) { el.innerHTML = `<span style="color: red; font-size: 0.9em;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; el.style.display = 'block'; }});
             [fornecedoraTableBody, concessionariaTableBody].forEach(el => { if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Falha.</td></tr>'; });
             [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => { if(el) el.innerHTML = `<span style="font-size: 0.7em; color: red;">Erro!</span>`; });
-            // Mostra erro no status da pizza também se o fetch principal falhar
+            // Mostra erro nos status dos gráficos também se o fetch principal falhar
              if (fornecedoraPieStatus) {
                  fornecedoraPieStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro geral</span>`;
                  fornecedoraPieStatus.style.display = 'block';
                  fornecedoraPieCanvas.style.display = 'none';
                  if (fornecedoraPieChartInstance) { fornecedoraPieChartInstance.destroy(); fornecedoraPieChartInstance = null;}
+             }
+             if (concessionariaBarStatus) {
+                 concessionariaBarStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro geral</span>`;
+                 concessionariaBarStatus.style.display = 'block';
+                 concessionariaBarCanvas.style.display = 'none';
+                 if (concessionariaBarChartInstance) { concessionariaBarChartInstance.destroy(); concessionariaBarChartInstance = null;}
              }
         }
     }
@@ -492,7 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentUrl = new URL(window.location);
             currentUrl.searchParams.set('month', selectedMonth);
             window.history.replaceState({}, '', currentUrl);
-            updateDashboardData(selectedMonth); // Chama a função que busca TUDO (incluindo a pizza)
+            updateDashboardData(selectedMonth); // Chama a função que busca TUDO (incluindo os gráficos)
         });
         // Chama para carregar dados iniciais via AJAX na primeira carga da página
         updateDashboardData(monthSelect.value);
