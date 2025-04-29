@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, flash, current_app, url_for, redirect
 from flask_login import login_required, current_user # <--- Adicionar current_user aqui
-from .. import database # Importa o módulo database do __init__.py
+from .. import db # Importa o módulo database do __init__.py
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,10 @@ def dashboard():
     # Busca inicial de placeholders (melhora UX, mas principal carga é AJAX)
     try:
         # O ideal é que estas funções usem `current_app.logger` se precisarem logar
-        # ou que o logger seja configurado adequadamente no módulo database.
-        total_kwh_mes = database.get_total_consumo_medio_by_month(month_str=selected_month_str)
-        clientes_ativos_count = database.count_clientes_ativos_by_month(month_str=selected_month_str)
-        clientes_registrados_count = database.count_clientes_registrados_by_month(month_str=selected_month_str)
+        # ou que o logger seja configurado adequadamente no módulo db.
+        total_kwh_mes = db.get_total_consumo_medio_by_month(month_str=selected_month_str)
+        clientes_ativos_count = db.count_clientes_ativos_by_month(month_str=selected_month_str)
+        clientes_registrados_count = db.count_clientes_registrados_by_month(month_str=selected_month_str)
         logger.debug(f"KPIs iniciais carregados para {selected_month_str}: kWH={total_kwh_mes}, Ativos={clientes_ativos_count}, Registrados={clientes_registrados_count}")
     except Exception as e:
         logger.error(f"Erro ao carregar KPIs iniciais do dashboard para {selected_month_str}: {e}", exc_info=True)

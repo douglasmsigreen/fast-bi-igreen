@@ -6,7 +6,7 @@ from flask import (Blueprint, render_template, request, Response, flash,
                    redirect, url_for, current_app)
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from .. import database
+from .. import db
 from ..exporter import ExcelExporter
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def relatorios():
 
         # Obter lista de fornecedoras
         try:
-            fornecedoras_db = database.get_fornecedoras()
+            fornecedoras_db = db.get_fornecedoras()
         except Exception as db_err:
             logger.error(f"Erro ao buscar lista de fornecedoras: {db_err}", exc_info=True)
             flash("Erro ao carregar a lista de fornecedoras.", "warning")
@@ -49,35 +49,42 @@ def relatorios():
         logger.info(f"Processando relatório: Tipo='{selected_report_type}', Fornecedora='{selected_fornecedora}', Página={page}")
 
         # Lógica para buscar dados e cabeçalhos com base no tipo de relatório
-        # (similar ao app.py original, mas usando `database` e `get_headers`)
         try:
-            headers = database.get_headers(selected_report_type) # Pega cabeçalhos primeiro
+            headers = db.get_headers(selected_report_type) # Pega cabeçalhos primeiro
             if not headers:
                  error_message = f"Cabeçalhos não definidos para o tipo de relatório: '{selected_report_type}'."
                  logger.error(error_message)
                  flash(error_message, 'danger')
             else:
                 if selected_report_type in ['base_clientes', 'rateio']:
-                    data_query, data_params = database.build_query(selected_report_type, selected_fornecedora, offset, items_per_page)
-                    dados = database.execute_query(data_query, data_params) or []
-                    count_q, count_p = database.count_query(selected_report_type, selected_fornecedora)
-                    total_items_result = database.execute_query(count_q, count_p, fetch_one=True)
+                    data_query, data_params = db.build_query(selected_report_type, selected_fornecedora, offset, items_per_page)
+                    dados = db.execute_query(data_query, data_params) or []
+                    count_q, count_p = db.count_query(selected_report_type, selected_fornecedora)
+                    total_items_result = db.execute_query(count_q, count_p, fetch_one=True)
                     total_items = total_items_result[0] if total_items_result else 0
 
                 elif selected_report_type == 'rateio_rzk':
-                    total_items = database.count_rateio_rzk()
-                    dados = database.get_rateio_rzk_data(offset=offset, limit=items_per_page)
+                    total_items = db.count_rateio_rzk()
+                    dados = db.get_rateio_rzk_data(offset=offset, limit=items_per_page)
                     selected_fornecedora = 'RZK' # Força a fornecedora para este relatório
 
                 elif selected_report_type == 'clientes_por_licenciado':
-                    total_items = database.count_clientes_por_licenciado()
-                    dados = database.get_clientes_por_licenciado_data(offset=offset, limit=items_per_page)
+                    total_items = db.count_clientes_por_licenciado()
+                    dados = db.get_clientes_por_licenciado_data(offset=offset, limit=items_per_page)
 
                 elif selected_report_type == 'boletos_por_cliente':
-                    total_items = database.count_boletos_por_cliente(fornecedora=selected_fornecedora)
-                    dados = database.get_boletos_por_cliente_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
+                    total_items = db.count_boletos_por_cliente(fornecedora=selected_fornecedora)
+                    dados = db.get_boletos_por_cliente_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
 
-                else:
+                # <<< INÍCIO DO BLOCO ADICIONADO >>>
+                elif selected_report_type == 'recebiveis_clientes':
+                    # Busca os dados paginados para recebíveis, passando a fornecedora
+                    dados = db.get_recebiveis_clientes_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
+                    # Conta o total de itens para recebíveis, respeitando a fornecedora
+                    total_items = db.count_recebiveis_clientes(fornecedora=selected_fornecedora)
+                # <<< FIM DO BLOCO ADICIONADO >>>
+
+                else: # Bloco else existente
                     error_message = f"Tipo de relatório desconhecido ou não implementado: '{selected_report_type}'."
                     logger.warning(f"Tentativa de acesso a relatório inválido: '{selected_report_type}'.")
                     flash(error_message, "warning")
@@ -155,16 +162,16 @@ def exportar_excel_route():
             forn_fn = 'Consolidado' if selected_fornecedora.lower() == "consolidado" else secure_filename(selected_fornecedora).replace('_', '')
             filename = f"Clientes_Rateio_{forn_fn}_{timestamp}.xlsx"
             # Busca TODOS os IDs (sem paginação)
-            nova_ids = database.get_base_nova_ids(fornecedora=selected_fornecedora)
-            enviada_ids = database.get_base_enviada_ids(fornecedora=selected_fornecedora)
+            nova_ids = db.get_base_nova_ids(fornecedora=selected_fornecedora)
+            enviada_ids = db.get_base_enviada_ids(fornecedora=selected_fornecedora)
             if not nova_ids and not enviada_ids:
                 flash(f"Nenhum dado encontrado para exportar o Rateio Geral (Fornecedora: {selected_fornecedora}).", "warning")
                 return redirect(url_for('reports_bp.relatorios', **request.args))
 
-            rateio_headers = database.get_headers('rateio') # Pega cabeçalhos
+            rateio_headers = db.get_headers('rateio') # Pega cabeçalhos
             # Busca detalhes completos para os IDs encontrados
-            nova_data = database.get_client_details_by_ids('rateio', nova_ids) if nova_ids else []
-            enviada_data = database.get_client_details_by_ids('rateio', enviada_ids) if enviada_ids else []
+            nova_data = db.get_client_details_by_ids('rateio', nova_ids) if nova_ids else []
+            enviada_data = db.get_client_details_by_ids('rateio', enviada_ids) if enviada_ids else []
 
             sheets_to_export = [
                 {'name': 'Base Nova', 'headers': rateio_headers, 'data': nova_data},
@@ -175,15 +182,15 @@ def exportar_excel_route():
         # --- EXPORTAÇÃO RATEIO RZK (MULTI-ABA) ---
         elif selected_report_type == 'rateio_rzk':
              filename = f"Clientes_Rateio_RZK_MultiBase_{timestamp}.xlsx"
-             nova_ids_rzk = database.get_rateio_rzk_base_nova_ids()
-             enviada_ids_rzk = database.get_rateio_rzk_base_enviada_ids()
+             nova_ids_rzk = db.get_rateio_rzk_base_nova_ids()
+             enviada_ids_rzk = db.get_rateio_rzk_base_enviada_ids()
              if not nova_ids_rzk and not enviada_ids_rzk:
                  flash("Nenhum dado encontrado para exportar o Rateio RZK.", "warning")
                  return redirect(url_for('reports_bp.relatorios', report_type='rateio_rzk')) # Redireciona mantendo o tipo
 
-             rzk_headers = database.get_headers('rateio_rzk')
-             nova_data_rzk = database.get_rateio_rzk_client_details_by_ids(nova_ids_rzk) if nova_ids_rzk else []
-             enviada_data_rzk = database.get_rateio_rzk_client_details_by_ids(enviada_ids_rzk) if enviada_ids_rzk else []
+             rzk_headers = db.get_headers('rateio_rzk')
+             nova_data_rzk = db.get_rateio_rzk_client_details_by_ids(nova_ids_rzk) if nova_ids_rzk else []
+             enviada_data_rzk = db.get_rateio_rzk_client_details_by_ids(enviada_ids_rzk) if enviada_ids_rzk else []
              sheets_to_export = [
                  {'name': 'Base Nova RZK', 'headers': rzk_headers, 'data': nova_data_rzk},
                  {'name': 'Base Enviada RZK', 'headers': rzk_headers, 'data': enviada_data_rzk}
@@ -191,11 +198,11 @@ def exportar_excel_route():
              excel_bytes = excel_exp.export_multi_sheet_excel_bytes(sheets_to_export)
 
         # --- EXPORTAÇÃO RELATÓRIOS DE ABA ÚNICA ---
-        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'boletos_por_cliente']:
+        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'boletos_por_cliente', 'recebiveis_clientes']: # Adicionado 'recebiveis_clientes' aqui
             forn_fn = secure_filename(selected_fornecedora).replace('_', '') if selected_fornecedora and selected_fornecedora.lower() != 'consolidado' else 'Consolidado'
             dados_completos = []
             sheet_title = selected_report_type.replace('_', ' ').title() # Título padrão
-            headers = database.get_headers(selected_report_type) # Pega cabeçalhos
+            headers = db.get_headers(selected_report_type) # Pega cabeçalhos
 
             if not headers:
                  flash(f"Configuração de cabeçalhos ausente para exportar '{selected_report_type}'.", "error")
@@ -204,19 +211,24 @@ def exportar_excel_route():
             # Busca todos os dados (sem paginação - limit=None)
             if selected_report_type == 'base_clientes':
                  filename = f"Clientes_Base_{forn_fn}_{timestamp}.xlsx"
-                 data_query, data_params = database.build_query(selected_report_type, selected_fornecedora, 0, None) # limit=None
-                 dados_completos = database.execute_query(data_query, data_params) or []
+                 data_query, data_params = db.build_query(selected_report_type, selected_fornecedora, 0, None) # limit=None
+                 dados_completos = db.execute_query(data_query, data_params) or []
                  sheet_title = f"Base Clientes ({forn_fn})"
 
             elif selected_report_type == 'clientes_por_licenciado':
                  filename = f"Qtd_Clientes_Licenciado_{timestamp}.xlsx"
-                 dados_completos = database.get_clientes_por_licenciado_data(limit=None) # limit=None
+                 dados_completos = db.get_clientes_por_licenciado_data(limit=None) # limit=None
                  sheet_title = "Clientes por Licenciado"
 
             elif selected_report_type == 'boletos_por_cliente':
                  filename = f"Qtd_Boletos_Cliente_{forn_fn}_{timestamp}.xlsx"
-                 dados_completos = database.get_boletos_por_cliente_data(limit=None, fornecedora=selected_fornecedora) # limit=None
+                 dados_completos = db.get_boletos_por_cliente_data(limit=None, fornecedora=selected_fornecedora) # limit=None
                  sheet_title = f"Boletos Cliente ({forn_fn})"
+
+            elif selected_report_type == 'recebiveis_clientes': # Novo bloco para exportação de recebíveis
+                filename = f"Recebiveis_Clientes_{forn_fn}_{timestamp}.xlsx"
+                dados_completos = db.get_recebiveis_clientes_data(limit=None, fornecedora=selected_fornecedora) # limit=None
+                sheet_title = f"Recebíveis ({forn_fn})"
 
             # Garante que o nome da aba não exceda 31 caracteres
             if len(sheet_title) > 31: sheet_title = sheet_title[:31]

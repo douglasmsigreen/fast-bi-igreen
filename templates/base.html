@@ -33,24 +33,24 @@
             </div>
             <nav class="sidebar-nav">
               <ul>
-                  {# 1. Painel de Controle #}
-                  <li class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+                  {# 1. Painel de Controle - Usando endpoint correto #}
+                  <li class="{{ 'active' if request.endpoint == 'dashboard_bp.dashboard' else '' }}">
                       <a href="{{ url_for('dashboard_bp.dashboard') }}">
                           <i class="fas fa-tachometer-alt fa-fw"></i>
                           <span>Painel</span> {# Texto mais curto #}
                       </a>
                   </li>
 
-                  {# 2. Relatórios #}
-                  <li class="{{ 'active' if request.endpoint == 'relatorios' else '' }}">
+                  {# 2. Relatórios - Usando endpoint correto #}
+                  <li class="{{ 'active' if request.endpoint == 'reports_bp.relatorios' else '' }}">
                        <a href="{{ url_for('reports_bp.relatorios') }}">
                           <i class="fas fa-file-alt fa-fw"></i>
                           <span>Relatórios</span>
                       </a>
                   </li>
 
-                  {# 3. Mapas e Gráficos #}
-                   <li class="{{ 'active' if request.endpoint == 'mapa_clientes' else '' }}">
+                  {# 3. Mapas e Gráficos - Usando endpoint correto #}
+                   <li class="{{ 'active' if request.endpoint == 'dashboard_bp.mapa_clientes' else '' }}">
                       <a href="{{ url_for('dashboard_bp.mapa_clientes') }}">
                            <i class="fas fa-map-marked-alt fa-fw"></i> {# Ícone de Mapa #}
                           <span>Mapa</span> {# Texto mais curto #}
@@ -96,7 +96,7 @@
 
             {# Área Principal para o Conteúdo da Página #}
             <div class="content-area">
-              {# --- Mensagens Flash (Descomentar se for usar) ---
+              {# --- Mensagens Flash --- #}
               {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                   <div class="flash-messages-container">
@@ -106,7 +106,6 @@
                   </div>
                 {% endif %}
               {% endwith %}
-              #}
 
              {% block content %}
              {# O conteúdo específico da página (dashboard, relatórios, etc.) será inserido aqui #}

@@ -3,7 +3,7 @@ import logging
 import re
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
-from .. import database
+from .. import db
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,10 @@ def api_state_summary_for_map():
     logger.info("Requisição recebida em /api/map-data/state-summary")
     try:
         # Chama a função do banco que retorna UF, Contagem e Soma
-        data_from_db = database.get_state_map_data() # Ex: [('SP', 100, 50000.0), ('MG', 80, 42000.0)]
+        data_from_db = db.get_state_map_data() # Ex: [('SP', 100, 50000.0), ('MG', 80, 42000.0)]
 
         if data_from_db is None: # Verifica se o DB retornou None (indicando erro interno)
-             logger.error("API Mapa: database.get_state_map_data() retornou None.")
+             logger.error("API Mapa: db.get_state_map_data() retornou None.")
              return jsonify({"error": "Erro interno ao buscar dados do mapa do banco de dados."}), 500
 
         # Transforma a lista de tuplas em uma lista de dicionários para facilitar o JS
@@ -49,7 +49,7 @@ def api_fornecedora_summary():
 
     logger.debug(f"API Fornecedora Summary: Buscando dados para o mês '{month_str}'.")
     try:
-        summary_data = database.get_fornecedora_summary(month_str=month_str)
+        summary_data = db.get_fornecedora_summary(month_str=month_str)
         if summary_data is None:
             logger.error(f"API Fornecedora Summary: Erro interno (DB retornou None) para o mês {month_str}.")
             return jsonify({"error": "Erro interno ao buscar dados por fornecedora."}), 500
@@ -78,7 +78,7 @@ def api_concessionaria_summary():
 
     logger.debug(f"API Concessionaria Summary: Buscando dados para o mês '{month_str}'.")
     try:
-        summary_data = database.get_concessionaria_summary(month_str=month_str)
+        summary_data = db.get_concessionaria_summary(month_str=month_str)
         if summary_data is None:
             logger.error(f"API Concessionaria Summary: Erro interno (DB retornou None) para o mês {month_str}.")
             return jsonify({"error": "Erro interno ao buscar dados por concessionária."}), 500
@@ -102,7 +102,7 @@ def api_kpi_total_kwh():
     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
         return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
     try:
-        total_kwh = database.get_total_consumo_medio_by_month(month_str=month_str)
+        total_kwh = db.get_total_consumo_medio_by_month(month_str=month_str)
         logger.debug(f"API KPI Total kWh: Mês={month_str}, Resultado={total_kwh}")
         return jsonify({"total_kwh": total_kwh})
     except Exception as e:
@@ -118,7 +118,7 @@ def api_kpi_clientes_ativos():
     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
         return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
     try:
-        count = database.count_clientes_ativos_by_month(month_str=month_str)
+        count = db.count_clientes_ativos_by_month(month_str=month_str)
         logger.debug(f"API KPI Clientes Ativos: Mês={month_str}, Resultado={count}")
         return jsonify({"clientes_ativos_count": count})
     except Exception as e:
@@ -134,7 +134,7 @@ def api_kpi_clientes_registrados():
     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
         return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
     try:
-        count = database.count_clientes_registrados_by_month(month_str=month_str)
+        count = db.count_clientes_registrados_by_month(month_str=month_str)
         logger.debug(f"API KPI Clientes Registrados: Mês={month_str}, Resultado={count}")
         return jsonify({"clientes_registrados_count": count})
     except Exception as e:
@@ -153,7 +153,7 @@ def api_chart_monthly_active_clients():
     try:
         year = int(year_str)
         logger.debug(f"API Chart Mensal: Buscando dados para o ano '{year}'.")
-        monthly_data = database.get_monthly_active_clients_by_year(year=year)
+        monthly_data = db.get_monthly_active_clients_by_year(year=year)
         if monthly_data is None: # Verifica erro no DB
              logger.error(f"API Chart Mensal: Erro interno (DB retornou None) para o ano {year}.")
              return jsonify({"error": f"Erro interno ao buscar dados mensais para {year}."}), 500
@@ -180,7 +180,7 @@ def api_clientes_fornecedora_pie():
     logger.debug(f"API Pizza Fornecedora: Buscando dados para o mês '{month_str}'.")
     try:
         # Reutiliza a função de resumo, pegando apenas fornecedora (índice 0) e contagem (índice 1)
-        data_from_db = database.get_fornecedora_summary(month_str=month_str)
+        data_from_db = db.get_fornecedora_summary(month_str=month_str)
 
         if data_from_db is None:
             logger.error(f"API Pizza Fornecedora: Erro interno (DB retornou None) para o mês {month_str}.")
@@ -221,7 +221,7 @@ def api_clientes_concessionaria_bar():
     logger.debug(f"API Barra Concessionária: Buscando dados para mês '{month_str}', limite={limit or 'Nenhum'}.")
     try:
         # Chama a função que retorna (regiao, contagem), já ordenada por contagem DESC
-        data_from_db = database.get_active_clients_count_by_concessionaria_month(month_str=month_str)
+        data_from_db = db.get_active_clients_count_by_concessionaria_month(month_str=month_str)
 
         if data_from_db is None:
             logger.error(f"API Barra Concessionária: Erro interno (DB retornou None) para o mês {month_str}.")

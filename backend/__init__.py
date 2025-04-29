@@ -4,7 +4,7 @@ import logging
 from flask import Flask, g
 from flask_login import LoginManager
 from .config import Config # Importa a configuração local
-from . import database      # Importa o módulo database local
+from . import db      # Importa o módulo database local
 from .models import User    # Importa o modelo User
 
 # --- Configuração de Logging (similar ao app.py original) ---
@@ -57,7 +57,7 @@ def create_app(config_class=Config):
     # já faz isso na primeira chamada a get_db, mas é bom garantir o contexto.
     with app.app_context():
         try:
-            database.init_pool() # Garante que o pool seja inicializado com o contexto da app
+            db.init_pool() # Garante que o pool seja inicializado com o contexto da app
         except ConnectionError as e:
             logger.critical(f"Falha CRÍTICA ao inicializar pool de conexões na factory: {e}")
             # Considerar lançar o erro ou lidar de outra forma
@@ -68,7 +68,7 @@ def create_app(config_class=Config):
     # --- Registrar Context Processors e Teardown ---
     @app.teardown_appcontext
     def close_db_connection(exception=None):
-        database.close_db(exception)
+        db.close_db(exception)
 
     @app.context_processor
     def inject_now():
