@@ -30,7 +30,7 @@
                 <h2 class="login-title">Bem-vindo ao Fast BI <span class="crm-icon">📊</span></h2>
 
                 {# Formulário de Login #}
-                <form method="POST" action="{{ url_for('login') }}" novalidate class="login-form">
+                <form method="POST" action="{{ url_for('auth_bp.login') }}" novalidate class="login-form">
                     {{ form.hidden_tag() }} {# CSRF Token #}
 
                     <div class="form-group">

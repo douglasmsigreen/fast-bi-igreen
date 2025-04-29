@@ -27,7 +27,7 @@
         {# --- Barra Lateral (Sidebar) --- #}
         <aside class="sidebar">
             <div class="sidebar-header">
-                <a href="{{ url_for('dashboard') }}" title="Ir para o Painel de Controle">
+                <a href="{{ url_for('dashboard_bp.dashboard') }}" title="Ir para o Painel de Controle">
                     <img src="{{ url_for('static', filename='img/logo_igreen_branco.png') }}" alt="Logo iGreen" height="35">
                 </a>
             </div>
@@ -35,7 +35,7 @@
               <ul>
                   {# 1. Painel de Controle #}
                   <li class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
-                      <a href="{{ url_for('dashboard') }}">
+                      <a href="{{ url_for('dashboard_bp.dashboard') }}">
                           <i class="fas fa-tachometer-alt fa-fw"></i>
                           <span>Painel</span> {# Texto mais curto #}
                       </a>
@@ -43,7 +43,7 @@
 
                   {# 2. Relatórios #}
                   <li class="{{ 'active' if request.endpoint == 'relatorios' else '' }}">
-                       <a href="{{ url_for('relatorios') }}">
+                       <a href="{{ url_for('reports_bp.relatorios') }}">
                           <i class="fas fa-file-alt fa-fw"></i>
                           <span>Relatórios</span>
                       </a>
@@ -51,7 +51,7 @@
 
                   {# 3. Mapas e Gráficos #}
                    <li class="{{ 'active' if request.endpoint == 'mapa_clientes' else '' }}">
-                      <a href="{{ url_for('mapa_clientes') }}">
+                      <a href="{{ url_for('dashboard_bp.mapa_clientes') }}">
                            <i class="fas fa-map-marked-alt fa-fw"></i> {# Ícone de Mapa #}
                           <span>Mapa</span> {# Texto mais curto #}
                       </a>
@@ -68,7 +68,7 @@
                    {# --- Logout no final --- #}
                    {% if current_user.is_authenticated %}
                    <li class="sidebar-logout">
-                       <a href="{{ url_for('logout') }}" title="Sair do sistema">
+                       <a href="{{ url_for('auth_bp.logout') }}" title="Sair do sistema">
                            <i class="fas fa-sign-out-alt fa-fw"></i>
                            <span>Sair</span>
                        </a>
@@ -89,7 +89,7 @@
                          {# <i class="fas fa-user-circle fa-fw" style="margin-right: 5px;"></i> #} {# Ícone de usuário (opcional) #}
                          <span title="Usuário logado">{{ current_user.nome | default('Utilizador', true) }}</span>
                          <span class="current-date" style="margin-left: auto; margin-right: 15px;" title="Data atual"></span> {# Data será preenchida por JS #}
-                         <a href="{{ url_for('logout') }}" class="btn-logout-alt" title="Sair"><i class="fas fa-sign-out-alt"></i></a>
+                         <a href="{{ url_for('auth_bp.logout') }}" class="btn-logout-alt" title="Sair"><i class="fas fa-sign-out-alt"></i></a>
                     {% endif %}
                  </div>
             </header>

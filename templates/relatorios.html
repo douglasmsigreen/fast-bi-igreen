@@ -3,12 +3,12 @@
 {% extends "base.html" %}
 
 {% block title %}Relatórios - Fast BI{% endblock %} {# Opcional: Título da aba mais específico #}
-{% block page_title %}Relatórios{% endblock %}   {# <<< ADICIONE ESTA LINHA #}
+{% block page_title %}Relatórios{% endblock %}   {# Título visível na página #}
 
 {% block content %}
 
 {# Formulário de Filtros #}
-    <form method="GET" action="{{ url_for('relatorios') }}" class="filter-form">
+    <form method="GET" action="{{ url_for('reports_bp.relatorios') }}" class="filter-form">
         <div class="form-group">
             <label for="report_type">Tipo Relatório:</label>
             <select name="report_type" id="report_type" onchange="this.form.submit()">
@@ -17,21 +17,31 @@
                 <option value="rateio_rzk" {% if selected_report_type == 'rateio_rzk' %}selected{% endif %}>Rateio RZK (Especial)</option>
                 <option value="clientes_por_licenciado" {% if selected_report_type == 'clientes_por_licenciado' %}selected{% endif %}>Clientes por Licenciado</option>
                 <option value="boletos_por_cliente" {% if selected_report_type == 'boletos_por_cliente' %}selected{% endif %}>Boletos por Cliente</option>
+                <option value="recebiveis_clientes" {% if selected_report_type == 'recebiveis_clientes' %}selected{% endif %}>Recebíveis Clientes</option>
             </select>
         </div>
         <div class="form-group">
             <label for="fornecedora">Fornecedora:</label>
-             {# Adicionado atributo 'disabled' condicionalmente pelo JS abaixo #}
-            <select name="fornecedora" id="fornecedora" {% if selected_report_type == 'rateio_rzk' or selected_report_type == 'clientes_por_licenciado' %}disabled{% endif %}>
+             {# <<< MODIFICADO: Removido 'recebiveis_clientes' da condição 'disabled' >>> #}
+            <select name="fornecedora" id="fornecedora" {% if selected_report_type in ['rateio_rzk', 'clientes_por_licenciado'] %}disabled{% endif %}>
                 {# Loop para popular as fornecedoras #}
                 {% for forn in fornecedoras %}
                 <option value="{{ forn }}" {% if forn == selected_fornecedora %}selected{% endif %}>{{ forn }}</option>
                 {% endfor %}
-                {% if not fornecedoras %}
-                <option value="" disabled>Nenhuma fornecedora disponível</option>
+                {# Adiciona "Consolidado" se não estiver na lista e nenhum outro fornecedor estiver selecionado #}
+                {# Garante que a opção selecionada (ou Consolidado) esteja sempre presente #}
+                {% if selected_fornecedora not in fornecedoras and selected_fornecedora == 'Consolidado' %}
+                     <option value="Consolidado" selected>Consolidado</option>
+                {% elif selected_fornecedora not in fornecedoras and selected_fornecedora != 'Consolidado' and selected_fornecedora %}
+                     {# Se uma fornecedora específica foi selecionada mas não veio do DB (improvável), mostra ela #}
+                     <option value="{{ selected_fornecedora }}" selected>{{ selected_fornecedora }}</option>
+                {% endif %}
+
+                {% if not fornecedoras and selected_fornecedora != 'Consolidado' %}
+                     <option value="" disabled>Nenhuma fornecedora disponível</option>
                 {% endif %}
             </select>
-             {# Mensagem informativa e campo oculto apenas para Rateio RZK #}
+             {# Mensagens informativas e campo oculto para tipos específicos #}
              {# Adicionando data-info-type para melhor seleção no JS #}
             {% if selected_report_type == 'rateio_rzk' %}
                 <small data-info-type="rateio_rzk" style="display: none;">(Fornecedora RZK implícita)</small>
@@ -39,13 +49,20 @@
             {% elif selected_report_type == 'clientes_por_licenciado' %}
                  <small data-info-type="clientes_por_licenciado" style="display: none;">(Filtro não aplicável)</small>
             {% endif %}
+            {# <<< REMOVIDO: Bloco elif para 'recebiveis_clientes' que mostrava a mensagem "Filtro não aplicável" >>> #}
         </div>
         <button type="submit" class="btn btn-primary">Buscar</button>
-         {# Link para Exportar Excel #}
+         {# Link para Exportar Excel - ajustado para incluir o novo tipo e passar fornecedora se aplicável #}
          {% if dados %}
-         <a href="{{ url_for('exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" target="_blank">
-             Exportar Excel
-         </a>
+             {# Gera a URL de exportação com os parâmetros atuais #}
+             {% set export_args = {'report_type': selected_report_type} %}
+             {# <<< MODIFICADO: Condição para adicionar fornecedora NÃO exclui mais 'recebiveis_clientes' >>> #}
+             {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado'] %}
+                 {% set _ = export_args.update({'fornecedora': selected_fornecedora}) %}
+             {% endif %}
+             <a href="{{ url_for('reports_bp.exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" target="_blank">
+                 <i class="fas fa-file-excel"></i> Exportar Excel {# Adicionado ícone #}
+             </a>
          {% endif %}
     </form>
 
@@ -62,7 +79,7 @@
   <div class="table-info">
     Exibindo {{ dados|length }} de {{ total_items }} registro(s). Página {{ page }} de {{ total_pages }}.
   </div>
-  <div class="table-responsive">
+  <div class="table-responsive"> {# Garante rolagem horizontal em telas pequenas #}
     <table id="dataTable">
         <thead>
             <tr>
@@ -87,30 +104,37 @@
   {% if total_pages > 1 %}
   <nav class="pagination">
     <ul>
+        {# Lógica de paginação otimizada com parâmetros corretos #}
+        {% set base_args = {'report_type': selected_report_type} %}
+        {# <<< MODIFICADO: Condição para adicionar fornecedora NÃO exclui mais 'recebiveis_clientes' >>> #}
+        {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado'] %}
+            {% set _ = base_args.update({'fornecedora': selected_fornecedora}) %}
+        {% endif %}
+
         {% if page > 1 %}
-        <li><a href="{{ url_for('relatorios', page=page-1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">&laquo; Anterior</a></li>
+        <li><a href="{{ url_for('reports_bp.relatorios', page=page-1, **base_args) }}">&laquo; Anterior</a></li>
         {% else %}<li class="disabled"><span>&laquo; Anterior</span></li>{% endif %}
 
         {% set start_page = [1, page-2]|max %}
         {% set end_page = [total_pages, page+2]|min %}
 
         {% if start_page > 1 %}
-          <li><a href="{{ url_for('relatorios', page=1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">1</a></li>
+          <li><a href="{{ url_for('reports_bp.relatorios', page=1, **base_args) }}">1</a></li>
           {% if start_page > 2 %}<li><span>...</span></li>{% endif %}
         {% endif %}
 
         {% for p in range(start_page, end_page + 1) %}
           {% if p == page %}<li class="active"><span>{{ p }}</span></li>
-          {% else %}<li><a href="{{ url_for('relatorios', page=p, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">{{ p }}</a></li>{% endif %}
+          {% else %}<li><a href="{{ url_for('reports_bp.relatorios', page=p, **base_args) }}">{{ p }}</a></li>{% endif %}
         {% endfor %}
 
          {% if end_page < total_pages %}
            {% if end_page < total_pages - 1 %}<li><span>...</span></li>{% endif %}
-           <li><a href="{{ url_for('relatorios', page=total_pages, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">{{ total_pages }}</a></li>
+           <li><a href="{{ url_for('reports_bp.relatorios', page=total_pages, **base_args) }}">{{ total_pages }}</a></li>
          {% endif %}
 
         {% if page < total_pages %}
-        <li><a href="{{ url_for('relatorios', page=page+1, fornecedora=selected_fornecedora, report_type=selected_report_type) }}">Próximo &raquo;</a></li>
+        <li><a href="{{ url_for('reports_bp.relatorios', page=page+1, **base_args) }}">Próximo &raquo;</a></li>
         {% else %}<li class="disabled"><span>Próximo &raquo;</span></li>{% endif %}
     </ul>
   </nav>
@@ -140,8 +164,9 @@
                 let disableFornecedora = false;
                 let activeInfoType = null; // Guarda qual tipo de info mostrar
 
-                // Define quais tipos de relatório desabilitam a fornecedora
-                const disableTypes = ['rateio_rzk', 'clientes_por_licenciado']; // Adicione outros se necessário
+                // Define quais tipos de relatório AINDA desabilitam a fornecedora
+                // --- ATUALIZADO: REMOVIDO 'recebiveis_clientes' ---
+                const disableTypes = ['rateio_rzk', 'clientes_por_licenciado'];
 
                 if (disableTypes.includes(selectedType)) {
                     disableFornecedora = true;
@@ -154,17 +179,20 @@
                 // Mostra/esconde as mensagens informativas
                 infoMessages.forEach(msg => {
                     const msgType = msg.getAttribute('data-info-type');
+                    // Mostra a mensagem APENAS se o tipo dela for o que está ativo E desabilitando o select
                     if (msgType === activeInfoType) {
-                         msg.style.display = 'inline'; // Mostra a mensagem correspondente
+                         msg.style.display = 'inline';
                     } else {
-                         msg.style.display = 'none'; // Esconde as outras
+                         msg.style.display = 'none'; // Esconde todas as outras
                     }
                 });
 
-                 // Se desabilitado, pode ser útil limpar a seleção ou selecionar um valor padrão
-                 // if (disableFornecedora) {
-                 //     fornecedoraSelect.value = ''; // Limpa seleção
-                 // }
+                 // Se desabilitado, garante que o valor enviado (se houver) seja o correto
+                 if (disableFornecedora) {
+                     if (selectedType === 'rateio_rzk') {
+                         // O input hidden já garante 'RZK'
+                     }
+                 }
             }
 
             // Verifica se os elementos existem antes de adicionar listeners

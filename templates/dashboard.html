@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function updateChartData(year) {
          if (!monthlyChartInstance) { console.error("Instância do Chart de Linha não encontrada."); return; }
         try {
-            const apiUrl = "{{ url_for('api_chart_monthly_active_clients') }}";
+            const apiUrl = "{{ url_for('api_bp.api_chart_monthly_active_clients') }}";
             const response = await fetch(`${apiUrl}?year=${year}`);
             if (!response.ok) {
                 let errorMsg = `Erro ${response.status}`;
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fornecedoraPieChartInstance.update();
         }
 
-        const apiUrl = `{{ url_for('api_clientes_fornecedora_pie') }}?month=${month}`;
+        const apiUrl = `{{ url_for('api_bp.api_clientes_fornecedora_pie') }}?month=${month}`;
         console.debug(`Buscando dados para gráfico pizza: ${apiUrl}`);
 
         try {
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
             concessionariaBarChartInstance.update();
         }
 
-        const apiUrl = `{{ url_for('api_clientes_concessionaria_bar') }}?month=${month}`;
+        const apiUrl = `{{ url_for('api_bp.api_clientes_concessionaria_bar') }}?month=${month}`;
         console.debug(`Buscando dados para gráfico barras concessionária: ${apiUrl}`);
 
         try {
@@ -553,11 +553,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // APIs a serem chamadas
         const endpoints = {
-            summaryForn: `{{ url_for('api_fornecedora_summary') }}?month=${month}`,
-            summaryConc: `{{ url_for('api_concessionaria_summary') }}?month=${month}`,
-            kpiKwh: `{{ url_for('api_kpi_total_kwh') }}?month=${month}`,
-            kpiAtivos: `{{ url_for('api_kpi_clientes_ativos') }}?month=${month}`,
-            kpiRegistrados: `{{ url_for('api_kpi_clientes_registrados') }}?month=${month}`
+            summaryForn: `{{ url_for('api_bp.api_fornecedora_summary') }}?month=${month}`,
+            summaryConc: `{{ url_for('api_bp.api_concessionaria_summary') }}?month=${month}`,
+            kpiKwh: `{{ url_for('api_bp.api_kpi_total_kwh') }}?month=${month}`,
+            kpiAtivos: `{{ url_for('api_bp.api_kpi_clientes_ativos') }}?month=${month}`,
+            kpiRegistrados: `{{ url_for('api_bp.api_kpi_clientes_registrados') }}?month=${month}`
         };
 
         // Função auxiliar para fetch

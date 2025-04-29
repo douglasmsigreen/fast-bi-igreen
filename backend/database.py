@@ -3,7 +3,7 @@ import psycopg2
 import psycopg2.pool
 import logging
 from flask import g
-from config import Config
+from .config import Config
 from typing import List, Tuple, Optional, Any
 from datetime import datetime, timedelta # Adicionado timedelta e datetime
 
@@ -195,7 +195,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
                END AS dias_ativo,
                COUNT(rcb.numinstalacao) AS quantidade_registros_rcb
         FROM public."CLIENTES" c
-        LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao """
+        LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao """ # Assume que RCB_CLIENTES também tem numinstalacao para contar
     where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"]
     params = []
     if fornecedora and fornecedora.lower() != 'consolidado':
@@ -263,6 +263,7 @@ def get_state_map_data() -> List[Tuple[str, int, float]]: # Retorna UF, CONTAGEM
 
 
 # --- FUNÇÕES PARA RATEIO RZK ---
+# (Estas funções permanecem inalteradas)
 def get_rateio_rzk_base_nova_ids() -> List[int]:
     """Busca IDs para 'Base Nova' do Rateio RZK."""
     query_base = """ SELECT DISTINCT cc.idcliente FROM public."CLIENTES_CONTRATOS" cc
@@ -332,9 +333,126 @@ def count_rateio_rzk() -> int:
 
 # --- FIM FUNÇÕES RZK ---
 
+# --- INÍCIO FUNÇÕES PARA RELATÓRIO 'Recebíveis Clientes' ---
+
+# <<< FUNÇÃO MODIFICADA para incluir e ordenar o campo 'qtd_rcb_cliente' >>>
+def _get_recebiveis_clientes_fields() -> List[str]:
+    """Retorna a lista de campos SQL para o relatório Recebíveis Clientes."""
+    return [
+        "rcb.idrcb",                            # 1
+        "c.idcliente AS codigo_cliente",        # 2
+        "c.nome AS cliente_nome",               # 3
+        "rcb.numinstalacao",                    # 4
+        "rcb.valorseria",                       # 5
+        "rcb.valorapagar",                      # 6
+        "rcb.valorcomcashback",                 # 7
+        "TO_CHAR(rcb.mesreferencia, 'MM/YYYY') AS data_referencia", # 8
+        "TO_CHAR(rcb.dtvencimento, 'DD/MM/YYYY') AS data_vencimento", # 9
+        "TO_CHAR(rcb.dtpagamento, 'DD/MM/YYYY') AS data_pagamento", # 10
+        "TO_CHAR(rcb.cdatavencoriginal, 'DD/MM/YYYY') AS data_vencimento_original", # 11
+        "c.celular",                            # 12
+        "c.email",                              # 13
+        "c.status_financeiro AS status_financeiro_cliente", # 14
+        "c.numcliente",                         # 15
+        "c.idconsultor AS id_licenciado",       # 16
+        "co.nome AS nome_licenciado",           # 17
+        "co.celular AS celular_licenciado",     # 18
+        """CASE
+            WHEN rcb.dtpagamento IS NOT NULL THEN 'PAGO'
+            WHEN rcb.dtvencimento >= CURRENT_DATE THEN 'A RECEBER'
+            ELSE 'VENCIDO'
+        END AS status_calculado""",             # 19
+        "rcb.urldemonstrativo",                 # 20
+        "rcb.urlboleto",                        # 21
+        "rcb.qrcode",                           # 22
+        "rcb.urlcontacemig",                    # 23
+        "rcb.nvalordistribuidora AS valor_distribuidora", # 24
+        "rcb.codigobarra",                      # 25
+        "c.ufconsumo",                          # 26
+        "c.fornecedora AS fornecedora_cliente", # 27 (Seleciona de CLIENTES)
+        "c.concessionaria",                     # 28
+        "c.cnpj",                               # 29
+        'c."cpf/cnpj" AS cpf_cnpj_cliente',     # 30
+        "rcb.nrodocumento",                     # 31
+        "rcb.idcomerc",                         # 32
+        "rcb.idbomfuturo",                      # 33
+        "rcb.energiainjetada",                  # 34
+        "rcb.energiacompensada",                # 35
+        "rcb.energiaacumulada",                 # 36
+        "rcb.energiaajuste",                    # 37
+        "rcb.energiafaturamento",               # 38
+        "c.desconto_cliente",                   # 39
+        # --- INÍCIO NOVA COLUNA CALCULADA (Última Posição) ---
+        """COUNT(rcb.idrcb) OVER (PARTITION BY c.idcliente) AS qtd_rcb_cliente""" # 40
+        # --- FIM NOVA COLUNA CALCULADA ---
+    ]
+
+# Função com filtro de fornecedora já aplicado
+def get_recebiveis_clientes_data(offset: int = 0, limit: Optional[int] = None, fornecedora: Optional[str] = None) -> List[tuple]:
+    """Busca os dados paginados para o relatório 'Recebíveis Clientes'."""
+    campos = _get_recebiveis_clientes_fields() # Já inclui status_calculado e qtd_rcb_cliente
+    select_clause = f"SELECT {', '.join(campos)}"
+    from_clause = 'FROM public."RCB_CLIENTES" rcb'
+    join_clause = """
+        LEFT JOIN public."CLIENTES" c ON rcb.numinstalacao = c.numinstalacao
+        LEFT JOIN public."CONSULTOR" co ON c.idconsultor = co.idconsultor
+    """
+    # LÓGICA DO WHERE CLAUSE (com filtro de fornecedora)
+    where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"] # Filtro base opcional
+    params = []
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        where_clauses.append("c.fornecedora = %s")
+        params.append(fornecedora)
+    where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    # FIM DA LÓGICA DO WHERE CLAUSE
+
+    order_by = "ORDER BY rcb.idrcb"
+    limit_clause = "LIMIT %s" if limit is not None else ""
+    offset_clause = "OFFSET %s" if offset > 0 else ""
+
+    # Adiciona limit e offset aos parâmetros DEPOIS do filtro de fornecedora
+    if limit is not None: params.append(limit)
+    if offset > 0: params.append(offset)
+
+    paginated_query = f"{select_clause} {from_clause} {join_clause} {where_clause} {order_by} {limit_clause} {offset_clause};"
+    logger.debug(f"Executando query para Recebíveis Clientes (Pag): {paginated_query} com params: {params}")
+    try:
+        return execute_query(paginated_query, tuple(params)) or []
+    except Exception as e:
+        logger.error(f"Erro get_recebiveis_clientes_data: {e}", exc_info=True)
+        return []
+
+# Função com filtro de fornecedora já aplicado
+def count_recebiveis_clientes(fornecedora: Optional[str] = None) -> int:
+    """Conta o total de registros para o relatório 'Recebíveis Clientes'."""
+    from_clause = 'FROM public."RCB_CLIENTES" rcb'
+    join_clause = """
+        LEFT JOIN public."CLIENTES" c ON rcb.numinstalacao = c.numinstalacao
+        LEFT JOIN public."CONSULTOR" co ON c.idconsultor = co.idconsultor
+    """
+    # LÓGICA DO WHERE CLAUSE (com filtro de fornecedora)
+    where_clauses = ["(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"] # Filtro base opcional
+    params = []
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        where_clauses.append("c.fornecedora = %s")
+        params.append(fornecedora)
+    where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    # FIM DA LÓGICA DO WHERE CLAUSE
+
+    count_query_sql = f"SELECT COUNT(rcb.idrcb) {from_clause} {join_clause} {where_clause};"
+    logger.debug(f"Executando query de contagem para Recebíveis Clientes: {count_query_sql} com params: {params}")
+    try:
+        result = execute_query(count_query_sql, tuple(params), fetch_one=True)
+        return result[0] if result else 0
+    except Exception as e:
+        logger.error(f"Erro count_recebiveis_clientes: {e}", exc_info=True)
+        return 0
+
+# --- FIM FUNÇÕES RECEBÍVEIS CLIENTES ---
+
 
 # --- FUNÇÕES PARA O DASHBOARD (KPIs, Resumos, Gráficos) ---
-
+# (Estas funções permanecem inalteradas)
 def get_total_consumo_medio_by_month(month_str: Optional[str] = None) -> float:
     """Calcula a soma total de 'consumomedio' para clientes ativos no mês (data_ativo)."""
     base_query = """
@@ -511,68 +629,137 @@ def get_fornecedoras() -> List[str]:
     try: results = execute_query(query); return sorted([str(f[0]) for f in results if f and f[0]]) if results else []
     except Exception as e: logger.error(f"Erro get_fornecedoras: {e}", exc_info=True); return []
 
+# <<< FUNÇÃO MODIFICADA para incluir mapeamento e ordem de 'qtd_rcb_cliente' >>>
 def get_headers(report_type: str) -> List[str]:
      """Retorna cabeçalhos legíveis baseados no tipo de relatório."""
-     # Este mapeamento deve conter TODAS as colunas de TODOS os relatórios
      header_map = {
-         # Chaves de Base Clientes e Rateio Geral (Incluir TODAS as suas colunas aqui)
-         "c.idcliente": "Código Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular",
-         "c.cidade": "Cidade", "regiao": "Região (UF-Conc)", "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas",
-         "c.consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ",
-         "c.numcliente": "Número Cliente", "dtultalteracao": "Última Alteração", "c.celular_2": "Celular 2", "c.email": "Email",
-         "c.rg": "RG", "c.emissor": "Emissor", "datainjecao": "Data Injeção", "c.idconsultor": "ID Consultor",
-         "consultor_nome": "Representante", "consultor_celular": "Celular Consultor", "c.cep": "CEP", "c.endereco": "Endereço",
-         "c.numero": "Número", "c.bairro": "Bairro", "c.complemento": "Complemento", "c.cnpj": "CNPJ (Empresa)",
-         "c.razao": "Razão Social", "c.fantasia": "Nome Fantasia", "c.ufconsumo": "UF Consumo", "c.classificacao": "Classificação",
-         "c.keycontrato": "Key Contrato", "c.keysigner": "Key Signer", "c.leadidsolatio": "Lead ID Solatio", "c.indcli": "Ind CLI",
-         "c.enviadocomerc": "Enviado Comerci", "c.obs": "Observação", "c.posvenda": "Pós-venda", "c.retido": "Retido",
-         "c.contrato_verificado": "Contrato Verificado", "c.rateio": "Rateio (S/N)", "c.validadosucesso": "Validação Sucesso (S/N)",
-         "status_sucesso": "Status Validação", "c.documentos_enviados": "Documentos Enviados", "c.link_documento": "Link Documento",
-         "c.caminhoarquivo": "Link Conta Energia", "c.caminhoarquivocnpj": "Link Cartão CNPJ", "c.caminhoarquivodoc1": "Link Doc Ident. 1",
-         "c.caminhoarquivodoc2": "Link Doc Ident. 2", "c.caminhoarquivoenergia2": "Link Conta Energia 2", "c.caminhocontratosocial": "Link Contrato Social",
-         "c.caminhocomprovante": "Link Comprovante", "c.caminhoarquivoestatutoconvencao": "Link Estatuto/Convenção", "c.senhapdf": "Senha PDF",
-         "c.codigo": "Código Interno", "c.elegibilidade": "Elegibilidade", "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelamento",
-         "data_ativo_original": "Data Ativo Original", "c.fornecedora": "Fornecedora", "c.desconto_cliente": "Desconto Cliente",
-         "dtnasc": "Data Nasc.", "c.origem": "Origem", "c.cm_tipo_pagamento": "Tipo Pagamento", "c.status_financeiro": "Status Financeiro",
-         "c.logindistribuidora": "Login Distribuidora", "c.senhadistribuidora": "Senha Distribuidora", "c.nacionalidade": "Nacionalidade",
-         "c.profissao": "Profissão", "c.estadocivil": "Estado Civil", "c.obs_compartilhada": "Observação Compartilhada",
-         "c.linkassinatura1": "Link Assinatura",
-         # Chaves de Rateio RZK (Incluir TODAS as suas colunas aqui)
-         "devolutiva": "Devolutiva", "licenciado": "Licenciado", "chave_contrato": "Chave Contrato", "nome_cliente_rateio": "Cliente Rateio",
-         # Chaves de Clientes por Licenciado
-         "c.cpf": "CPF Consultor", "c.uf": "UF Consultor", "quantidade_clientes_ativos": "Qtd. Clientes Ativos",
-         # Chaves de Boletos por Cliente
-         "quantidade_registros_rcb": "Qtd. Boletos (RCB)", "dias_ativo": "Dias Ativo"
+         # ... (mapeamentos existentes) ...
+         "c.fornecedora": "Fornecedora", # Mapeamento genérico, pode ser sobreposto
+         # Chaves de Recebíveis Clientes (baseadas no CSV e nos aliases usados)
+         "rcb.idrcb": "Idrcb",
+         "codigo_cliente": "Codigo Cliente",
+         "cliente_nome": "Cliente",
+         "rcb.numinstalacao": "Instalacao",
+         "rcb.valorseria": "Quanto Seria",
+         "rcb.valorapagar": "Valor A Pagar",
+         "rcb.valorcomcashback": "Valor Com Cashback",
+         "data_referencia": "Data Referencia",
+         "data_vencimento": "Data Vencimento",
+         "data_pagamento": "Data Pagamento",
+         "data_vencimento_original": "Data Vencimento Original",
+         "status_financeiro_cliente": "Status Financeiro Cliente",
+         "id_licenciado": "Id Licenciado",
+         "nome_licenciado": "Licenciado",
+         "celular_licenciado": "Celular Licenciado",
+         "status_calculado": "Status",
+         "rcb.urldemonstrativo": "Url Demonstrativo",
+         "rcb.urlboleto": "Url Boleto",
+         "rcb.qrcode": "Qrcode Pix",
+         "rcb.urlcontacemig": "Url Boleto Distribuidora",
+         "valor_distribuidora": "Valor Distribuidora",
+         "rcb.codigobarra": "Codigo Barra Boleto",
+         "fornecedora_cliente": "Fornecedora", # Alias específico para Recebiveis
+         "c.concessionaria": "Concessionaria",
+         "cpf_cnpj_cliente": "Cpf",
+         "rcb.nrodocumento": "Numero Documento",
+         "rcb.idcomerc": "Idcomerc",
+         "rcb.idbomfuturo": "Idbomfuturo",
+         "rcb.energiainjetada": "Energia Injetada",
+         "rcb.energiacompensada": "Energia Compensada",
+         "rcb.energiaacumulada": "Energia Acumulada",
+         "rcb.energiaajuste": "Energia Ajuste",
+         "rcb.energiafaturamento": "Energia Faturamento",
+         "qtd_rcb_cliente": "Qt de Rcb", # <<< ADICIONADO MAPEAMENTO
+         # ... (outros mapeamentos podem existir para outras colunas/relatórios) ...
      }
      # Define a ORDEM das colunas para cada relatório
      keys_order = {
-         "base_clientes": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ], # Sua ordem completa
-         "rateio": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ], # Sua ordem completa
-         "rateio_rzk": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "devolutiva", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ], # Sua ordem completa
+         "base_clientes": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ],
+         "rateio": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
+         "rateio_rzk": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "devolutiva", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
          "clientes_por_licenciado": [ "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos" ],
-         "boletos_por_cliente": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "c.fornecedora", "data_ativo", "dias_ativo", "quantidade_registros_rcb" ]
+         "boletos_por_cliente": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "c.fornecedora", "data_ativo", "dias_ativo", "quantidade_registros_rcb" ],
+         # <<< LISTA MODIFICADA para incluir 'qtd_rcb_cliente' no final >>>
+         "recebiveis_clientes": [
+             "rcb.idrcb",                        # 1
+             "codigo_cliente",                   # 2
+             "cliente_nome",                     # 3
+             "rcb.numinstalacao",                # 4
+             "rcb.valorseria",                   # 5
+             "rcb.valorapagar",                  # 6
+             "rcb.valorcomcashback",             # 7
+             "data_referencia",                  # 8
+             "data_vencimento",                  # 9
+             "data_pagamento",                   # 10
+             "data_vencimento_original",         # 11
+             "c.celular",                        # 12
+             "c.email",                          # 13
+             "status_financeiro_cliente",        # 14
+             "c.numcliente",                     # 15
+             "id_licenciado",                    # 16
+             "nome_licenciado",                  # 17
+             "celular_licenciado",               # 18
+             "status_calculado",                 # 19
+             "rcb.urldemonstrativo",             # 20
+             "rcb.urlboleto",                    # 21
+             "rcb.qrcode",                       # 22
+             "rcb.urlcontacemig",                # 23
+             "valor_distribuidora",              # 24
+             "rcb.codigobarra",                  # 25
+             "c.ufconsumo",                      # 26
+             "fornecedora_cliente",              # 27
+             "c.concessionaria",                 # 28
+             "c.cnpj",                           # 29
+             "cpf_cnpj_cliente",                 # 30
+             "rcb.nrodocumento",                 # 31
+             "rcb.idcomerc",                     # 32
+             "rcb.idbomfuturo",                  # 33
+             "rcb.energiainjetada",              # 34
+             "rcb.energiacompensada",            # 35
+             "rcb.energiaacumulada",             # 36
+             "rcb.energiaajuste",                # 37
+             "rcb.energiafaturamento",           # 38
+             "c.desconto_cliente",               # 39
+             # --- INÍCIO NOVA CHAVE (Última Posição) ---
+             "qtd_rcb_cliente"                   # 40
+             # --- FIM NOVA CHAVE ---
+         ]
      }
      report_keys = keys_order.get(report_type.lower())
-     if not report_keys: logger.warning(f"Ordem de chaves não definida para '{report_type}' em get_headers."); return []
-     headers_list = [header_map.get(key, key.replace('_', ' ').title()) for key in report_keys] # Usa fallback
-     missing_keys = [key for key in report_keys if key not in header_map]
-     if missing_keys: logger.warning(f"Chaves não mapeadas em header_map para '{report_type}': {missing_keys}")
+     if not report_keys:
+         logger.warning(f"Ordem de chaves não definida para '{report_type}' em get_headers.")
+         if report_type.lower() == 'recebiveis_clientes':
+              try:
+                  # Tenta obter aliases ou nomes de colunas da função _get_fields
+                  report_keys = [f.split(' AS ')[-1].strip() for f in _get_recebiveis_clientes_fields()]
+                  logger.info(f"Usando ordem de campos da query como fallback para headers de '{report_type}'.")
+              except Exception: return []
+         else:
+              return []
+
+     headers_list = []
+     for key in report_keys:
+         # Tenta mapear a chave completa primeiro (útil para aliases como 'status_calculado')
+         header = header_map.get(key)
+         if not header:
+             # Se não encontrou, tenta mapear a parte principal (ex: 'c.idcliente' ou 'idcliente')
+             base_key = key.split('.')[-1] # Remove prefixo tipo 'c.' ou 'rcb.'
+             header = header_map.get(base_key, key.replace('_', ' ').title()) # Fallback final
+         headers_list.append(header)
+
+     missing_keys = [key for key in report_keys if key not in header_map and key.split('.')[-1] not in header_map]
+     if missing_keys:
+         logger.warning(f"Chaves/Aliases não mapeados em header_map para '{report_type}': {missing_keys}")
      return headers_list
+# --- FIM DA FUNÇÃO get_headers ---
 
 
-# --- ADICIONADO: Função para Gráfico Pizza Fornecedora ---
+# --- FUNÇÕES PARA GRÁFICOS DO DASHBOARD ---
+# (Estas funções permanecem inalteradas)
 def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = None) -> List[Tuple[str, int]] or None:
     """
     Busca a contagem de clientes ativos (por data_ativo) agrupados por fornecedora
     para um mês específico. Usado no gráfico de pizza do dashboard.
-
-    Args:
-        month_str: O mês para filtrar no formato 'YYYY-MM'.
-                   Se None, busca de todos os clientes com data_ativo.
-
-    Returns:
-        Lista de tuplas (fornecedora, qtd_clientes) ou None em caso de erro.
-        Retorna lista vazia se nenhum dado for encontrado.
     """
     base_query = """
         SELECT
@@ -581,29 +768,27 @@ def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = Non
         FROM public."CLIENTES" c
         WHERE
             (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-            AND {date_filter} -- Placeholder para o filtro de data
+            AND {date_filter}
         GROUP BY fornecedora_tratada
-        HAVING COUNT(c.idcliente) > 0 -- Garante que só retorne fornecedoras com clientes no período
-        ORDER BY qtd_clientes DESC, fornecedora_tratada; -- Ordena por qtd desc
+        HAVING COUNT(c.idcliente) > 0
+        ORDER BY qtd_clientes DESC, fornecedora_tratada;
     """
     params = []
-    date_filter_sql = "c.data_ativo IS NOT NULL" # Filtro padrão
+    date_filter_sql = "c.data_ativo IS NOT NULL"
 
     if month_str:
         try:
             start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
-            # Calcula o fim do mês corretamente
             if start_date.month == 12:
                 end_date_exclusive = start_date.replace(year=start_date.year + 1, month=1, day=1)
             else:
                 end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
-            logger.info(f"[PIE CHART] Filtrando contagem por fornecedora por data_ativo no mês: {month_str} (>= {start_date} e < {end_date_exclusive})")
             date_filter_sql = "(c.data_ativo >= %s AND c.data_ativo < %s)"
             params.extend([start_date, end_date_exclusive])
         except ValueError:
-            logger.warning(f"[PIE CHART] Formato de mês inválido: '{month_str}'. Usando filtro padrão (data_ativo IS NOT NULL).")
+            logger.warning(f"[PIE CHART] Formato de mês inválido: '{month_str}'. Usando filtro padrão.")
             date_filter_sql = "c.data_ativo IS NOT NULL"
-            params = [] # Reseta params se o mês for inválido
+            params = []
 
     final_query = base_query.format(date_filter=date_filter_sql)
     logger.debug(f"Executando query para gráfico pizza fornecedora (Mês: {month_str or 'Todos'}): {final_query} com params: {params}")
@@ -611,33 +796,23 @@ def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = Non
     try:
         results = execute_query(final_query, tuple(params))
         if results:
-            # Formata garantindo (string, int)
             formatted_results = [(str(row[0]), int(row[1])) for row in results]
             logger.info(f"[PIE CHART] Dados por fornecedora (Mês: {month_str or 'Todos'}) encontrados: {len(formatted_results)} registros.")
             return formatted_results
         else:
             logger.info(f"[PIE CHART] Nenhum dado encontrado para gráfico pizza fornecedora (Mês: {month_str or 'Todos'}).")
-            return [] # Retorna lista vazia se não houver resultados
+            return []
     except Exception as e:
         logger.error(f"[PIE CHART] Erro ao buscar dados para gráfico pizza fornecedora (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
-        return None # Retorna None em caso de erro
+        return None
 
 def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = None) -> List[Tuple[str, int]] or None:
     """
     Busca a CONTAGEM de clientes ativos agrupados por Região/Concessionária,
     filtrando por clientes cuja data_ativo cai dentro do mês especificado.
-    Retorna uma lista de tuplas (regiao_concessionaria, qtd_clientes).
-
-    Args:
-        month_str: O mês para filtrar no formato 'YYYY-MM'.
-                   Se None, busca de todos os clientes com data_ativo.
-
-    Returns:
-        Lista de tuplas (regiao_concessionaria, qtd_clientes) ordenada ou None em caso de erro.
     """
     base_query = """
         SELECT
-            -- Trata concessionária vazia ou nula e combina com UF se disponível
             CASE
                 WHEN c.concessionaria IS NULL OR TRIM(c.concessionaria) = '' THEN COALESCE(UPPER(TRIM(c.ufconsumo)), 'NÃO ESPECIFICADA')
                 WHEN c.ufconsumo IS NULL OR TRIM(c.ufconsumo) = '' THEN UPPER(TRIM(c.concessionaria))
@@ -647,16 +822,15 @@ def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = 
         FROM public."CLIENTES" c
         WHERE
             (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-            AND {date_filter} -- Placeholder para o filtro de data
-        GROUP BY regiao_concessionaria -- Agrupa pela coluna calculada
-        ORDER BY qtd_clientes DESC; -- Ordena pela quantidade de clientes (decrescente)
+            AND {date_filter}
+        GROUP BY regiao_concessionaria
+        ORDER BY qtd_clientes DESC;
     """
     params = []
     date_filter_sql = "c.data_ativo IS NOT NULL"
     if month_str:
         try:
             start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
-            # Calcula o fim do mês corretamente
             if start_date.month == 12:
                 end_date_exclusive = start_date.replace(year=start_date.year + 1, month=1, day=1)
             else:
@@ -666,21 +840,20 @@ def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = 
         except ValueError:
             logger.warning(f"[CONCESSIONARIA COUNT] Formato de mês inválido: '{month_str}'. Usando data_ativo IS NOT NULL.")
             date_filter_sql = "c.data_ativo IS NOT NULL"
-            params = [] # Reseta params se o mês for inválido
+            params = []
 
     final_query = base_query.format(date_filter=date_filter_sql)
     logger.debug(f"Buscando contagem de clientes por concessionária (Mês: {month_str or 'Todos'})...")
     try:
         results = execute_query(final_query, tuple(params))
         if results:
-            # Formata garantindo que os tipos estão corretos
             formatted_results = [(str(row[0]), int(row[1])) for row in results]
             logger.debug(f"Contagem por concessionária (Mês: {month_str or 'Todos'}) encontrada: {len(formatted_results)} registros.")
             return formatted_results
         else:
             logger.debug(f"Nenhum dado encontrado para contagem por concessionária (Mês: {month_str or 'Todos'}).")
-            return [] # Retorna lista vazia se não houver resultados
+            return []
     except Exception as e:
         logger.error(f"Erro ao buscar contagem por concessionária (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
-        return None # Retorna None em caso de erro
-# --- FIM DA NOVA FUNÇÃO ---
+        return None
+# --- FIM DA FUNÇÃO ---

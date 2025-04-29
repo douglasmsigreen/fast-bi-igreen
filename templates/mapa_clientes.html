@@ -22,7 +22,7 @@
             const mapDiv = document.getElementById('brazil-map-div');
 
             // Usa a API que retorna UF, count e sum_consumo
-            fetch("{{ url_for('api_state_summary_for_map') }}")
+            fetch("{{ url_for('api_bp.api_state_summary_for_map') }}")
                 .then(response => {
                     if (!response.ok) {
                         return response.json().then(err => { throw new Error(err.error || `Erro HTTP: ${response.status}`) });
@@ -125,7 +125,7 @@
                 })
                 .catch(error => {
                     console.error('Erro ao carregar ou renderizar o mapa:', error);
-                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa: ${error.message}<br>Verifique a URL da API ('${"{{ url_for('api_state_summary_for_map') }}"}'), o caminho do GeoJSON e o console (F12).</p>`;
+                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa: ${error.message}<br>Verifique a URL da API ('${"{{ url_for('api_bp.api_state_summary_for_map') }}"}'), o caminho do GeoJSON e o console (F12).</p>`;
                 });
         });
     </script>
