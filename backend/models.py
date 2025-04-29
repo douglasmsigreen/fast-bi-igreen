@@ -1,7 +1,7 @@
 # models.py
 from flask_login import UserMixin
 import bcrypt # Importa a biblioteca bcrypt para verificação de senha
-from . import database # Importa nosso módulo de banco de dados para acesso às funções de query
+from . import db as database # Importa nosso módulo de banco de dados para acesso às funções de query
 import logging # Adiciona import para logger
 
 # Obtém o logger configurado em app.py ou database.py
