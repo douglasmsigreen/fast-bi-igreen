@@ -1,0 +1,61 @@
+{# templates/layouts/base_layout.html #}
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Fast BI{% endblock %}</title>
+
+    {# --- CSS Links --- #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+
+    {# --- Bloco para CSS ou meta tags extras --- #}
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+    <div class="page-wrapper"> {# Wrapper principal #}
+
+        {# --- Incluir Sidebar (Componente) --- #}
+        {% include 'components/sidebar.html' %}
+
+        {# --- Área de Conteúdo Principal --- #}
+        <main class="main-content">
+
+            {# --- Incluir Header (Componente) --- #}
+            {% include 'components/header.html' %}
+
+            {# --- Área Principal para o Conteúdo da Página --- #}
+            <div class="content-area">
+                {# --- Incluir Mensagens Flash (Componente) --- #}
+                {% include 'components/flash_messages.html' %}
+
+                {# --- Bloco principal do conteúdo --- #}
+                {% block content %}
+                {# O conteúdo específico da página será inserido aqui #}
+                {% endblock %}
+            </div>
+
+            {# --- Incluir Footer (Componente) --- #}
+            {% include 'components/footer.html' %}
+
+        </main>
+        {# --- Fim da Área de Conteúdo Principal --- #}
+
+    </div> {# Fim page-wrapper #}
+
+    {# --- Scripts JS --- #}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    {# Script para atualizar data no header (já está no componente header.html) #}
+
+    {# --- Bloco para scripts JS específicos da página --- #}
+    {% block scripts_extra %}{% endblock %}
+
+</body>
+</html>

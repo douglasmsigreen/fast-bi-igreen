@@ -1,9 +1,13 @@
-{# templates/dashboard.html - Final com gráfico de pizza fornecedora, barras concessionária (Top 8), Vencidos e SortableJS #}
-{% extends "base.html" %}
+{# templates/dashboard.html - Refatorado para modularização #}
+{% extends "layouts/base_layout.html" %} {# <<< MUDA PARA ESTENDER O NOVO LAYOUT #}
 
-{# Define o título que pode aparecer na barra superior interna #}
+{# Define o título da aba do navegador #}
+{% block title %}Painel de Controle - Fast BI{% endblock %}
+
+{# Define o título visível no header da página (incluído via componente header.html) #}
 {% block page_title %}Painel de Controle{% endblock %}
 
+{# Conteúdo específico desta página #}
 {% block content %}
 
 {# Linha para Filtros #}
@@ -111,9 +115,7 @@
                     </tbody>
                 </table>
             </div>
-            {% if error_summary %}
-                 <p class="text-danger" style="text-align: center; margin-top: 10px; font-size: 0.9em;">{{ error_summary }}</p>
-            {% endif %}
+            {# Removido o bloco de erro daqui, pois as mensagens flash agora são tratadas no layout base #}
         </div>
     </div>
 
@@ -156,16 +158,13 @@
             Clientes Ativos por Fornecedora
             <i class="fas fa-info-circle tooltip-icon" title="Distribuição percentual dos clientes com data_ativo no mês selecionado, por fornecedora."></i>
         </div>
-        <div class="card-body" style="position: relative; min-height: 300px;"> {# Altura mínima para o gráfico #}
-            {# Status de Carregamento/Erro para o gráfico #}
+        <div class="card-body" style="position: relative; min-height: 300px;">
             <div id="fornecedora-pie-chart-status" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999; display: none;">
                 <i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...
             </div>
-            {# Canvas para o gráfico #}
             <canvas id="fornecedoraPieChart" style="display: block; width: 100%; height: 100%;"></canvas>
         </div>
     </div>
-    {# --- FIM Card Gráfico Pizza Fornecedora --- #}
 
     {# --- Card Gráfico Barras Concessionária (Top 8) --- #}
     <div class="card chart-card grid-span-2"> {# <<< ITEM ARRASTÁVEL >>> #} {# Ocupa 2 colunas #}
@@ -173,30 +172,25 @@
             Top 8 Regiões/Concessionárias (Clientes Ativos)
             <i class="fas fa-info-circle tooltip-icon" title="Quantidade de clientes com data_ativo no mês selecionado, agrupados por Região/Concessionária (Top 8)."></i>
         </div>
-        <div class="card-body" style="position: relative; min-height: 300px;"> {# Altura mínima para o gráfico #}
-            {# Status de Carregamento/Erro para o gráfico #}
+        <div class="card-body" style="position: relative; min-height: 300px;">
             <div id="concessionaria-bar-chart-status" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999; display: none;">
                 <i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...
             </div>
-            {# Canvas para o gráfico #}
             <canvas id="concessionariaBarChart" style="display: block; width: 100%; height: 100%;"></canvas>
         </div>
     </div>
-    {# --- FIM Card Gráfico Barras Concessionária --- #}
 
     {# --- CARD: Fornecedoras Cli > 100 dias s/ RCB --- #}
-    <div class="card summary-table-card fornecedora-no-rcb-card grid-span-2"> {# <<< ITEM ARRASTÁVEL >>> #} {# Ocupa 2 colunas #}
+    <div class="card summary-table-card fornecedora-no-rcb-card grid-span-2"> {# <<< ITEM ARRASTÁVEL >>> #}
         <div class="card-header">
             Fornecedoras s/ RCB (Clientes > 100d)
             <i class="fas fa-info-circle tooltip-icon" title="Fornecedoras com clientes ativos há mais de 100 dias e que NÃO possuem nenhum registro na tabela de Recebíveis."></i>
         </div>
         <div class="card-body">
-            {# Status de Carregamento/Erro #}
             <div id="fornecedora-no-rcb-status" style="text-align: center; padding: 10px; display: none;">
                 <i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...
             </div>
-            {# Tabela para exibir os dados #}
-            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;"> {# Altura máxima e rolagem #}
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
                 <table id="fornecedora-no-rcb-table" class="table table-sm table-striped table-hover">
                     <thead>
                         <tr>
@@ -206,47 +200,41 @@
                         </tr>
                     </thead>
                     <tbody id="fornecedora-no-rcb-tbody">
-                        {# O conteúdo será preenchido via JavaScript #}
                         <tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando dados...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-    {# --- FIM DO CARD --- #}
 
     {# --- CARD: Pagamentos Vencidos por Fornecedora --- #}
-    <div class="card chart-card grid-span-2"> {# <<< ITEM ARRASTÁVEL >>> #} {# Ocupa 2 colunas #}
+    <div class="card chart-card grid-span-2"> {# <<< ITEM ARRASTÁVEL >>> #}
         <div class="card-header">
-            {# Filtro de Dias #}
             <select id="overdue-days-filter" name="days_overdue" style="font-size: 0.9em; border: none; background: transparent; font-weight: bold; color: var(--cor-texto-principal); margin-right: 10px;">
                 <option value="30" selected>30 dias</option>
                 <option value="60">60 dias</option>
                 <option value="90">90 dias</option>
                 <option value="120">120 dias</option>
             </select>
-            <span>Pagamentos Vencidos s/ Baixa</span> {# Título do Card #}
+            <span>Pagamentos Vencidos s/ Baixa</span>
             <i class="fas fa-info-circle tooltip-icon" title="Contagem de boletos/faturas vencidos (sem data de pagamento registrada) por fornecedora, conforme o período selecionado."></i>
         </div>
-        <div class="card-body" style="position: relative; min-height: 300px;"> {# Altura mínima #}
-            {# Status de Carregamento/Erro #}
+        <div class="card-body" style="position: relative; min-height: 300px;">
             <div id="overdue-payments-chart-status" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999; display: none;">
                 <i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...
             </div>
-            {# Canvas para o Gráfico #}
             <canvas id="overduePaymentsChart" style="display: block; width: 100%; height: 100%;"></canvas>
         </div>
     </div>
-    {# --- FIM DO CARD --- #}
 
 </div> {# Fim dashboard-grid #}
 
-{% endblock %}
+{% endblock %} {# Fim do bloco content #}
 
-{# Bloco de Scripts com AJAX, Ordenação, Gráficos e SortableJS #}
+{# Bloco de Scripts específico para o Dashboard #}
 {% block scripts_extra %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{# O script SortableJS já está incluído no base.html #}
+{# O script SortableJS já está incluído no base_layout.html via CDN #}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -324,8 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Mostra carregando e esconde canvas antigo
-        fornecedoraPieStatus.innerHTML = '<i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...'; // Reseta status
+        fornecedoraPieStatus.innerHTML = '<i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...';
         fornecedoraPieStatus.style.display = 'block';
         fornecedoraPieCanvas.style.display = 'none';
         if (fornecedoraPieChartInstance) {
@@ -503,20 +490,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Função GERAL para buscar dados (que dependem do MÊS) ---
     async function updateDashboardData(month) {
         console.log(`Atualizando dados do dashboard para o mês: ${month}`);
-        // Mostra indicadores de carregamento
         [fornecedoraStatus, concessionariaStatus].forEach(el => {
             if(el) { el.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...'; el.style.display = 'block'; }
         });
-        // Limpa tabelas
         [fornecedoraTableBody, concessionariaTableBody].forEach(el => {
             if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando...</td></tr>';
         });
-        // Limpa KPIs
         [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => {
              if(el) el.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
         });
 
-        // APIs a serem chamadas
         const endpoints = {
             summaryForn: `{{ url_for('api_bp.api_fornecedora_summary') }}?month=${month}`,
             summaryConc: `{{ url_for('api_bp.api_concessionaria_summary') }}?month=${month}`,
@@ -525,7 +508,6 @@ document.addEventListener('DOMContentLoaded', function() {
             kpiRegistrados: `{{ url_for('api_bp.api_kpi_clientes_registrados') }}?month=${month}`
         };
 
-        // Função auxiliar para fetch
         async function fetchData(url, description) {
             try {
                 const response = await fetch(url);
@@ -533,21 +515,16 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) { console.error(`Erro de rede/JSON ${description}:`, error); throw error; }
         }
 
-        // Chama as APIs que dependem do mês em paralelo
         try {
             const [ dataSummaryForn, dataSummaryConc, dataKpiKwh, dataKpiAtivos, dataKpiRegistrados ] = await Promise.all([
                 fetchData(endpoints.summaryForn, "Resumo Fornecedora"), fetchData(endpoints.summaryConc, "Resumo Concessionária"),
                 fetchData(endpoints.kpiKwh, "KPI Total kWh"), fetchData(endpoints.kpiAtivos, "KPI Clientes Ativos"), fetchData(endpoints.kpiRegistrados, "KPI Clientes Registrados") ]);
 
-            // Atualiza gráficos que dependem do MÊS
             updateFornecedoraPieChart(month);
             updateConcessionariaBarChart(month);
 
-            // Processa Resumo Fornecedora
             if (fornecedoraTableBody && fornecedoraStatus) { fornecedoraStatus.style.display = 'none'; fornecedoraTableBody.innerHTML = ''; if (dataSummaryForn && dataSummaryForn.length > 0) { dataSummaryForn.forEach(row => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${row.fornecedora || 'N/A'}</td><td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td><td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`; fornecedoraTableBody.appendChild(tr); }); reapplySort('fornecedora-summary-table'); } else { fornecedoraTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de fornecedora.</td></tr>'; } }
-            // Processa Resumo Concessionária
             if (concessionariaTableBody && concessionariaStatus) { concessionariaStatus.style.display = 'none'; concessionariaTableBody.innerHTML = ''; if (dataSummaryConc && dataSummaryConc.length > 0) { dataSummaryConc.forEach(row => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${row.concessionaria || 'N/A'}</td><td style="text-align: right;">${formatNumber(row.qtd_clientes, 0)}</td><td style="text-align: right;">${formatNumber(row.soma_consumo, 2)} kWh</td>`; concessionariaTableBody.appendChild(tr); }); reapplySort('concessionaria-summary-table'); } else { concessionariaTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado de concessionária.</td></tr>'; } }
-            // Processa KPIs
             if (kpiTotalKwhElement && dataKpiKwh) kpiTotalKwhElement.textContent = formatNumber(dataKpiKwh.total_kwh, 0);
             if (kpiClientesAtivosElement && dataKpiAtivos) kpiClientesAtivosElement.textContent = formatNumber(dataKpiAtivos.clientes_ativos_count, 0);
             if (kpiClientesRegistradosElement && dataKpiRegistrados) kpiClientesRegistradosElement.textContent = formatNumber(dataKpiRegistrados.clientes_registrados_count, 0);
@@ -556,19 +533,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error('Erro ao buscar dados do dashboard (Promise.all falhou):', error);
-            // Lida com erros para os elementos dependentes do mês
             [fornecedoraStatus, concessionariaStatus].forEach(el => { if(el) { el.innerHTML = `<span style="color: red; font-size: 0.9em;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; el.style.display = 'block'; }});
             [fornecedoraTableBody, concessionariaTableBody].forEach(el => { if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Falha.</td></tr>'; });
             [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => { if(el) el.innerHTML = `<span style="font-size: 0.7em; color: red;">Erro!</span>`; });
-            // Mostra erro nos status dos gráficos também
-             if (fornecedoraPieStatus) { fornecedoraPieStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; fornecedoraPieStatus.style.display = 'block'; }
-             if (concessionariaBarStatus) { concessionariaBarStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; concessionariaBarStatus.style.display = 'block'; }
-             if (overduePaymentsStatus) { overduePaymentsStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro geral</span>`; overduePaymentsStatus.style.display = 'block'; }
+            if (fornecedoraPieStatus) { fornecedoraPieStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; fornecedoraPieStatus.style.display = 'block'; }
+            if (concessionariaBarStatus) { concessionariaBarStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; concessionariaBarStatus.style.display = 'block'; }
+            if (overduePaymentsStatus) { overduePaymentsStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro geral</span>`; overduePaymentsStatus.style.display = 'block'; }
         }
 
-        // Chamada para os cards que NÃO dependem do mês selecionado
         updateFornecedoraNoRcbCard();
-        // updateOverduePaymentsChart NÃO é chamado aqui, pois depende do seu próprio filtro
     }
 
     // --- Listener para o filtro de MÊS ---
@@ -578,19 +551,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const currentUrl = new URL(window.location);
             currentUrl.searchParams.set('month', selectedMonth);
             window.history.replaceState({}, '', currentUrl);
-            updateDashboardData(selectedMonth); // Atualiza dados dependentes do MÊS
+            updateDashboardData(selectedMonth);
         });
-        // Chama para carregar dados iniciais dependentes do MÊS
         updateDashboardData(monthSelect.value);
     } else { console.error("Elemento #filter-month não encontrado."); }
-
 
     // --- Listener para o filtro de DIAS do gráfico de VENCIDOS ---
     if (overdueDaysFilter) {
         overdueDaysFilter.addEventListener('change', function() {
-            updateOverduePaymentsChart(this.value); // Atualiza APENAS o gráfico de vencidos
+            updateOverduePaymentsChart(this.value);
         });
-        // Chama para carregar dados iniciais do gráfico de VENCIDOS
         updateOverduePaymentsChart(overdueDaysFilter.value);
     } else {
         console.error("Elemento #overdue-days-filter não encontrado.");
@@ -603,8 +573,8 @@ document.addEventListener('DOMContentLoaded', function() {
          const initialData = { labels: labels, datasets: [{ label: 'Carregando...', data: Array(12).fill(0), fill: true, backgroundColor: 'rgba(0, 201, 59, 0.1)', borderColor: 'rgb(0, 201, 59)', borderWidth: 2, tension: 0.3, pointBackgroundColor: 'rgb(0, 201, 59)', pointRadius: 3, pointHoverRadius: 5 }] };
          const config = { type: 'line', data: initialData, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.7)', titleFont: { weight: 'bold'}, callbacks: { label: function(context) { return (context.dataset.label || '') + ': ' + formatNumber(context.parsed.y); } } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }, interaction: { intersect: false, mode: 'index', } } };
          monthlyChartInstance = new Chart(chartCanvas, config);
-         updateChartData(initialYear); // Busca dados para o ano inicial
-         yearSelectChart.addEventListener('change', function() { updateChartData(this.value); }); // Listener para mudar ano
+         updateChartData(initialYear);
+         yearSelectChart.addEventListener('change', function() { updateChartData(this.value); });
     } else { console.error("Elementos do gráfico de linha não encontrados."); }
 
     // --- FUNÇÃO GENÉRICA PARA ORDENAÇÃO DE TABELA ---
@@ -615,27 +585,21 @@ document.addEventListener('DOMContentLoaded', function() {
     function reapplySort(tableId) { const state = sortState[tableId]; if (state && state.colIndex !== -1 && state.direction !== 'none') { const table = document.getElementById(tableId); const header = table ? table.querySelector(`thead th[data-column-index="${state.colIndex}"]`) : null; if (header) { const sortType = header.getAttribute('data-sort-type'); const originalDirection = state.direction; state.colIndex = -1; state.direction = 'none'; sortTable(tableId, parseInt(header.getAttribute('data-column-index')), sortType); if (sortState[tableId].direction !== originalDirection) { sortTable(tableId, parseInt(header.getAttribute('data-column-index')), sortType); } } } else { updateSortIcons(tableId, null); } }
     function addSortListeners(tableId, headerSelectorClass) { const table = document.getElementById(tableId); const headers = table ? table.querySelectorAll(`thead th.${headerSelectorClass}`) : []; if (!headers.length) { console.warn(`Cabeçalhos .${headerSelectorClass} não achados em #${tableId}.`); return; } headers.forEach(header => { if (header.hasAttribute('data-column-index') && header.hasAttribute('data-sort-type')) { header.style.cursor = 'pointer'; header.addEventListener('click', function() { const columnIndex = parseInt(this.getAttribute('data-column-index'), 10); const sortType = this.getAttribute('data-sort-type'); sortTable(tableId, columnIndex, sortType); }); } }); }
 
-    // Adiciona listeners de ordenação
     addSortListeners('fornecedora-summary-table', 'sortable-header');
     addSortListeners('concessionaria-summary-table', 'sortable-header');
     addSortListeners('fornecedora-no-rcb-table', 'sortable-header');
-
 
     // --- Inicialização do SortableJS ---
     if (gridContainer) {
         new Sortable(gridContainer, {
             animation: 150, ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', dragClass: 'sortable-drag',
-            // handle: '.card-header', // Descomente para arrastar só pelo header
             onEnd: function (evt) {
                 console.log('Card movido:', evt.item.querySelector('.card-header span') ? evt.item.querySelector('.card-header span').textContent.trim() : 'ID Desconhecido');
-                // Lógica de persistência (localStorage ou API) pode ser adicionada aqui
             },
         });
         console.log("SortableJS inicializado para .dashboard-grid");
-        // Lógica para carregar ordem salva (localStorage ou API) pode ser adicionada aqui
     } else { console.error("Container .dashboard-grid não encontrado para SortableJS."); }
-    // --- FIM: Inicialização do SortableJS ---
 
 }); // Fim DOMContentLoaded
 </script>
-{% endblock %}
+{% endblock %} {# Fim do bloco scripts_extra #}
