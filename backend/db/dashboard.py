@@ -362,3 +362,58 @@ def get_fornecedora_summary_no_rcb() -> List[Tuple[str, int, float]] or None:
         return None
 
 # --- FIM DA FUNÇÃO MODIFICADA (2ª Vez) ---
+
+
+# --- INÍCIO DA NOVA FUNÇÃO (COM AJUSTE PARA 120 DIAS) ---
+def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[str, int]] or None:
+    """
+    Busca a contagem de instalações com pagamentos vencidos há X dias (sem pagamento),
+    agrupados por fornecedora.
+
+    Args:
+        days_overdue: O número de dias de atraso (ex: 30, 60, 90, 120).
+
+    Returns:
+        Lista de tuplas (fornecedora, quantidade) ou None em caso de erro.
+    """
+    # Modifique a lista para incluir 120
+    if days_overdue not in [30, 60, 90, 120]:
+        logger.warning(f"Valor inválido para days_overdue: {days_overdue}. Usando 30 por padrão.")
+        days_overdue = 30
+
+    # Usa INTERVAL para subtrair dias da data atual
+    # Placeholders (%s) são usados para segurança (SQL Injection)
+    query = """
+        SELECT
+            COALESCE(NULLIF(TRIM(c.fornecedora), ''), 'NÃO ESPECIFICADA') AS fornecedora_tratada,
+            COUNT(rc.numinstalacao) AS quantidade_vencido_sem_pgto
+        FROM
+            public."CLIENTES" c
+        INNER JOIN
+            public."RCB_CLIENTES" rc ON c.numinstalacao = rc.numinstalacao
+        WHERE
+            rc.dtpagamento IS NULL
+            AND rc.dtvencimento < (CURRENT_DATE - INTERVAL '%s day') -- Usa placeholder para o intervalo
+            AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) -- Filtro padrão
+        GROUP BY
+            fornecedora_tratada
+        ORDER BY
+            quantidade_vencido_sem_pgto DESC, -- Ordena pela quantidade (maior primeiro)
+            fornecedora_tratada;
+    """
+    params = (days_overdue,) # Passa o valor como parâmetro
+
+    logger.info(f"Buscando pagamentos vencidos há {days_overdue} dias por fornecedora...")
+    try:
+        results = execute_query(query, params)
+        if results:
+            formatted_results = [(str(row[0]), int(row[1])) for row in results]
+            logger.info(f"Dados de vencidos ({days_overdue} dias) encontrados: {len(formatted_results)} fornecedoras.")
+            return formatted_results
+        else:
+            logger.info(f"Nenhum dado de vencidos ({days_overdue} dias) encontrado.")
+            return []
+    except Exception as e:
+        logger.error(f"Erro ao buscar pagamentos vencidos ({days_overdue} dias) por fornecedora: {e}", exc_info=True)
+        return None
+# --- FIM DA NOVA FUNÇÃO ---

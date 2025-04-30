@@ -44,27 +44,15 @@ from .dashboard import (
     get_monthly_active_clients_by_year,
     get_active_clients_count_by_fornecedora_month,
     get_active_clients_count_by_concessionaria_month,
-    get_state_map_data
+    get_state_map_data,
+    get_fornecedora_summary_no_rcb,
+    get_overdue_payments_by_fornecedora # <<< AJUSTE APLICADO AQUI <<<
 )
 
 # Importações do utils.py
 from .utils import (
     get_fornecedoras,
     get_headers
-)
-
-# Importações do dashboard.py
-from .dashboard import (
-    get_total_consumo_medio_by_month,
-    count_clientes_ativos_by_month,
-    count_clientes_registrados_by_month,
-    get_fornecedora_summary,
-    get_concessionaria_summary,
-    get_monthly_active_clients_by_year,
-    get_active_clients_count_by_fornecedora_month,
-    get_active_clients_count_by_concessionaria_month,
-    get_state_map_data,
-    get_fornecedora_summary_no_rcb # <<< ADICIONE ESTA LINHA
 )
 
 # Opcional: Definir __all__ para controlar explicitamente o que é importado com 'from .db import *'
@@ -78,7 +66,7 @@ from .dashboard import (
 #     'get_total_consumo_medio_by_month', 'count_clientes_ativos_by_month', 'count_clientes_registrados_by_month',
 #     'get_fornecedora_summary', 'get_concessionaria_summary', 'get_monthly_active_clients_by_year',
 #     'get_active_clients_count_by_fornecedora_month', 'get_active_clients_count_by_concessionaria_month',
-#     'get_state_map_data',
+#     'get_state_map_data', 'get_fornecedora_summary_no_rcb', 'get_overdue_payments_by_fornecedora', # Incluindo as novas
 #     'get_fornecedoras', 'get_headers'
 # ]
 

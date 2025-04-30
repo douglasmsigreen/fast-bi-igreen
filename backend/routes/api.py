@@ -247,25 +247,25 @@ def api_clientes_concessionaria_bar():
     except Exception as e:
         logger.error(f"API Barra Concessionária: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado no servidor ao buscar dados do gráfico de barras."}), 500
-    
-# --- Rota API para Card Fornecedoras s/ RCB e Clientes > 100 dias --- # <<< DOCSTRING ATUALIZADA >>>
+
+# --- Rota API para Card Fornecedoras s/ RCB e Clientes > 100 dias ---
 @api_bp.route('/summary/fornecedora-no-rcb')
 @login_required
 def api_fornecedora_no_rcb_summary():
     """
     Retorna dados (fornecedora, qtd clientes, soma consumo) de fornecedoras
     cujos clientes NÃO possuem registros em RCB_CLIENTES E estão ativos
-    há mais de 100 dias. # <<< DESCRIÇÃO ATUALIZADA >>>
+    há mais de 100 dias.
     """
-    logger.info("API: Requisição recebida em /api/summary/fornecedora-no-rcb") # Log pode continuar o mesmo
+    logger.info("API: Requisição recebida em /api/summary/fornecedora-no-rcb")
     try:
         summary_data = db.get_fornecedora_summary_no_rcb()
 
         if summary_data is None:
-            logger.error("API Fornecedora s/ RCB: Erro interno (DB retornou None).") # Log atualizado
+            logger.error("API Fornecedora s/ RCB: Erro interno (DB retornou None).")
             return jsonify({"error": "Erro interno ao buscar dados de fornecedoras com clientes sem RCB."}), 500
         elif not summary_data:
-            logger.info("API Fornecedora s/ RCB: Nenhum dado encontrado.") # Log atualizado
+            logger.info("API Fornecedora s/ RCB: Nenhum dado encontrado.")
             return jsonify({"data": []})
         else:
             data_as_dicts = [
@@ -273,10 +273,51 @@ def api_fornecedora_no_rcb_summary():
                 {"fornecedora": r[0], "numero_clientes": r[1], "soma_consumomedio": r[2]}
                 for r in summary_data
             ]
-            logger.info(f"API Fornecedora s/ RCB: Enviando {len(data_as_dicts)} registros.") # Log atualizado
+            logger.info(f"API Fornecedora s/ RCB: Enviando {len(data_as_dicts)} registros.")
             return jsonify({"data": data_as_dicts})
 
     except Exception as e:
-        logger.error(f"API Fornecedora s/ RCB: Erro inesperado: {e}", exc_info=True) # Log atualizado
+        logger.error(f"API Fornecedora s/ RCB: Erro inesperado: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado no servidor ao buscar resumo de fornecedoras com clientes sem RCB."}), 500
-# --- FIM DA NOVA ROTA ---
+
+# --- ROTA API PARA GRÁFICO DE VENCIDOS POR FORNECEDORA (COM AJUSTE PARA 120 DIAS) ---
+@api_bp.route('/chart/overdue-payments')
+@login_required
+def api_overdue_payments_chart():
+    """Retorna dados para o gráfico de barras de pagamentos vencidos por fornecedora."""
+    days_str = request.args.get('days', '30') # Pega o parâmetro 'days', padrão 30
+
+    # Validação básica do parâmetro 'days'
+    try:
+        days = int(days_str)
+        # Modifique a lista para incluir 120
+        if days not in [30, 60, 90, 120]: # <<< AJUSTE APLICADO AQUI <<<
+            logger.warning(f"API Vencidos: Valor de 'days' inválido '{days_str}'. Usando 30.")
+            days = 30
+    except ValueError:
+        logger.warning(f"API Vencidos: Valor de 'days' não é um número '{days_str}'. Usando 30.")
+        days = 30
+
+    logger.debug(f"API Vencidos: Buscando dados para {days} dias.")
+    try:
+        # Chama a função do banco de dados passando os dias
+        data_from_db = db.get_overdue_payments_by_fornecedora(days_overdue=days)
+
+        if data_from_db is None:
+            logger.error(f"API Vencidos: Erro interno (DB retornou None) para {days} dias.")
+            return jsonify({"error": f"Erro interno ao buscar dados de vencidos ({days} dias)."}), 500
+        elif not data_from_db:
+            logger.info(f"API Vencidos: Nenhum dado encontrado para {days} dias.")
+            return jsonify({"labels": [], "data": []}) # Estrutura vazia para Chart.js
+
+        # Separa labels (nomes das fornecedoras) e data (valores/contagem)
+        labels = [item[0] for item in data_from_db]
+        data_values = [item[1] for item in data_from_db]
+
+        logger.debug(f"API Vencidos: Enviando {len(labels)} fornecedoras para {days} dias.")
+        return jsonify({"labels": labels, "data": data_values})
+
+    except Exception as e:
+        logger.error(f"API Vencidos: Erro inesperado para {days} dias: {e}", exc_info=True)
+        return jsonify({"error": f"Erro inesperado no servidor ao buscar dados de vencidos ({days} dias)."}), 500
+# --- FIM DA ROTA API VENCIDOS ---

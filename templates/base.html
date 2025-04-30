@@ -155,7 +155,10 @@
         });
     </script>
 
-    {# Bloco para adicionar scripts JS específicos da página (Chart.js, etc.) #}
+    {# --- ADICIONADO: Incluir SortableJS via CDN --- #}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+    {# Bloco para adicionar scripts JS específicos da página (Chart.js, inicialização SortableJS, etc.) #}
     {% block scripts_extra %}{% endblock %}
 
 </body>
