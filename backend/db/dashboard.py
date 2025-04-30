@@ -277,3 +277,88 @@ def get_state_map_data() -> List[Tuple[str, int, float]]: # Retorna UF, CONTAGEM
         logger.error(f"Erro ao buscar dados agregados por estado para o mapa: {e}", exc_info=True)
         return []
 # --- FIM FUNÇÃO MAPA ---
+
+# --- FUNÇÃO MODIFICADA (2ª Vez) PARA O CARD ---
+def get_fornecedora_summary_no_rcb() -> List[Tuple[str, int, float]] or None:
+    """
+    Busca resumo (qtd clientes, soma consumo) por fornecedora para clientes
+    cujo 'numinstalacao' não aparece na tabela RCB_CLIENTES E cujo 'data_ativo'
+    é anterior a 100 dias atrás.
+    """
+    # <<< INÍCIO DA QUERY SUBSTITUÍDA (NOVA VERSÃO) >>>
+    query = """
+        -- CTE para calcular a contagem de cada numinstalacao em RCB_CLIENTES
+        WITH ContagemInstalacoes AS (
+            SELECT
+                numinstalacao,
+                COUNT(*) AS quantidade_ocorrencias
+            FROM
+                public."RCB_CLIENTES"
+            GROUP BY
+                numinstalacao
+        ),
+        -- CTE para juntar CLIENTES com as contagens, incluindo consumomedio e data_ativo
+        ClientesComContagem AS (
+            SELECT
+                c.idcliente,
+                c.fornecedora,
+                c.numinstalacao,
+                c.consumomedio,
+                c.data_ativo, -- Incluindo data_ativo
+                COALESCE(ci.quantidade_ocorrencias, 0) AS contagem_numinstalacao_rcb
+            FROM
+                public."CLIENTES" c
+            LEFT JOIN
+                ContagemInstalacoes ci ON c.numinstalacao = ci.numinstalacao
+            WHERE
+                 -- Filtro de origem padrão da aplicação
+                (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        )
+        -- Query final: Agrupa, filtra (contagem zero E data < 100 dias atrás), conta e soma
+        SELECT
+            ccc.fornecedora,
+            -- Mantendo aliases antigos para compatibilidade com API/JS
+            COUNT(ccc.idcliente) AS numero_clientes,
+            SUM(COALESCE(ccc.consumomedio, 0)) AS soma_consumomedio
+        FROM
+            ClientesComContagem ccc
+        WHERE
+            ccc.contagem_numinstalacao_rcb = 0 -- Critério 1: contagem zero
+            -- Critério 2: data_ativo anterior a 100 dias atrás (usando INTERVAL)
+            AND ccc.data_ativo < (CURRENT_DATE - INTERVAL '100 day')
+            -- Se 'data_ativo' for garantidamente DATE, pode usar:
+            -- AND ccc.data_ativo < (CURRENT_DATE - 100)
+        GROUP BY
+            ccc.fornecedora
+        HAVING
+            COUNT(ccc.idcliente) > 0 -- Garante que só listamos fornecedoras com resultados > 0 após filtros
+        ORDER BY
+            ccc.fornecedora;
+    """
+    # <<< FIM DA QUERY SUBSTITUÍDA (NOVA VERSÃO) >>>
+
+    # Log message atualizado para refletir ambos critérios
+    logger.info("Executando query para card 'Fornecedoras s/ RCB (Clientes > 100d)'...")
+    try:
+        results = execute_query(query)
+        if results:
+            # Formatação (continua funcionando)
+            formatted_results = [
+                (
+                    str(row[0]) if row[0] else 'N/A', # Fornecedora
+                    int(row[1]) if row[1] is not None else 0, # numero_clientes
+                    float(row[2]) if row[2] is not None else 0.0 # soma_consumomedio
+                )
+                for row in results
+            ]
+            logger.info(f"Dados 'Fornecedoras s/ RCB (Clientes > 100d)' encontrados: {len(formatted_results)} registros.")
+            return formatted_results
+        else:
+            logger.info("Nenhum dado encontrado para 'Fornecedoras s/ RCB (Clientes > 100d)'.")
+            return []
+    except Exception as e:
+        # Mensagem de erro atualizada
+        logger.error(f"Erro ao buscar dados para 'Fornecedoras s/ RCB (Clientes > 100d)': {e}", exc_info=True)
+        return None
+
+# --- FIM DA FUNÇÃO MODIFICADA (2ª Vez) ---

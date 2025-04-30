@@ -53,6 +53,20 @@ from .utils import (
     get_headers
 )
 
+# Importações do dashboard.py
+from .dashboard import (
+    get_total_consumo_medio_by_month,
+    count_clientes_ativos_by_month,
+    count_clientes_registrados_by_month,
+    get_fornecedora_summary,
+    get_concessionaria_summary,
+    get_monthly_active_clients_by_year,
+    get_active_clients_count_by_fornecedora_month,
+    get_active_clients_count_by_concessionaria_month,
+    get_state_map_data,
+    get_fornecedora_summary_no_rcb # <<< ADICIONE ESTA LINHA
+)
+
 # Opcional: Definir __all__ para controlar explicitamente o que é importado com 'from .db import *'
 # __all__ = [
 #     'init_pool', 'get_db', 'close_db', 'close_pool', 'db_pool', 'execute_query',

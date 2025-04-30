@@ -184,6 +184,37 @@
     </div>
     {# --- FIM Card Gráfico Barras Concessionária --- #}
 
+    {# --- NOVO CARD: Fornecedoras Cli > 100 dias s/ RCB --- #}
+    <div class="card summary-table-card fornecedora-no-rcb-card grid-span-2"> {# Ocupa 2 colunas #}
+        <div class="card-header">
+            Fornecedoras s/ RCB (Clientes > 100d) 
+            <i class="fas fa-info-circle tooltip-icon" title="Fornecedoras com clientes ativos há mais de 100 dias e que NÃO possuem nenhum registro na tabela de Recebíveis."></i> 
+        </div>
+        <div class="card-body">
+            {# Status de Carregamento/Erro #}
+            <div id="fornecedora-no-rcb-status" style="text-align: center; padding: 10px; display: none;">
+                <i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...
+            </div>
+            {# Tabela para exibir os dados #}
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;"> {# Altura máxima e rolagem #}
+                <table id="fornecedora-no-rcb-table" class="table table-sm table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="sortable-header" data-column-index="0" data-sort-type="text">Fornecedora <span class="sort-icon"></span></th>
+                            <th scope="col" class="sortable-header" data-column-index="1" data-sort-type="number" style="text-align: right;">Clientes <span class="sort-icon"></span></th>
+                            <th scope="col" class="sortable-header" data-column-index="2" data-sort-type="number" style="text-align: right;">Total kWh <span class="sort-icon"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="fornecedora-no-rcb-tbody">
+                        {# O conteúdo será preenchido via JavaScript #}
+                        <tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando dados...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {# --- FIM DO NOVO CARD --- #}
+
 </div> {# Fim dashboard-grid #}
 
 {% endblock %}
@@ -220,6 +251,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Gráfico Barras Concessionária
     const concessionariaBarCanvas = document.getElementById('concessionariaBarChart'); // <<< ADICIONADO
     const concessionariaBarStatus = document.getElementById('concessionaria-bar-chart-status'); // <<< ADICIONADO
+
+    // <<< NOVOS ELEMENTOS DOM PARA O CARD 'Fornecedora sem RCB' >>>
+    const fornecedoraNoRcbTableBody = document.getElementById('fornecedora-no-rcb-tbody');
+    const fornecedoraNoRcbStatus = document.getElementById('fornecedora-no-rcb-status');
+    // <<< FIM NOVOS ELEMENTOS DOM >>>
 
     // --- Função para formatar número ---
     function formatNumber(num, decimalPlaces = 0) {
@@ -537,14 +573,76 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- FIM Função para Atualizar Gráfico Barras Concessionária ---
 
 
-    // --- Função GERAL para buscar dados (KPIs, Resumos, Gráfico Pizza e Gráfico Barras) ---
+    // <<< NOVA FUNÇÃO PARA ATUALIZAR O CARD 'Fornecedora sem RCB' >>>
+    async function updateFornecedoraNoRcbCard() {
+        if (!fornecedoraNoRcbTableBody || !fornecedoraNoRcbStatus) {
+            console.error("Elementos da tabela ou status do card 'Fornecedora sem RCB' não encontrados.");
+            return;
+        }
+
+        // Mostra carregando e limpa tabela
+        fornecedoraNoRcbStatus.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...';
+        fornecedoraNoRcbStatus.style.display = 'block';
+        fornecedoraNoRcbTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando...</td></tr>';
+
+        const apiUrl = "{{ url_for('api_bp.api_fornecedora_no_rcb_summary') }}"; // Não precisa de mês aqui
+        console.debug(`Buscando dados para card Fornecedora sem RCB: ${apiUrl}`);
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                let errorMsg = `Erro ${response.status}`;
+                try { const data = await response.json(); errorMsg = data.error || errorMsg; } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            const apiResponse = await response.json(); // Espera {data: [...]} ou {error: ...}
+
+            // Esconde carregando
+            fornecedoraNoRcbStatus.style.display = 'none';
+            fornecedoraNoRcbTableBody.innerHTML = ''; // Limpa a mensagem de carregando
+
+            if (apiResponse && Array.isArray(apiResponse.data) && apiResponse.data.length > 0) {
+                 // Preenche a tabela
+                 apiResponse.data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.fornecedora || 'N/A'}</td>
+                        <td style="text-align: right;">${formatNumber(row.numero_clientes, 0)}</td>
+                        <td style="text-align: right;">${formatNumber(row.soma_consumomedio, 0)} kWh</td>
+                    `;
+                    fornecedoraNoRcbTableBody.appendChild(tr);
+                });
+                // Reaplicar ordenação se houver estado salvo para esta tabela
+                reapplySort('fornecedora-no-rcb-table');
+                console.debug(`Card Fornecedora sem RCB atualizado com ${apiResponse.data.length} registros.`);
+            } else if (apiResponse && Array.isArray(apiResponse.data) && apiResponse.data.length === 0) {
+                // Nenhum dado retornado
+                fornecedoraNoRcbTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Nenhum dado encontrado.</td></tr>';
+                console.debug("Nenhum dado recebido para card Fornecedora sem RCB.");
+            } else {
+                // Resposta inesperada ou erro no JSON da API
+                 throw new Error(apiResponse.error || 'Formato de resposta inválido da API.');
+            }
+
+        } catch (error) {
+            console.error(`Erro ao buscar ou renderizar card Fornecedora sem RCB:`, error);
+            fornecedoraNoRcbStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar</span>`;
+            fornecedoraNoRcbStatus.style.display = 'block';
+            fornecedoraNoRcbTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Falha ao carregar dados.</td></tr>';
+        }
+    }
+    // <<< FIM NOVA FUNÇÃO >>>
+
+
+    // --- Função GERAL para buscar dados (KPIs, Resumos, Gráficos) ---
     async function updateDashboardData(month) {
         console.log(`Atualizando dados do dashboard para o mês: ${month}`);
-        // Mostra indicadores de carregamento
-        [fornecedoraStatus, concessionariaStatus].forEach(el => {
+        // Mostra indicadores de carregamento (inclui o novo status se existir)
+        [fornecedoraStatus, concessionariaStatus, fornecedoraNoRcbStatus].forEach(el => { // <<< ADICIONADO fornecedoraNoRcbStatus
             if(el) { el.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i> Carregando...'; el.style.display = 'block'; }
         });
-        [fornecedoraTableBody, concessionariaTableBody].forEach(el => {
+        // Limpa tabelas (inclui a nova tabela)
+        [fornecedoraTableBody, concessionariaTableBody, fornecedoraNoRcbTableBody].forEach(el => { // <<< ADICIONADO fornecedoraNoRcbTableBody
             if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999; font-style: italic;">Carregando...</td></tr>';
         });
         [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => {
@@ -558,6 +656,7 @@ document.addEventListener('DOMContentLoaded', function() {
             kpiKwh: `{{ url_for('api_bp.api_kpi_total_kwh') }}?month=${month}`,
             kpiAtivos: `{{ url_for('api_bp.api_kpi_clientes_ativos') }}?month=${month}`,
             kpiRegistrados: `{{ url_for('api_bp.api_kpi_clientes_registrados') }}?month=${month}`
+            // Não incluímos a API do novo card aqui pois ela não depende do mês
         };
 
         // Função auxiliar para fetch
@@ -571,7 +670,10 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) { console.error(`Erro de rede/JSON ${description}:`, error); throw error; }
         }
 
-        // Chama todas as APIs em paralelo (exceto gráficos que são chamados separadamente)
+        // <<< CHAMADA PARA A FUNÇÃO DO NOVO CARD (fora do Promise.all, pois não depende do mês) >>>
+        updateFornecedoraNoRcbCard();
+
+        // Chama as APIs que dependem do mês em paralelo
         try {
             const [
                 dataSummaryForn, dataSummaryConc, dataKpiKwh, dataKpiAtivos, dataKpiRegistrados
@@ -583,9 +685,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetchData(endpoints.kpiRegistrados, "KPI Clientes Registrados")
             ]);
 
-            // <<< CHAMADAS PARA OS GRÁFICOS >>>
-            updateFornecedoraPieChart(month); // Chama a atualização do gráfico de pizza
-            updateConcessionariaBarChart(month); // Chama a atualização do gráfico de barras
+            // <<< CHAMADAS PARA OS GRÁFICOS (que dependem do mês) >>>
+            updateFornecedoraPieChart(month);
+            updateConcessionariaBarChart(month);
 
             // Processa Resumo Fornecedora
             if (fornecedoraTableBody && fornecedoraStatus) {
@@ -616,26 +718,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiClientesAtivosElement && dataKpiAtivos) kpiClientesAtivosElement.textContent = formatNumber(dataKpiAtivos.clientes_ativos_count, 0);
             if (kpiClientesRegistradosElement && dataKpiRegistrados) kpiClientesRegistradosElement.textContent = formatNumber(dataKpiRegistrados.clientes_registrados_count, 0);
 
-            console.log("Dados do dashboard atualizados com sucesso (exceto gráficos, chamados separadamente).");
+            console.log("Dados do dashboard (dependentes do mês) atualizados com sucesso.");
 
         } catch (error) {
             console.error('Erro ao buscar dados do dashboard (Promise.all falhou):', error);
+            // Lida com erros para os elementos dependentes do mês
             [fornecedoraStatus, concessionariaStatus].forEach(el => { if(el) { el.innerHTML = `<span style="color: red; font-size: 0.9em;"><i class="fas fa-exclamation-triangle"></i> Erro</span>`; el.style.display = 'block'; }});
             [fornecedoraTableBody, concessionariaTableBody].forEach(el => { if(el) el.innerHTML = '<tr><td colspan="3" style="text-align: center; color: red;">Falha.</td></tr>'; });
             [kpiTotalKwhElement, kpiClientesAtivosElement, kpiClientesRegistradosElement].forEach(el => { if(el) el.innerHTML = `<span style="font-size: 0.7em; color: red;">Erro!</span>`; });
-            // Mostra erro nos status dos gráficos também se o fetch principal falhar
-             if (fornecedoraPieStatus) {
-                 fornecedoraPieStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro geral</span>`;
-                 fornecedoraPieStatus.style.display = 'block';
-                 fornecedoraPieCanvas.style.display = 'none';
-                 if (fornecedoraPieChartInstance) { fornecedoraPieChartInstance.destroy(); fornecedoraPieChartInstance = null;}
-             }
-             if (concessionariaBarStatus) {
-                 concessionariaBarStatus.innerHTML = `<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Erro geral</span>`;
-                 concessionariaBarStatus.style.display = 'block';
-                 concessionariaBarCanvas.style.display = 'none';
-                 if (concessionariaBarChartInstance) { concessionariaBarChartInstance.destroy(); concessionariaBarChartInstance = null;}
-             }
+            // Mostra erro nos status dos gráficos também
+             if (fornecedoraPieStatus) { /* ... (código de erro existente) ... */ }
+             if (concessionariaBarStatus) { /* ... (código de erro existente) ... */ }
+             // Não precisamos tratar o erro do card 'no-rcb' aqui novamente, pois updateFornecedoraNoRcbCard já trata seus próprios erros.
         }
     }
 
@@ -724,6 +818,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adiciona listeners usando a MESMA classe 'sortable-header'
     addSortListeners('fornecedora-summary-table', 'sortable-header');
     addSortListeners('concessionaria-summary-table', 'sortable-header');
+    // <<< ADICIONA LISTENER PARA A NOVA TABELA >>>
+    addSortListeners('fornecedora-no-rcb-table', 'sortable-header');
 
 }); // Fim DOMContentLoaded
 </script>

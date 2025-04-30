@@ -247,3 +247,36 @@ def api_clientes_concessionaria_bar():
     except Exception as e:
         logger.error(f"API Barra Concessionária: Erro inesperado para o mês {month_str}: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado no servidor ao buscar dados do gráfico de barras."}), 500
+    
+# --- Rota API para Card Fornecedoras s/ RCB e Clientes > 100 dias --- # <<< DOCSTRING ATUALIZADA >>>
+@api_bp.route('/summary/fornecedora-no-rcb')
+@login_required
+def api_fornecedora_no_rcb_summary():
+    """
+    Retorna dados (fornecedora, qtd clientes, soma consumo) de fornecedoras
+    cujos clientes NÃO possuem registros em RCB_CLIENTES E estão ativos
+    há mais de 100 dias. # <<< DESCRIÇÃO ATUALIZADA >>>
+    """
+    logger.info("API: Requisição recebida em /api/summary/fornecedora-no-rcb") # Log pode continuar o mesmo
+    try:
+        summary_data = db.get_fornecedora_summary_no_rcb()
+
+        if summary_data is None:
+            logger.error("API Fornecedora s/ RCB: Erro interno (DB retornou None).") # Log atualizado
+            return jsonify({"error": "Erro interno ao buscar dados de fornecedoras com clientes sem RCB."}), 500
+        elif not summary_data:
+            logger.info("API Fornecedora s/ RCB: Nenhum dado encontrado.") # Log atualizado
+            return jsonify({"data": []})
+        else:
+            data_as_dicts = [
+                # Os nomes das chaves devem corresponder aos aliases da query SQL
+                {"fornecedora": r[0], "numero_clientes": r[1], "soma_consumomedio": r[2]}
+                for r in summary_data
+            ]
+            logger.info(f"API Fornecedora s/ RCB: Enviando {len(data_as_dicts)} registros.") # Log atualizado
+            return jsonify({"data": data_as_dicts})
+
+    except Exception as e:
+        logger.error(f"API Fornecedora s/ RCB: Erro inesperado: {e}", exc_info=True) # Log atualizado
+        return jsonify({"error": "Erro inesperado no servidor ao buscar resumo de fornecedoras com clientes sem RCB."}), 500
+# --- FIM DA NOVA ROTA ---
