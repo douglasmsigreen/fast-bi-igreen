@@ -1,15 +1,13 @@
-{# templates/login.html #}
 <!doctype html>
 <html lang="pt-br">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Login - Fast BI</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-        <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-        {# Adiciona Font Awesome se ainda não estiver globalmente #}
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    </head>
+    <html lang="pt-br">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Login - Fast BI</title>
+            <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+            <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+            </head>
 <body class="login-page-body"> {# Adiciona uma classe ao body para estilos específicos #}
 
     <div class="login-wrapper">
@@ -22,9 +20,6 @@
         {# Coluna da Direita (Formulário) #}
         <div class="login-form-column">
             <div class="login-form-container">
-
-                {# <<< ADICIONAR A INCLUSÃO AQUI >>> #}
-                {% include 'components/flash_messages.html' %}
 
                 {# Logo (ajuste caminho e estilo) #}
                 <div class="login-logo">
@@ -52,8 +47,8 @@
                         {{ form.password.label }} {# Label acima #}
                         {# Adicionar um wrapper para o ícone do olho (requer JS para funcionar) #}
                         <div class="password-wrapper">
-                            {{ form.password(class="form-control", placeholder="********") }}
-                            {# <span class="password-toggle-icon">👁️</span> #} {# Ícone - JS necessário #}
+                             {{ form.password(class="form-control", placeholder="********") }}
+                             {# <span class="password-toggle-icon">👁️</span> #} {# Ícone - JS necessário #}
                         </div>
                         {% if form.password.errors %}
                             <div class="invalid-feedback">
@@ -67,7 +62,7 @@
                         {{ form.remember_me.label(class="form-check-label") }}
                     </div>
 
-                    {{ form.submit(class="btn btn-primary btn-login-submit", value="Entrar") }} {# Texto do botão no 'value' e classe primária #}
+                    {{ form.submit(class="btn btn-login-submit", value="Entrar") }} {# Texto do botão no 'value' #}
                 </form>
 
             </div> {# Fim login-form-container #}
@@ -75,7 +70,7 @@
 
     </div> {# Fim login-wrapper #}
 
-{# Scripts JS no final #}
-<script src="{{ url_for('static', filename='js/script.js') }}"></script> {# Inclui o script principal #}
+{# Scripts JS no final, se necessário (ex: para toggle de senha) #}
+{# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
 </body>
 </html>

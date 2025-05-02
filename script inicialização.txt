@@ -2,7 +2,7 @@ cd OneDrive\Documentos\Douglas\Nova Aplicação Web BI\exportador_web
 python -m venv venv
 source venv/bin/activate  # No Windows: venv\Scripts\activate
 
-python run.py
+python app.py
 
 # 1. Verificar o que mudou (opcional)
 git status
