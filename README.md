@@ -46,5 +46,3 @@ A aplicação utiliza Python (Flask) no backend para processamento de dados e l�
     * Font Awesome (Ícones)
 * **Banco de Dados:**
     * PostgreSQL (Implícito pelo uso de `psycopg2` e queries SQL)
-
-## Estrutura do Projeto (Simplificada)
