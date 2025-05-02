@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {# Font Awesome é usado na sidebar e potencialmente nos flash messages #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
@@ -33,6 +34,7 @@
             {# --- Área Principal para o Conteúdo da Página --- #}
             <div class="content-area">
                 {# --- Incluir Mensagens Flash (Componente) --- #}
+                {# Esta inclusão renderizará o HTML dos pop-ups, que serão posicionados pelo CSS #}
                 {% include 'components/flash_messages.html' %}
 
                 {# --- Bloco principal do conteúdo --- #}
@@ -50,9 +52,10 @@
     </div> {# Fim page-wrapper #}
 
     {# --- Scripts JS --- #}
+    {# SortableJS (usado no dashboard) #}
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-
-    {# Script para atualizar data no header (já está no componente header.html) #}
+    {# Script principal da aplicação (inclui lógica de fechar pop-ups flash) #}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     {# --- Bloco para scripts JS específicos da página --- #}
     {% block scripts_extra %}{% endblock %}

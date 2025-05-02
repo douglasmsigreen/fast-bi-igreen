@@ -1,4 +1,4 @@
-/* static/css/style.css - VERSÃO ATUALIZADA COM MELHORIAS VISUAIS */
+/* static/css/style.css - VERSÃO ATUALIZADA COM MELHORIAS VISUAIS E FLASH POP-UPS */
 
 /* --- Reset Básico e Variáveis de Cor --- */
 * {
@@ -216,8 +216,8 @@ body.login-page-body {
     background-color: var(--cor-fundo-geral);
 }
 
-/* --- Mensagens Flash (Sugestão 7) --- */
-.flash-messages-container { margin-bottom: 20px; }
+/* --- Mensagens Flash (Layout Antigo - Mantido por referência se precisar reverter) --- */
+/* .flash-messages-container { margin-bottom: 20px; }
 .flash-messages-container .alert {
     padding: 12px 18px;
     margin-bottom: 15px;
@@ -227,19 +227,19 @@ body.login-page-body {
     font-weight: 500;
     display: flex;
     align-items: center;
-    animation: fadeIn 0.25s ease-out; /* (Sugestão 7) */
+    animation: fadeIn 0.25s ease-out;
 }
 .alert-danger, .alert-error { color: var(--cor-erro); background-color: var(--cor-erro-fundo); border-color: var(--cor-erro); }
 .alert-warning { color: var(--cor-aviso); background-color: var(--cor-aviso-fundo); border-color: var(--cor-aviso); }
 .alert-success { color: var(--cor-sucesso); background-color: var(--cor-sucesso-fundo); border-color: var(--cor-sucesso); }
-.alert-info { color: var(--cor-info); background-color: var(--cor-info-fundo); border-color: var(--cor-info); }
+.alert-info { color: var(--cor-info); background-color: var(--cor-info-fundo); border-color: var(--cor-info); } */
 
 /* --- Layout de Login --- */
 .login-wrapper { display: flex; min-height: 100vh; width: 100%; }
 .login-image-column { flex: 1; background-image: url('../img/telalogin.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; display: none; }
 .login-form-column { flex: 1; display: flex; justify-content: center; align-items: center; padding: 40px; background-color: var(--cor-fundo-elemento); }
 @media (min-width: 992px) { .login-image-column { display: block; flex: 0 0 55%; } .login-form-column { flex: 0 0 45%; width: auto; } }
-.login-form-container { width: 100%; max-width: 400px; }
+.login-form-container { width: 100%; max-width: 400px; position: relative; /* Para posicionar flash pop-up */ }
 .login-logo { text-align: center; margin-bottom: 30px; } .login-logo img { max-height: 50px; width: auto; }
 .login-title { text-align: center; font-size: 1.8em; font-weight: 700; color: var(--cor-texto-principal); margin-top: 0; margin-bottom: 30px; } .login-title .crm-icon { font-size: 0.8em; vertical-align: middle; }
 .login-form .form-group { margin-bottom: 20px; }
@@ -263,7 +263,13 @@ body.login-page-body {
     width: 100%;
     font-size: 1rem;
     height: auto; line-height: normal;
+    background-color: var(--cor-primaria); /* Garante cor primária */
+    color: var(--cor-primaria-texto);    /* Garante texto branco */
 }
+.btn-login-submit:hover {
+    background-color: var(--cor-primaria-hover); /* Efeito hover */
+}
+
 
 /* --- ESTILOS GENÉRICOS PARA FORMULÁRIOS (Sugestão 5) --- */
 .form-control, select, input[type="text"], input[type="email"], input[type="password"], textarea { /* Adicionado textarea */
@@ -616,3 +622,97 @@ th.sortable-header .sort-icon { font-size: 0.8em; margin-left: 5px; color: var(-
     cursor: grab; /* Indica que o header pode ser usado para arrastar (se usar 'handle') */
 }
 /* --- FIM: Estilos para SortableJS --- */
+
+
+/* --- INÍCIO: Estilos para Mensagens Flash como Pop-ups --- */
+.flash-popup-container {
+    position: fixed; /* Ou absolute, dependendo do contexto, mas fixed é comum */
+    top: 20px;
+    right: 20px;
+    z-index: 1050; /* Garante que fique acima da maioria dos elementos */
+    width: 100%;
+    max-width: 350px; /* Largura máxima para os pop-ups */
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Espaçamento entre mensagens */
+}
+
+.flash-popup-container .alert {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Sombra para destacar */
+    margin-bottom: 0; /* Remove a margem inferior padrão do alert */
+    display: flex; /* Para melhor alinhamento interno se necessário */
+    align-items: flex-start; /* Alinha texto e botão no topo */
+    animation: fadeInRight 0.3s ease-out; /* Animação de entrada (opcional) */
+    /* Estilos base do .alert (padding, border, colors) são mantidos */
+    padding: 12px 18px;
+    padding-right: 40px; /* Espaço extra à direita para o botão */
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    position: relative; /* Necessário para posicionar o botão dentro */
+}
+/* Cores específicas (mantém as mesmas classes .alert-* da aplicação) */
+.flash-popup-container .alert-danger, .flash-popup-container .alert-error { color: var(--cor-erro); background-color: var(--cor-erro-fundo); border-color: var(--cor-erro); }
+.flash-popup-container .alert-warning { color: var(--cor-aviso); background-color: var(--cor-aviso-fundo); border-color: var(--cor-aviso); }
+.flash-popup-container .alert-success { color: var(--cor-sucesso); background-color: var(--cor-sucesso-fundo); border-color: var(--cor-sucesso); }
+.flash-popup-container .alert-info { color: var(--cor-info); background-color: var(--cor-info-fundo); border-color: var(--cor-info); }
+
+.flash-close-btn {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 1.4rem; /* Tamanho do 'x' */
+    font-weight: bold;
+    line-height: 1;
+    color: inherit; /* Herda a cor do texto do alert */
+    opacity: 0.6;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.flash-close-btn:hover {
+    opacity: 1;
+}
+
+/* Animação de entrada (opcional) */
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Opcional: Animação de saída (usada pelo JS antes de remover) */
+.flash-fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95); /* Efeito leve de encolher */
+    }
+}
+
+/* Ajustes para telas menores (opcional) */
+@media (max-width: 768px) {
+    .flash-popup-container {
+        top: 10px;
+        right: 10px;
+        max-width: calc(100% - 20px); /* Ocupa quase toda a largura */
+    }
+}
+/* --- FIM: Estilos para Mensagens Flash como Pop-ups --- */

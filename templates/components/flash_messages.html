@@ -1,9 +1,17 @@
 {# templates/components/flash_messages.html #}
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="flash-messages-container">
+    {# Adiciona um container para posicionar todos os pop-ups #}
+    <div class="flash-popup-container">
         {% for category, message in messages %}
-        <div class="alert alert-{{ category or 'info' }}">{{ message }}</div>
+        {# Adiciona position: relative para o posicionamento absoluto do botão #}
+        <div class="alert alert-{{ category or 'info' }}" role="alert" style="position: relative; padding-right: 40px;">
+            {{ message }}
+            {# Botão de fechar #}
+            <button type="button" class="flash-close-btn" aria-label="Fechar" title="Fechar">
+                &times; {# Símbolo de multiplicação como ícone de fechar #}
+            </button>
+        </div>
         {% endfor %}
     </div>
     {% endif %}
