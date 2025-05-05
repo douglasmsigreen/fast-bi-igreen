@@ -1,4 +1,4 @@
-/* static/css/style.css - VERSÃO ATUALIZADA COM MELHORIAS VISUAIS E MODAL */
+/* static/css/style.css - VERSÃO ATUALIZADA COM MELHORIAS VISUAIS */
 
 /* --- Reset Básico e Variáveis de Cor --- */
 * {
@@ -483,7 +483,7 @@ nav.pagination li.disabled span { color: var(--cor-texto-secundario); background
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 25px;
-    align-items: stretch; /* Garante que cards tenham a mesma altura na linha se possível */
+    align-items: stretch;
 }
 
 .card { /* (Sugestão 2 e 10, com hover modificado) */
@@ -517,7 +517,7 @@ nav.pagination li.disabled span { color: var(--cor-texto-secundario); background
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-shrink: 0; /* Evita que o header encolha */
+    flex-shrink: 0;
 }
 .card-header .tooltip-icon { color: var(--cor-texto-secundario); cursor: help; margin-left: 5px; }
 .card-header select { font-size: 0.9em; border: none; background: transparent; font-weight: bold; margin-right: 10px; color: var(--cor-texto-principal); }
@@ -616,106 +616,3 @@ th.sortable-header .sort-icon { font-size: 0.8em; margin-left: 5px; color: var(-
     cursor: grab; /* Indica que o header pode ser usado para arrastar (se usar 'handle') */
 }
 /* --- FIM: Estilos para SortableJS --- */
-
-
-/* --- INÍCIO: Estilos para Modal de Seleção de Cards --- */
-.modal {
-    /* Estilos básicos já inline no HTML */
-    display: none; /* Começa oculto */
-    position: fixed;
-    z-index: 1050;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto; /* Permite scroll se conteúdo for maior */
-    background-color: rgba(0,0,0,0.5); /* Fundo semi-transparente */
-    animation: fadeInModal 0.3s ease-out; /* Animação suave */
-}
-@keyframes fadeInModal { from { opacity: 0; } to { opacity: 1; } }
-
-/* Estilos para o conteúdo do modal */
-.modal-content {
-    /* Estilos básicos já inline no HTML */
-    background-color: #fefefe;
-    margin: 10% auto; /* Centraliza verticalmente (aproximado) e horizontalmente */
-    padding: 25px;
-    border: 1px solid #ccc; /* Borda mais sutil */
-    width: 90%; /* Mais responsivo em telas menores */
-    max-width: 550px; /* Limite máximo */
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    transform: translateY(-20px); /* Efeito de "cair" */
-    animation: slideDownModal 0.3s ease-out forwards;
-}
-@keyframes slideDownModal { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-/* Cabeçalho do modal */
-.modal-header {
-    /* Estilos básicos já inline no HTML */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--cor-borda-suave);
-    padding-bottom: 15px;
-    margin-bottom: 20px;
-}
-.modal-header h5 { margin: 0; font-size: 1.25rem; color: var(--cor-texto-principal); }
-.modal-header #close-modal-btn {
-    background: none;
-    border: none;
-    font-size: 1.8rem; /* Maior para facilitar clique */
-    cursor: pointer;
-    color: #888;
-    padding: 0;
-    line-height: 1;
-    transition: color 0.2s ease;
-}
-.modal-header #close-modal-btn:hover { color: #333; }
-
-
-/* Corpo do modal */
-.modal-body {
-    /* Estilos básicos já inline no HTML */
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Layout responsivo */
-    gap: 15px;
-}
-.modal-body .checkbox-group label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-size: 0.9rem;
-    padding: 8px 10px; /* Espaçamento interno */
-    border-radius: 6px;
-    transition: background-color 0.2s ease;
-    border: 1px solid transparent; /* Para manter o layout estável no hover */
-}
-.modal-body .checkbox-group label:hover {
-    background-color: var(--cor-fundo-hover);
-    border-color: var(--cor-borda-suave);
-}
-
-.modal-body .checkbox-group input[type="checkbox"] {
-    margin-right: 10px;
-    cursor: pointer;
-    width: 16px;
-    height: 16px;
-    accent-color: var(--cor-primaria); /* Estiliza o checkbox (navegadores modernos) */
-}
-
-/* Rodapé do modal */
-.modal-footer {
-    /* Estilos básicos já inline no HTML */
-    border-top: 1px solid var(--cor-borda-suave);
-    padding-top: 20px;
-    margin-top: 25px;
-    text-align: right;
-}
-/* --- FIM: Estilos para Modal de Seleção de Cards --- */
-
-
-/* --- Classe para Ocultar Cards --- */
-.card-hidden {
-    display: none !important; /* Usa !important para garantir a sobreposição */
-}
