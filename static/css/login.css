@@ -1,0 +1,109 @@
+/* static/css/login.css */
+
+/* Estilo específico para o fundo branco da página de login */
+body.login-page-body {
+    background-color: var(--cor-fundo-elemento) !important;
+    display: block; /* Sobrescreve display: flex de .page-wrapper se herdado */
+    min-height: 100vh;
+}
+
+/* --- Estrutura da Página de Login --- */
+.login-wrapper {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Coluna da Imagem (Esquerda) */
+.login-image-column {
+    flex: 1; /* Ocupa espaço disponível */
+    background-image: url('../img/telalogin.jpg'); /* Caminho relativo */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: none; /* Escondido por padrão */
+}
+
+/* Coluna do Formulário (Direita) */
+.login-form-column {
+    flex: 1; /* Ocupa espaço disponível */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    background-color: var(--cor-fundo-elemento); /* Fundo branco */
+}
+
+/* Container do formulário para limitar largura */
+.login-form-container {
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Logo */
+.login-logo {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.login-logo img {
+    max-height: 50px;
+    width: auto;
+}
+
+/* Título */
+.login-title {
+    text-align: center;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: var(--cor-texto-principal);
+    margin-top: 0;
+    margin-bottom: 30px;
+}
+.login-title .crm-icon { /* Ícone no título */
+    font-size: 0.8em;
+    vertical-align: middle;
+}
+
+/* Formulário de Login */
+.login-form .form-group {
+    margin-bottom: 20px; /* Espaçamento específico do login */
+}
+
+/* Aplicar estilos de forms.css e sobrescrever se necessário */
+.login-form .form-control {
+    background-color: var(--cor-fundo-geral); /* Fundo cinza claro */
+}
+.login-form .form-control:focus {
+    background-color: var(--cor-fundo-elemento); /* Fundo branco no foco */
+}
+
+/* Checkbox específico do login */
+.login-form .form-check-group {
+     margin-bottom: 25px;
+}
+
+/* Botão de submit do login */
+.btn-login-submit {
+    width: 100%;
+    font-size: 1rem;
+    height: auto; /* Permitir altura baseada no padding */
+    line-height: normal;
+    padding: 12px 18px; /* Ajustar padding se necessário */
+}
+
+/* Responsividade da página de login */
+@media (min-width: 992px) { /* Exibe imagem em telas maiores */
+    .login-image-column {
+        display: block;
+        flex: 0 0 55%; /* Largura fixa para imagem */
+    }
+    .login-form-column {
+        flex: 0 0 45%; /* Largura fixa para formulário */
+        width: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .login-form-column { padding: 25px; }
+    .login-title { font-size: 1.6em; }
+}

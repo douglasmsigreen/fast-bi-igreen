@@ -1,4 +1,4 @@
-{# templates/base.html - MODIFICADO COM AJUSTES VISUAIS E FONTE INTER #}
+{# templates/base.html - MODIFICADO COM LINKS CSS DIVIDIDOS #}
 <!doctype html>
 <html lang="pt-br">
 <head>
@@ -6,17 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Fast BI{% endblock %}</title>
 
-    {# --- Adicionar link para Google Font (Inter) --- #}
+    {# --- Google Font (Inter) --- #}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    {# --- Link para Font Awesome --- #}
+    {# --- Font Awesome --- #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    {# --- Link para seu CSS customizado (agora com as variáveis e estilos novos) --- #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {# --- Favicon --- #}
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+
+    {# --- REMOVIDO o link antigo --- #}
+    {# <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> #}
+
+    {# --- ADICIONADO: Links para os novos arquivos CSS na ordem correta --- #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tables.css') }}">
+    {# Carregar CSS específico da página apenas se necessário? Ou carregar todos?
+       Para simplicidade inicial, carregamos todos. Para otimização, pode-se carregar condicionalmente. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+    {# --- Fim dos novos links --- #}
 
     {% block head_extra %}{% endblock %}
 </head>
@@ -101,7 +116,11 @@
                 {% if messages %}
                   <div class="flash-messages-container">
                     {% for category, message in messages %}
-                      <div class="alert alert-{{ category or 'info' }}">{{ message }}</div>
+                      {# Adiciona botão de fechar (requer components.css e script.js) #}
+                      <div class="alert alert-{{ category or 'info' }}" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" aria-label="Fechar"></button>
+                      </div>
                     {% endfor %}
                   </div>
                 {% endif %}
@@ -114,7 +133,8 @@
 
             {# Rodapé Principal #}
             <footer class="main-footer">
-                 &copy; {{ now().year }} Fast BI - Todos os direitos reservados. {# Texto exemplo #}
+                 {# Usando 'now' do context processor injetado em backend/__init__.py #}
+                 &copy; {{ now().year if now else '2025' }} Fast BI - Todos os direitos reservados. {# Texto exemplo #}
             </footer>
         </main>
         {# --- Fim da Área de Conteúdo Principal --- #}
@@ -128,8 +148,8 @@
     {# Adicionar JS do Bootstrap se estiver usando componentes interativos deles #}
     {# <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script> #}
 
-    {# Script JS Global (se houver) #}
-    {# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
+    {# Script JS Global para funcionalidades básicas (como fechar flash messages) #}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     {# Script para atualizar data no header #}
     <script>
@@ -146,19 +166,26 @@
                     dateElement.textContent = formattedDate;
                 } catch (e) { // Fallback simples se pt-BR não for suportado
                      const day = String(now.getDate()).padStart(2, '0');
-                     const month = String(now.getMonth() + 1).padStart(2, '0');
+                     const month = String(now.getMonth() + 1).padStart(2, '0'); // Mês é 0-indexado
                      const year = now.getFullYear();
                      dateElement.textContent = `${day}/${month}/${year}`;
                      console.warn("toLocaleDateString('pt-BR') não suportado ou falhou, usando fallback DD/MM/YYYY.");
                 }
             }
+            // Código para fechar flash messages (movido para script.js, mas pode ficar aqui como alternativa)
+            // const closeButtons = document.querySelectorAll('.flash-messages-container .btn-close');
+            // closeButtons.forEach(button => {
+            //     button.addEventListener('click', function() {
+            //         this.closest('.alert').remove(); // Usa closest para remover o alerta pai
+            //     });
+            // });
         });
     </script>
 
-    {# --- ADICIONADO: Incluir SortableJS via CDN --- #}
+    {# --- Incluir SortableJS via CDN --- #}
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-    {# Bloco para adicionar scripts JS específicos da página (Chart.js, inicialização SortableJS, etc.) #}
+    {# Bloco para adicionar scripts JS específicos da página (Chart.js, Plotly.js, inicializações, etc.) #}
     {% block scripts_extra %}{% endblock %}
 
 </body>

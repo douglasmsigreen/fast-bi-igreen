@@ -1,0 +1,86 @@
+/* static/css/base.css */
+
+/* --- Reset Básico --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- Variáveis de Cor e Tipografia --- */
+:root {
+  /* Cores Originais */
+  --cor-primaria: #00B034;
+  --cor-primaria-hover: #00962C;
+  --cor-primaria-texto: #FFFFFF;
+  --cor-fundo-geral: #F8FAFC;
+  --cor-fundo-elemento: #FFFFFF;
+  --cor-fundo-header-card: #F1F5F9;
+  --cor-fundo-hover: #F1F5F9;
+  --cor-fundo-zebrado: #F8FAFC;
+  --cor-borda-suave: #E2E8F0;
+  --cor-borda-forte: #CBD5E1;
+  --cor-texto-principal: #1E293B;
+  --cor-texto-secundario: #64748B;
+  --cor-texto-link: #007bff;
+  --cor-texto-link-hover: #0056b3;
+  --cor-sucesso: #15803d;
+  --cor-sucesso-fundo: #dcfce7;
+  --cor-erro: #b91c1c;
+  --cor-erro-fundo: #fee2e2;
+  --cor-aviso: #b45309;
+  --cor-aviso-fundo: #fef3c7;
+  --cor-info: #0369a1;
+  --cor-info-fundo: #e0f2fe;
+
+  /* Novas Variáveis (Sugestões anteriores) */
+  --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-headings: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-size-base: 0.9375rem; /* 15px */
+  --line-height-base: 1.6;
+
+  --sombra-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --sombra-card-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --sombra-card-elevated: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+
+  --table-border-radius: 10px;
+}
+
+/* --- Estilos Gerais para o BODY --- */
+body {
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    letter-spacing: 0.01em;
+    background-color: var(--cor-fundo-geral);
+    color: var(--cor-texto-principal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Estilos para Cabeçalhos --- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-headings);
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 0.75rem;
+  color: var(--cor-texto-principal);
+}
+
+/* --- Utilitários --- */
+hr {
+    border: none;
+    border-top: 1px solid var(--cor-borda-suave);
+    margin: 25px 0;
+}
+
+/* Animações */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Adicionar outros estilos base globais aqui, se houver */

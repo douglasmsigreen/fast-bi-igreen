@@ -1,0 +1,169 @@
+/* static/css/tables.css */
+
+.table-responsive {
+    overflow-x: auto;
+    /* margin-top: 15px; */ /* Remover margin geral, aplicar onde necessário */
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: var(--table-border-radius);
+    background-color: var(--cor-fundo-elemento);
+    box-shadow: var(--sombra-card); /* Sombra suave padrão */
+    /* Garantir que a borda não suma com a rolagem do cabeçalho */
+    overflow-y: hidden; /* Evitar rolagem vertical dupla com summary tables */
+}
+
+table { /* Estilo base para TODAS as tabelas */
+     border-collapse: separate; /* Necessário para border-radius funcionar em th/td */
+     border-spacing: 0;
+     width: 100%;
+     font-size: 0.875rem;
+     color: var(--cor-texto-principal);
+}
+
+table th,
+table td {
+     padding: 12px 15px;
+     border: none; /* Remove bordas padrão */
+     border-bottom: 1px solid var(--cor-borda-suave); /* Linha separadora horizontal */
+     text-align: left;
+     white-space: nowrap; /* Evita quebra de linha por padrão */
+     vertical-align: middle;
+}
+
+table thead th {
+     background-color: var(--cor-fundo-header-card);
+     color: var(--cor-texto-secundario);
+     font-weight: 600;
+     font-size: 0.8rem; /* Ligeiramente menor */
+     text-transform: uppercase; /* Opcional */
+     letter-spacing: 0.5px; /* Opcional */
+     border-bottom-width: 1px; /* Mais sutil */
+     border-color: var(--cor-borda-forte); /* Borda inferior mais forte */
+     position: sticky; /* Cabeçalho fixo ao rolar */
+     top: 0;
+     z-index: 1; /* Fica acima do conteúdo da tabela */
+     /* Adicionar um fundo opaco para não ver o conteúdo passando por baixo */
+     /* background-clip: padding-box; */ /* Ajuda em alguns navegadores */
+}
+
+/* Bordas arredondadas nos cantos da tabela */
+table thead th:first-child { border-top-left-radius: calc(var(--table-border-radius) - 1px); } /* Ajuste para borda */
+table thead th:last-child { border-top-right-radius: calc(var(--table-border-radius) - 1px); }
+/* Aplicar nas células da última linha */
+table tr:last-child td:first-child { border-bottom-left-radius: calc(var(--table-border-radius) - 1px); }
+table tr:last-child td:last-child { border-bottom-right-radius: calc(var(--table-border-radius) - 1px); }
+/* Remover a borda inferior da última linha */
+table tr:last-child td { border-bottom: none; }
+
+/* Zebrado e Hover */
+table tbody tr:nth-child(even) {
+    background-color: var(--cor-fundo-zebrado);
+}
+table tbody tr {
+    transition: background-color 0.15s ease; /* Hover suave */
+}
+table tbody tr:hover {
+    background-color: var(--cor-fundo-hover);
+}
+
+/* Informações da Tabela (Ex: mostrando X de Y) */
+.table-info {
+    margin-top: 15px;
+    margin-bottom: 10px;
+    font-style: italic;
+    color: var(--cor-texto-secundario);
+    font-size: 0.85rem;
+}
+
+/* Paginação */
+nav.pagination {
+    margin-top: 25px;
+    text-align: center;
+}
+nav.pagination ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: inline-block;
+}
+nav.pagination li {
+    display: inline-block;
+    margin: 0 3px;
+}
+nav.pagination a,
+nav.pagination span { /* Estilo comum para links e spans (ativo/desabilitado) */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: 8px;
+    text-decoration: none;
+    background-color: var(--cor-fundo-elemento);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+nav.pagination a {
+    color: var(--cor-texto-link);
+}
+nav.pagination a:hover {
+    background-color: var(--cor-fundo-hover);
+    border-color: var(--cor-borda-forte);
+}
+nav.pagination li.active span { /* Span dentro do li ativo */
+    background-color: var(--cor-primaria);
+    color: var(--cor-primaria-texto);
+    border-color: var(--cor-primaria);
+    cursor: default;
+    font-weight: 600;
+}
+nav.pagination li.disabled span { /* Span dentro do li desabilitado */
+    color: var(--cor-texto-secundario);
+    background-color: var(--cor-fundo-geral);
+    border-color: var(--cor-borda-suave);
+    cursor: default;
+    opacity: 0.7;
+}
+
+/* --- ESTILOS PARA CABEÇALHOS ORDENÁVEIS --- */
+th.sortable-header {
+    cursor: pointer;
+    position: relative; /* Para posicionar o ícone */
+    user-select: none; /* Evita seleção de texto ao clicar */
+    transition: background-color 0.2s ease;
+}
+th.sortable-header:hover {
+    background-color: var(--cor-fundo-hover);
+}
+/* O ícone de ordenação */
+th.sortable-header .sort-icon {
+    font-size: 0.8em;
+    margin-left: 5px;
+    color: var(--cor-texto-secundario);
+    opacity: 0.8;
+    display: inline-block;
+    width: 1em; /* Espaço reservado */
+    text-align: center;
+    font-weight: normal; /* Ícone não é bold */
+    transition: transform 0.2s ease; /* Animação suave do ícone */
+}
+/* Opcional: Animar a seta */
+/* th.sortable-header[data-direction="asc"] .sort-icon { transform: rotate(0deg); } */
+/* th.sortable-header[data-direction="desc"] .sort-icon { transform: rotate(180deg); } */
+
+/* Responsividade de Tabelas (Exemplo: permitir quebra de linha em telas menores) */
+@media (max-width: 768px) {
+    table th, table td {
+        white-space: normal; /* Permite quebra de linha */
+        font-size: 0.8rem;
+        padding: 8px 10px;
+    }
+    .table-responsive { border-radius: 8px; } /* Reduzir borda */
+    table thead th:first-child { border-top-left-radius: 7px; }
+    table thead th:last-child { border-top-right-radius: 7px; }
+    table tr:last-child td:first-child { border-bottom-left-radius: 7px; }
+    table tr:last-child td:last-child { border-bottom-right-radius: 7px; }
+}

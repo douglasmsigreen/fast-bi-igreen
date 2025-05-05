@@ -1,0 +1,123 @@
+/* static/css/forms.css */
+
+/* --- ESTILOS GENÉRICOS PARA ELEMENTOS DE FORMULÁRIO --- */
+.form-control,
+select,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"], /* Adicionar outros tipos se usados */
+textarea {
+    padding: 10px 15px;
+    font-size: 0.95rem; /* Ou var(--font-size-base); */
+    border: 1px solid var(--cor-borda-suave);
+    border-radius: 8px;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    height: 42px; /* Altura padrão */
+    background-color: var(--cor-fundo-elemento);
+    color: var(--cor-texto-principal);
+    width: 100%; /* Ocupa largura total por padrão */
+    box-sizing: border-box;
+}
+
+/* Ajuste para textarea */
+textarea.form-control {
+    height: auto;
+    min-height: 80px;
+}
+
+/* Estilos de Foco */
+.form-control:focus,
+select:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+     border-color: var(--cor-primaria);
+     box-shadow: 0 0 0 3px rgba(0, 176, 52, 0.15);
+     outline: none;
+}
+
+/* Estilo para inputs inválidos (ex: validação WTForms) */
+.form-control.is-invalid {
+  border-color: var(--cor-erro);
+  background-image: none; /* Remover ícone padrão se houver */
+  padding-right: 15px;
+}
+.form-control.is-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.15); /* Sombra de erro */
+}
+/* Div para exibir mensagens de erro de validação */
+.invalid-feedback {
+    color: var(--cor-erro);
+    font-size: 0.85em;
+    margin-top: 5px;
+    display: block; /* Garante que seja exibido */
+}
+
+/* Placeholder */
+::placeholder {
+  color: var(--cor-texto-secundario);
+  opacity: 0.6;
+}
+
+/* --- Grupos de Formulário e Labels --- */
+.form-group {
+    margin-bottom: 20px; /* Espaçamento padrão */
+}
+
+/* Estilo padrão para labels */
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--cor-texto-secundario);
+}
+
+/* Estilo para Checkbox/Radio (genérico) */
+.form-check-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px; /* Ajustar conforme necessário */
+}
+.form-check-input {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid var(--cor-borda-suave);
+    /* Remover aparência padrão para estilizar */
+    /* appearance: none; */
+    /* Adicionar estilos customizados se necessário */
+}
+/* Adicionar :checked styles se desejar customizar */
+.form-check-label {
+    font-size: 0.9em;
+    color: var(--cor-texto-secundario); /* Ou principal */
+    cursor: pointer;
+    font-weight: normal; /* Labels de check geralmente não são bold */
+    margin-bottom: 0; /* Resetar margin-bottom de label padrão */
+}
+
+/* Wrapper para ícone de toggle de senha (requer JS) */
+.password-wrapper {
+    position: relative;
+}
+.password-wrapper .password-toggle-icon {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #aaa;
+}
+
+/* Responsividade de Formulários (Exemplo) */
+@media (max-width: 768px) {
+    .form-control, select, input, textarea {
+        font-size: 1rem; /* Aumentar um pouco em telas menores para facilitar toque */
+    }
+}

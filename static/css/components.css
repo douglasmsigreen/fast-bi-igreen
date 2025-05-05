@@ -1,0 +1,145 @@
+/* static/css/components.css */
+
+/* --- ESTILOS GENÉRICOS PARA BOTÕES --- */
+.btn {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.5;
+    height: 42px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    text-align: center;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeito ripple */
+.btn::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 5px; height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+.btn:focus:not(:active)::after {
+  animation: ripple 0.6s ease-out;
+}
+@keyframes ripple {
+  0% { transform: scale(0, 0) translate(-50%, -50%); opacity: 0.5; }
+  100% { transform: scale(30, 30) translate(-50%, -50%); opacity: 0; }
+}
+
+/* Variações de Cor */
+.btn-primary { background-color: var(--cor-primaria); color: var(--cor-primaria-texto); }
+.btn-primary:hover { background-color: var(--cor-primaria-hover); }
+.btn-success { background-color: var(--cor-sucesso); color: white; }
+.btn-success:hover { background-color: #166534; }
+/* Adicionar .btn-danger, .btn-warning, .btn-info se necessário */
+
+/* Botão com loading */
+.btn.loading {
+  position: relative;
+  color: transparent !important; /* Esconde o texto original */
+  pointer-events: none;
+}
+.btn.loading::after { /* Sobrescreve o ripple */
+  content: "";
+  position: absolute;
+  width: 16px; height: 16px;
+  top: 50%; left: 50%;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white; /* Cor do spinner */
+  animation: spin 0.8s linear infinite;
+  transform-origin: center center;
+  transform: none;
+  background: transparent;
+  opacity: 1;
+}
+/* A animação spin pode ficar aqui ou em base.css */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
+/* --- Mensagens Flash --- */
+.flash-messages-container {
+    margin-bottom: 20px;
+}
+.flash-messages-container .alert {
+    padding: 12px 18px;
+    margin-bottom: 15px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    animation: fadeIn 0.25s ease-out; /* Requer @keyframes fadeIn em base.css */
+    /* Adicionar botão de fechar opcional */
+    position: relative;
+}
+/* Botão de fechar (exemplo) */
+.alert .btn-close {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0;
+}
+.alert .btn-close:hover { opacity: 1; }
+
+/* Variações de Cor */
+.alert-danger, .alert-error { color: var(--cor-erro); background-color: var(--cor-erro-fundo); border-color: var(--cor-erro); }
+.alert-warning { color: var(--cor-aviso); background-color: var(--cor-aviso-fundo); border-color: var(--cor-aviso); }
+.alert-success { color: var(--cor-sucesso); background-color: var(--cor-sucesso-fundo); border-color: var(--cor-sucesso); }
+.alert-info { color: var(--cor-info); background-color: var(--cor-info-fundo); border-color: var(--cor-info); }
+
+
+/* --- ESTILOS DE CARREGAMENTO (Skeleton) --- */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    color: transparent !important;
+    cursor: progress;
+    min-height: 1em; /* Garante altura mínima */
+    user-select: none; /* Impede seleção de texto "fantasma" */
+}
+.skeleton::placeholder { color: transparent; }
+.skeleton * { visibility: hidden; } /* Esconde conteúdo real */
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

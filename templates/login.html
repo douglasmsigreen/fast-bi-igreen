@@ -1,27 +1,44 @@
+{# templates/login.html - AJUSTADO PARA INCLUIR CSS NECESSÁRIO #}
 <!doctype html>
 <html lang="pt-br">
-    <html lang="pt-br">
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Login - Fast BI</title>
-            <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-            <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
-            </head>
-<body class="login-page-body"> {# Adiciona uma classe ao body para estilos específicos #}
+<head> {# Mantido head original #}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - Fast BI</title>
+
+    {# --- Google Font (Inter) --- #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    {# --- Font Awesome (Se usar ícones no login) --- #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    {# --- Favicon --- #}
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+
+    {# --- ADICIONADO: Links CSS necessários para a página de login --- #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    {# --- Fim dos links adicionados --- #}
+
+</head>
+<body class="login-page-body">
 
     <div class="login-wrapper">
 
         {# Coluna da Esquerda (Imagem) #}
         <div class="login-image-column">
-            {# A imagem será definida via CSS background-image #}
+            {# A imagem será definida via CSS background-image em login.css #}
         </div>
 
         {# Coluna da Direita (Formulário) #}
         <div class="login-form-column">
             <div class="login-form-container">
 
-                {# Logo (ajuste caminho e estilo) #}
+                {# Logo #}
                 <div class="login-logo">
                     <img src="{{ url_for('static', filename='img/logo_igreen.png') }}" alt="iGreen Energy Logo">
                 </div>
@@ -29,12 +46,27 @@
                 {# Título #}
                 <h2 class="login-title">Bem-vindo ao Fast BI <span class="crm-icon">📊</span></h2>
 
+                {# Mensagens Flash (Importante adicionar se quiser exibi-las aqui) #}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    <div class="flash-messages-container" style="max-width: 400px; margin-left: auto; margin-right: auto;"> {# Estilo inline para exemplo #}
+                      {% for category, message in messages %}
+                        <div class="alert alert-{{ category or 'info' }}" role="alert">
+                          {{ message }}
+                           {# <button type="button" class="btn-close" aria-label="Fechar"></button> #} {# Adicionar botão se necessário #}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                {% endwith %}
+
+
                 {# Formulário de Login #}
                 <form method="POST" action="{{ url_for('auth_bp.login') }}" novalidate class="login-form">
                     {{ form.hidden_tag() }} {# CSRF Token #}
 
                     <div class="form-group">
-                        {{ form.email.label }} {# Label acima #}
+                        {{ form.email.label }}
                         {{ form.email(class="form-control", placeholder="seuemail@exemplo.com") }}
                         {% if form.email.errors %}
                             <div class="invalid-feedback">
@@ -44,11 +76,10 @@
                     </div>
 
                     <div class="form-group">
-                        {{ form.password.label }} {# Label acima #}
-                        {# Adicionar um wrapper para o ícone do olho (requer JS para funcionar) #}
+                        {{ form.password.label }}
                         <div class="password-wrapper">
                              {{ form.password(class="form-control", placeholder="********") }}
-                             {# <span class="password-toggle-icon">👁️</span> #} {# Ícone - JS necessário #}
+                             {# Ícone de olho pode ser adicionado aqui/via JS #}
                         </div>
                         {% if form.password.errors %}
                             <div class="invalid-feedback">
@@ -62,7 +93,9 @@
                         {{ form.remember_me.label(class="form-check-label") }}
                     </div>
 
-                    {{ form.submit(class="btn btn-login-submit", value="Entrar") }} {# Texto do botão no 'value' #}
+                    {# Usar o botão de submit do WTForms aqui #}
+                    {{ form.submit(class="btn btn-primary btn-login-submit") }} {# Adiciona btn-primary para herdar cor #}
+
                 </form>
 
             </div> {# Fim login-form-container #}
@@ -70,7 +103,7 @@
 
     </div> {# Fim login-wrapper #}
 
-{# Scripts JS no final, se necessário (ex: para toggle de senha) #}
+{# Scripts JS no final, se necessário #}
 {# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
 </body>
 </html>

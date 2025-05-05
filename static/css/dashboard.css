@@ -1,0 +1,293 @@
+/* static/css/dashboard.css */
+
+/* --- Filtros do Dashboard --- */
+.filter-row {
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap; /* Permite quebra de linha em telas menores */
+    gap: 20px;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--cor-texto-secundario);
+    margin-bottom: 0; /* Reset label margin */
+}
+
+.filter-group select {
+    min-width: 180px; /* Largura mínima */
+    width: auto; /* Largura baseada no conteúdo */
+    /* Usa estilos de forms.css */
+}
+
+/* --- Grid do Dashboard --- */
+.dashboard-grid {
+    display: grid;
+    /* grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); */ /* Alternativa responsiva */
+    grid-template-columns: repeat(4, 1fr); /* Layout inicial 4 colunas */
+    gap: 25px;
+    align-items: stretch; /* Faz os cards terem a mesma altura na linha */
+}
+
+/* Card Base (usado por todos os cards do dashboard) */
+.card {
+    background-color: var(--cor-fundo-elemento);
+    border-radius: 12px;
+    box-shadow: var(--sombra-card);
+    border: 1px solid var(--cor-borda-suave);
+    overflow: hidden; /* Garante que conteúdo não vaze */
+    display: flex;
+    flex-direction: column; /* Conteúdo empilha verticalmente */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    will-change: transform, box-shadow; /* Otimização de animação */
+}
+.card:hover {
+    /* Efeito sutil opcional no hover */
+    /* transform: translateY(-2px); */
+    /* box-shadow: var(--sombra-card-hover); */
+}
+/* Variações de Sombra */
+.card.elevated { box-shadow: var(--sombra-card-elevated); }
+.card.elevated:hover { box-shadow: var(--sombra-card-elevated); } /* Manter sombra no hover */
+
+/* Cabeçalho do Card */
+.card-header {
+    padding: 12px 18px;
+    background-color: var(--cor-fundo-header-card);
+    border-bottom: 1px solid var(--cor-borda-suave);
+    font-weight: 500;
+    color: var(--cor-texto-secundario);
+    font-size: 0.8rem; /* Ligeiramente menor */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0; /* Não encolher */
+}
+.card-header .tooltip-icon {
+    color: var(--cor-texto-secundario);
+    cursor: help;
+    margin-left: 5px;
+}
+.card-header select { /* Seletor dentro do header */
+    font-size: 0.9em;
+    border: none;
+    background: transparent;
+    font-weight: bold;
+    margin-right: 10px;
+    color: var(--cor-texto-principal);
+    padding: 2px 5px; /* Pequeno padding */
+    cursor: pointer;
+}
+
+/* Corpo do Card */
+.card-body {
+    padding: 20px;
+    flex-grow: 1; /* Ocupa espaço restante */
+    display: flex;
+    flex-direction: column; /* Padrão */
+}
+
+/* --- Variações de Card --- */
+
+/* Card KPI (Valor único grande) */
+.kpi-card .card-body {
+    justify-content: center; /* Centraliza verticalmente */
+    align-items: center; /* Centraliza horizontalmente */
+    text-align: center;
+}
+.kpi-card .kpi-main-value {
+    font-size: 2.6em;
+    font-weight: 700;
+    color: var(--cor-primaria);
+    margin-bottom: 5px;
+    line-height: 1.1;
+    /* Garantir que o spinner caiba */
+    min-height: 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.kpi-card .kpi-sub-label {
+    display: block;
+    color: var(--cor-texto-secundario);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+/* Card Qualificação (Dois valores lado a lado) */
+.qualification-card .card-body {
+    justify-content: center;
+    align-items: center;
+}
+.qualification-card .qualification-numbers {
+    display: flex;
+    justify-content: center; /* Ou space-around */
+    text-align: center;
+    gap: 35px;
+    align-items: flex-start; /* Alinha pelo topo */
+    width: 100%;
+}
+.qualification-card .qual-item .qual-number {
+    font-size: 2.2em; /* Ajustado */
+    font-weight: 700;
+    color: var(--cor-primaria); /* Cor diferente? */
+    display: block;
+    line-height: 1.1;
+    min-height: 1.2em; /* Para caber spinner */
+}
+.qualification-card .qual-item .qual-label {
+    font-size: 0.85em; /* Ajustado */
+    color: var(--cor-texto-secundario);
+    line-height: 1.3;
+    margin-top: 3px;
+}
+
+/* Card de Gráfico */
+.chart-card .card-body {
+    min-height: 300px; /* Altura mínima ajustada */
+    position: relative; /* Para posicionar canvas e status */
+    flex-grow: 1;
+    padding: 15px; /* Menor padding para dar mais espaço ao gráfico */
+    display: flex; /* Adicionado para ajudar no dimensionamento do canvas */
+    align-items: center; /* Centraliza verticalmente se o conteúdo for menor */
+    justify-content: center; /* Centraliza horizontalmente se o conteúdo for menor */
+}
+.chart-card canvas {
+    display: block; /* Remove espaço extra abaixo */
+    max-width: 100%; /* Usa max-width em vez de width !important */
+    max-height: 100%; /* Usa max-height em vez de height !important */
+    /* A altura/largura real será definida pela biblioteca de gráficos ou pelo container */
+    /* object-fit: contain; */ /* Opcional: Garante que o gráfico caiba sem distorção */
+}
+/* Status de carregamento/erro para gráficos */
+.chart-card .chart-status { /* Usar uma classe dedicada é mais explícito */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: var(--cor-texto-secundario); /* Usar variável de cor */
+    display: none; /* Escondido por padrão */
+    z-index: 2; /* Acima do canvas */
+    padding: 10px; /* Adiciona algum espaçamento interno */
+    background-color: rgba(255, 255, 255, 0.8); /* Fundo semi-transparente opcional */
+    border-radius: 4px;
+}
+
+/* Card que ocupa mais de uma coluna */
+.grid-span-2 {
+    grid-column: span 2;
+    /* display: flex; flex-direction: column; */ /* Já é o padrão do .card */
+}
+/* Adicionar .grid-span-3, .grid-span-4 se necessário */
+
+/* Card com Tabela de Resumo */
+.summary-table-card .card-body {
+    padding: 0; /* Remover padding para a tabela ocupar tudo */
+}
+.summary-table-card .table-responsive {
+    border: none; /* Remover borda da tabela */
+    box-shadow: none; /* Remover sombra da tabela */
+    border-radius: 0; /* Remover borda arredondada da tabela */
+    border-bottom-left-radius: 12px; /* Aplicar na tabela */
+    border-bottom-right-radius: 12px;
+    margin-top: 0;
+    flex-grow: 1; /* Ocupa espaço */
+    overflow-y: auto; /* Rolagem vertical se necessário */
+    max-height: 250px; /* Altura máxima */
+}
+.summary-table-card table {
+    font-size: 0.85rem;
+    margin-bottom: 0; /* Remover margem inferior da tabela */
+}
+/* Remover bordas arredondadas do thead dentro do card */
+.summary-table-card table thead th:first-child,
+.summary-table-card table thead th:last-child {
+    border-radius: 0;
+}
+/* Estilos específicos para células das tabelas resumo */
+.summary-table-card th,
+.summary-table-card td {
+    padding: 10px 15px; /* Padding menor */
+}
+.summary-table-card thead th:nth-child(n+2), /* Colunas 2 e 3 (ou mais) */
+.summary-table-card tbody td:nth-child(n+2) {
+    text-align: right; /* Alinha números à direita */
+}
+.summary-table-card tbody td:nth-child(n+2) { /* Opcional: Fonte monoespaçada para números */
+    font-family: Consolas, monaco, monospace;
+}
+/* Status de carregamento para tabelas resumo */
+.summary-table-card .card-body > div[id$="-status"] {
+    padding: 15px; /* Adicionar padding ao status */
+}
+
+/* --- Seções (Opcional, se usado para agrupar cards) --- */
+.section { margin-bottom: 2.5rem; }
+.section-title {
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+    color: var(--cor-texto-principal);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+.section-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--cor-borda-suave);
+    margin-left: 1rem;
+}
+
+/* --- Estilos para SortableJS --- */
+.sortable-ghost { /* Placeholder onde o item pode ser solto */
+    opacity: 0.4;
+    background-color: #e0f2fe; /* Fundo azul claro */
+    border: 1px dashed var(--cor-info);
+    border-radius: 12px; /* Mesma borda do card */
+}
+.sortable-chosen { /* Item que está sendo selecionado (antes de arrastar) */
+    /* Ex: box-shadow: 0 0 10px rgba(0,0,0,0.2); */
+}
+.sortable-drag { /* Item enquanto está sendo arrastado */
+    opacity: 0.9;
+    cursor: grabbing !important; /* Muda o cursor */
+    transform: scale(1.01); /* Leve aumento */
+    box-shadow: var(--sombra-card-elevated); /* Sombra elevada */
+}
+/* Evita seleção de texto e ajusta cursor */
+.dashboard-grid .card { user-select: none; }
+.dashboard-grid .card .card-header { cursor: grab; } /* Cursor ao passar no header */
+/* Pode ser necessário desabilitar eventos em elementos internos se atrapalhar */
+/* .dashboard-grid .card .card-body, .dashboard-grid .card canvas { pointer-events: none; } */
+
+
+/* --- Responsividade do Dashboard --- */
+@media (max-width: 1200px) {
+    .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Garante que span 2 ainda funcione corretamente */
+    .grid-span-2 { grid-column: span 2; }
+}
+@media (max-width: 768px) {
+    .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
+    /* Em layout de coluna única, span 2 não faz sentido */
+    .grid-span-2 { grid-column: span 1; }
+    .card { border-radius: 10px; }
+    .kpi-card .kpi-main-value { font-size: 2rem; }
+    .qualification-card .qual-item .qual-number { font-size: 1.8rem; }
+    .qualification-card .qualification-numbers { gap: 20px; }
+    .chart-card .card-body { min-height: 250px; } /* Reduzir altura mínima */
+    .filter-row { flex-direction: column; align-items: stretch; }
+    .filter-group select { width: 100%; }
+}
