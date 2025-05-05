@@ -232,6 +232,13 @@
     padding: 15px; /* Adicionar padding ao status */
 }
 
+/* Adiciona cor de fundo ao cabeçalho da tabela resumo */
+.summary-table-card table thead th {
+    background-color: #d6d5d5; /* Um cinza claro como exemplo */
+    color: var(--cor-texto-principal); /* Garante contraste do texto */
+    border-color: #dee2e6; /* Ajusta a cor da borda se necessário */
+}
+
 /* --- Seções (Opcional, se usado para agrupar cards) --- */
 .section { margin-bottom: 2.5rem; }
 .section-title {
