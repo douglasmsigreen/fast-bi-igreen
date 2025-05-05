@@ -85,14 +85,17 @@ document.addEventListener('DOMContentLoaded', function() {
         cards.forEach(card => {
             const cardId = card.dataset.id;
             const cardLabel = cardLabels[cardId] || cardId;
-            const isVisible = currentVisibility[cardId] !== false; // Por padrão é visível
+            const isVisible = currentVisibility[cardId] !== false;
             
             const div = document.createElement('div');
             div.className = 'form-check mb-2';
+            div.style.paddingLeft = '25px'; // Aumenta o padding esquerdo
+            div.style.position = 'relative'; // Garante posicionamento adequado
             div.innerHTML = `
                 <input class="form-check-input" type="checkbox" id="check-${cardId}" 
-                       data-card-id="${cardId}" ${isVisible ? 'checked' : ''}>
-                <label class="form-check-label" for="check-${cardId}">
+                       data-card-id="${cardId}" ${isVisible ? 'checked' : ''} 
+                       style="border-color: #00b034; background-color: ${isVisible ? '#00b034' : ''}; margin-left: 5px;">
+                <label class="form-check-label" for="check-${cardId}" style="padding-left: 10px;">
                     ${cardLabel}
                 </label>
             `;
