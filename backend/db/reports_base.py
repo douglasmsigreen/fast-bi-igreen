@@ -40,17 +40,91 @@ def get_base_enviada_ids(fornecedora: Optional[str] = None) -> List[int]:
 
 # --- Função para buscar detalhes completos por lista de IDs (Base Clientes ou Rateio Geral) ---
 def _get_query_fields(report_type: str) -> List[str]:
-     """Retorna lista de campos SQL baseados no tipo de relatório."""
-     report_type = report_type.lower()
-     # Campos Base Clientes (Exemplo - Mantenha sua lista completa)
-     base_clientes_fields = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura", "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "co.nome AS consultor_nome", "c.fornecedora" ] # Exemplo reduzido
-     # Campos Rateio Geral (Exemplo - Mantenha sua lista completa)
-     base_rateio_fields = [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "co.nome AS consultor_nome", "c.fornecedora" ] # Exemplo reduzido
+    """Retorna a lista de campos SQL BASE para Base Clientes ou Rateio Geral."""
+    report_type = report_type.lower()
+    
+    # Lista completa de campos para Base Clientes
+    base_clientes_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
+        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
+        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura",
+        "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
+        "c.\"cpf/cnpj\"", "c.numcliente", "TO_CHAR(c.dtultalteracao, 'DD/MM/YYYY') AS dtultalteracao",
+        "c.celular_2", "c.email", "c.rg", "c.emissor", "TO_CHAR(c.datainjecao, 'DD/MM/YYYY') AS datainjecao",
+        "c.idconsultor", "co.nome AS consultor_nome", "co.celular AS consultor_celular", "c.cep",
+        "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia",
+        "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli",
+        "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio",
+        "c.validadosucesso", "CASE WHEN c.validadosucesso = 'S' THEN 'Aprovado' ELSE 'Rejeitado' END AS status_sucesso",
+        "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj",
+        "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
+        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo",
+        "c.elegibilidade", "c.idplanopj", "TO_CHAR(c.dtcancelado, 'DD/MM/YYYY') AS dtcancelado",
+        "TO_CHAR(c.data_ativo_original, 'DD/MM/YYYY') AS data_ativo_original", "c.fornecedora",
+        "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.origem",
+        "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora",
+        "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
+    ]
+    
+    # Campos Rateio Geral
+    base_rateio_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", 
+        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", 
+        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio", 
+        "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente", 
+        "c.email", "c.rg", "c.emissor", "c.cep", "co.nome AS consultor_nome", 
+        "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", 
+        "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", 
+        "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", 
+        "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", 
+        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", 
+        "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", 
+        "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio", 
+        "c.nacionalidade", "c.profissao", "c.estadocivil"
+    ]
+    
+    # Campos para Rateio RZK
+    rateio_rzk_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
+        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
+        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio",
+        "c.status AS devolutiva", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
+        "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor",
+        "co.nome AS licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro",
+        "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo",
+        "c.classificacao", "c.keycontrato AS chave_contrato", "c.link_documento",
+        "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1",
+        "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
+        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf",
+        "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
+        "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio",
+        "c.nacionalidade", "c.profissao", "c.estadocivil"
+    ]
+    
+    # Campos para Clientes por Licenciado
+    clientes_por_licenciado_fields = [
+        "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos"
+    ]
+    
+    # Campos para Boletos por Cliente
+    boletos_por_cliente_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao",
+        "c.fornecedora", "data_ativo", "quantidade_registros_rcb"
+    ]
 
-     if report_type == "base_clientes": return base_clientes_fields # Use sua lista completa aqui
-     elif report_type == "rateio": return base_rateio_fields # Use sua lista completa aqui
-     # Adicionar outros tipos se get_client_details_by_ids for usado para eles
-     else: logger.warning(f"_get_query_fields: Tipo '{report_type}' não mapeado para campos genéricos."); return []
+    if report_type == "base_clientes":
+        return base_clientes_fields
+    elif report_type == "rateio":
+        return base_rateio_fields
+    elif report_type == "rateio_rzk":
+        return rateio_rzk_fields
+    elif report_type == "clientes_por_licenciado":
+        return clientes_por_licenciado_fields
+    elif report_type == "boletos_por_cliente":
+        return boletos_por_cliente_fields
+    else:
+        logger.warning(f"_get_query_fields: Tipo '{report_type}' não mapeado para campos genéricos.")
+        return []
 
 def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_size: int = 1000) -> List[tuple]:
     """Busca detalhes base para Rateio Geral ou Base Clientes por IDs."""

@@ -33,12 +33,27 @@ class ExcelExporter:
         """Adiciona dados a uma planilha."""
         if not data: return
         logger.info(f"Adicionando {len(data)} linhas de dados à aba '{ws.title}'...")
+        
+        # Identificar colunas de valores financeiros pelo nome exato
+        valor_cols_names = ['quanto_seria', 'valor_a_pagar', 'valor_com_cashback']
+        valor_cols_indexes = []
+        
+        # Se tivermos cabeçalhos, encontramos os índices das colunas financeiras
+        if ws.max_row >= 1:
+            headers = [cell.value.lower() if cell.value else "" for cell in ws[1]]
+            valor_cols_indexes = [i+1 for i, h in enumerate(headers) if h.lower() in valor_cols_names]
+        
         for i, row in enumerate(data):
-            # Converte tudo para string para evitar problemas de tipo com openpyxl
-            ws.append([
-                v if isinstance(v, (int, float)) else (str(v) if v is not None else "")
-                for v in row
-            ])        # logger.info(f"Dados adicionados à aba '{ws.title}'.") # Log menos verboso
+            # Adiciona a linha
+            ws.append(row)
+            
+            # Depois de adicionar, aplica formato de texto às colunas financeiras
+            # para garantir que o Excel não converta os valores
+            if valor_cols_indexes:
+                row_idx = i + 2  # +2 porque índice 1-based e cabeçalho é a linha 1
+                for col_idx in valor_cols_indexes:
+                    cell = ws.cell(row=row_idx, column=col_idx)
+                    cell.number_format = '@'  # Formato de texto para preservar vírgulas
 
     def _apply_formattings(self, ws, num_rows: int, headers: List[str]) -> None:
         """Aplica formatações (largura, filtro, congela painéis, condicional) a uma planilha."""
@@ -76,6 +91,16 @@ class ExcelExporter:
             adjusted_width = min(max(max_len + 2, 10), 60) # Min 10, Max 60
             ws.column_dimensions[letter].width = adjusted_width
 
+        # Aplicar formato de célula para valores contábeis
+        valor_cols_names = ['quanto_seria', 'valor_a_pagar', 'valor_com_cashback']
+        for idx, header in enumerate(headers, start=1):
+            if header.lower() in valor_cols_names:
+                col_letter = get_column_letter(idx)
+                # Aplica formato de texto a todas as células da coluna (para preservar a vírgula)
+                for row in range(2, num_rows + 2):  # A partir da linha 2 (pós-cabeçalho)
+                    cell = ws[f"{col_letter}{row}"]
+                    cell.number_format = '@'  # Formato de texto
+
         # Formatação Condicional (se houver dados)
         if num_rows > 0:
             target = self.CONDITIONAL_FORMATTING_TARGET_COLUMN
@@ -95,7 +120,48 @@ class ExcelExporter:
                 # Loga um aviso se ocorrer outro erro durante a formatação condicional
                 logger.warning(f"Erro ao aplicar formatação condicional na aba '{ws.title}': {e}", exc_info=False)
 
+        # Formatar células de valores financeiros como texto (@)
+        valor_cols_names = ['quanto_seria', 'valor_a_pagar', 'valor_com_cashback']
+        for idx, header in enumerate(headers, start=1):
+            if header.lower() in valor_cols_names:
+                col_letter = get_column_letter(idx)
+                # Configura a coluna inteira para formato de texto
+                for row in range(2, ws.max_row + 1):  # A partir da linha 2 (após cabeçalho)
+                    cell = ws[f"{col_letter}{row}"]
+                    # Garante formato de texto mesmo que já tenha valor
+                    cell.number_format = '@'
+                    
+                    # Se o valor contém vírgula, força o modo texto prefixando com aspas
+                    if cell.value and ',' in str(cell.value):
+                        # Em alguns casos, forçar o Excel a manter como texto adicionando uma apóstrofe no início
+                        cell.value = f"'{cell.value}" if not str(cell.value).startswith("'") else cell.value
+
         # logger.info(f"Formatações Excel aplicadas na aba '{ws.title}'.") # Log menos verboso
+
+    def _pre_process_financial_data(self, data: List[tuple], headers: List[str]) -> List[tuple]:
+        """Pré-processa dados financeiros para garantir que valores com vírgula sejam tratados como texto."""
+        if not data or not headers: 
+            return data
+        
+        # Identificar índices de colunas financeiras
+        valor_cols_names = ['quanto_seria', 'valor_a_pagar', 'valor_com_cashback']
+        valor_cols_indexes = [i for i, h in enumerate(headers) if h.lower() in valor_cols_names]
+        
+        if not valor_cols_indexes:
+            return data
+        
+        # Processar os dados, garantindo que valores financeiros sejam tratados como texto
+        processed_data = []
+        for row in data:
+            processed_row = list(row)
+            for idx in valor_cols_indexes:
+                if idx < len(processed_row) and processed_row[idx] is not None:
+                    # Adiciona aspas simples no início para forçar formato texto
+                    if ',' in str(processed_row[idx]):
+                        processed_row[idx] = f"'{processed_row[idx]}"
+            processed_data.append(tuple(processed_row))
+        
+        return processed_data
 
     # --- Método para Exportação de Planilha Única ---
     def export_to_excel_bytes(self, data: List[tuple], headers: List[str], sheet_name: str = "Clientes") -> bytes:
