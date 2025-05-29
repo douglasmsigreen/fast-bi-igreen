@@ -5,7 +5,7 @@
 <style>
 /* Estilos para o modal mais largo */
 #dashboardConfigModal .modal-dialog {
-    max-width: 600px;
+    max-width: 800px;
 }
 
 /* Adicionando espaçamento para os checkboxes */
@@ -63,6 +63,9 @@
     background-color: #f8f9fa;
     border-radius: 8px;
     border: 1px solid #e9ecef;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
 
 /* Garantindo que o conteúdo tenha um padding interno adicional */
@@ -73,6 +76,12 @@
 #dashboard-cards-config > div:last-child {
     border-bottom: none; /* Remove a borda do último item */
     margin-bottom: 0; /* Remove margem do último item */
+}
+
+@media (max-width: 576px) {
+    #dashboard-cards-config {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 {% endblock %}
@@ -333,15 +342,21 @@
 </div> {# Fim dashboard-grid #}
 
 <!-- Modal de Configuração do Dashboard -->
-<div class="modal" id="dashboardConfigModal" tabindex="-1" aria-labelledby="dashboardConfigModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" style="max-width: 600px; pointer-events: auto !important;">
+<div class="modal" id="dashboardConfigModal" tabindex="-1" role="dialog" aria-labelledby="dashboardConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" style="max-width: 900px; pointer-events: auto !important;">
         <div class="modal-content" style="pointer-events: auto !important;">
             <div class="modal-header">
                 <h5 class="modal-title" id="dashboardConfigModalLabel">Configuração do Dashboard</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body" style="pointer-events: auto !important;">
-                <p>Selecione os cards que deseja exibir no Dashboard:</p>
+                <div class="d-flex justify-content-between mb-3">
+                    <p class="mb-0">Selecione os cards que deseja exibir no Dashboard:</p>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="select-all-cards">Selecionar Todos</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-1" id="deselect-all-cards">Desmarcar Todos</button>
+                    </div>
+                </div>
                 <div id="dashboard-cards-config" class="config-options" style="pointer-events: auto !important;">
                     <!-- Será preenchido via JavaScript -->
                 </div>

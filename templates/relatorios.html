@@ -7,8 +7,16 @@
 
 {% block content %}
 
+{# Overlay de Carregamento #}
+<div id="loading-overlay" style="display: none;">
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Carregando relatório...</p>
+    </div>
+</div>
+
 {# Formulário de Filtros #}
-    <form method="GET" action="{{ url_for('reports_bp.relatorios') }}" class="filter-form">
+    <form method="GET" action="{{ url_for('reports_bp.relatorios') }}" class="filter-form" id="relatoriosForm">
         <div class="form-group">
             <label for="report_type">Tipo Relatório:</label>
             <select name="report_type" id="report_type" onchange="this.form.submit()">
@@ -60,7 +68,7 @@
              {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado'] %}
                  {% set _ = export_args.update({'fornecedora': selected_fornecedora}) %}
              {% endif %}
-             <a href="{{ url_for('reports_bp.exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" target="_blank">
+             <a href="{{ url_for('reports_bp.exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" id="exportButton">
                  <i class="fas fa-file-excel"></i> Exportar Excel {# Adicionado ícone #}
              </a>
          {% endif %}
@@ -151,10 +159,43 @@
     {# Script JS principal da aplicação (contém filtro da tabela) #}
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
-    {# Script para desabilitar/habilitar o dropdown de Fornecedora #}
+    {# Script para o loading overlay #}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Form loading indicator
+            const form = document.getElementById('relatoriosForm');
+            const loadingOverlay = document.getElementById('loading-overlay');
             const reportTypeSelect = document.getElementById('report_type');
+            
+            // Mostrar loading quando o formulário for enviado
+            if (form) {
+                form.addEventListener('submit', function() {
+                    loadingOverlay.style.display = 'flex';
+                });
+            }
+            
+            // Mostrar loading quando o relatório for alterado pelo dropdown
+            if (reportTypeSelect) {
+                reportTypeSelect.addEventListener('change', function() {
+                    loadingOverlay.style.display = 'flex';
+                });
+            }
+            
+            // Mostrar loading quando exportar Excel
+            const exportButton = document.getElementById('exportButton');
+            if (exportButton) {
+                exportButton.addEventListener('click', function() {
+                    // Mostrar feedback apenas para uma janela rápida
+                    loadingOverlay.style.display = 'flex';
+                    
+                    // Ocultar após um curto período pois abre em nova aba
+                    setTimeout(function() {
+                        loadingOverlay.style.display = 'none';
+                    }, 1000);
+                });
+            }
+            
+            // Script original para toggle de fornecedora
             const fornecedoraSelect = document.getElementById('fornecedora');
             // Seleciona TODAS as mensagens <small> com o atributo data-info-type
             const infoMessages = document.querySelectorAll('.filter-form small[data-info-type]');

@@ -7,9 +7,9 @@ from backend import create_app, logger as backend_logger # Importa a factory e o
 # Descomente a linha desejada e comente a outra para alternar
 
 # Modo 1: Execução ACESSÍVEL NA REDE (outras máquinas podem conectar)
-# app_host = '0.0.0.0'
+app_host = '0.0.0.0'
 # Modo 2: Execução APENAS LOCAL (ninguém de fora acessa)
-app_host = '127.0.0.1'
+# app_host = '127.0.0.1'
 
 # ------------------------------------
 
