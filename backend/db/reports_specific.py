@@ -332,3 +332,93 @@ def count_recebiveis_clientes(fornecedora: Optional[str] = None) -> int:
         logger.error(f"Erro count_recebiveis_clientes: {e}", exc_info=True)
         return 0
 # --- FIM FUNÇÕES RECEBÍVEIS CLIENTES ---
+
+# --- INÍCIO FUNÇÕES PARA RELATÓRIO 'Análise Clientes PRO' ---
+def _get_analise_clientes_pro_query_parts() -> dict:
+    """Retorna as partes da query para evitar repetição."""
+    select_fields = """
+        c.idcliente AS codigo, c.nome AS nome_cliente, c.numinstalacao AS instalacao,
+        c.numcliente AS numero_cliente, COALESCE(NULLIF(c.cnpj, ''), c."cpf/cnpj") AS cpf_cnpj,
+        c.cidade, CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN '' ELSE (c.uf || '-' || c.concessionaria) END AS regiao,
+        CASE WHEN COALESCE(c.fornecedora, '')::text <> ''::text THEN c.fornecedora::text WHEN COALESCE(c.idcomerc, '')::text <> ''::text AND c.ufconsumo::text = 'MG'::text THEN 'COMERC MG'::text WHEN c.ufconsumo::text = 'MT'::text THEN 'BOM FUTURO'::text WHEN c.ufconsumo::text = 'PE'::text THEN 'COMERC PE'::text WHEN c.ufconsumo::text = 'GO'::text THEN 'BC ENERGIA'::text WHEN COALESCE(c.idcomerc, '')::text = ''::text AND c.ufconsumo::text = 'MG'::text THEN 'SOLATIO'::text ELSE ''::text END AS fornecedora_calculada,
+        c.consumomedio AS consumo_medio, TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo_fmt,
+        CASE WHEN c.data_ativo IS NOT NULL THEN EXTRACT(DAY FROM (NOW() - c.data_ativo))::INTEGER ELSE NULL END AS dias_desde_ativacao,
+        c.validadosucesso AS validado_sucesso, c.status AS devolutiva, c.idconsultor AS id_licenciado, cons.nome AS nome_licenciado,
+        CASE WHEN cp.dtgraduacao IS NULL THEN 'NÃO' ELSE 'SIM' END AS status_pro,
+        TO_CHAR(cp.dtgraduacao, 'DD/MM/YYYY') AS data_graduacao_pro, COUNT(rcb.numinstalacao) AS quantidade_boletos
+    """
+    from_join_part = """
+        FROM public."CLIENTES" c
+        LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao
+        LEFT JOIN public."CONSULTOR" cons ON c.idconsultor = cons.idconsultor
+        LEFT JOIN (
+            SELECT idconsultor, MAX(dtgraduacao) AS dtgraduacao
+            FROM public."CONTROLE_PRO"
+            GROUP BY idconsultor
+        ) cp ON c.idconsultor = cp.idconsultor
+    """
+    # --- MODIFICAÇÃO AQUI ---
+    # A condição ILIKE agora usa um placeholder %s
+    where_part = "WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) AND (c.status NOT ILIKE %s OR c.status IS NULL)"
+    # O valor para o placeholder %s
+    where_params = ['CANCELADO%']
+    
+    group_by_part = "GROUP BY c.idcliente, cons.nome, cp.dtgraduacao, c.consumomedio"
+    
+    # Retorna também os parâmetros da cláusula WHERE
+    return {
+        "select": select_fields,
+        "from_join": from_join_part,
+        "where": where_part,
+        "where_params": where_params, # <-- NOVO
+        "group_by": group_by_part
+    }
+
+def get_analise_clientes_pro_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
+    """Busca os dados paginados para o relatório 'Análise Clientes PRO'."""
+    parts = _get_analise_clientes_pro_query_parts()
+    order_by_part = "ORDER BY c.idcliente"
+    
+    # --- MODIFICAÇÃO AQUI ---
+    # Começa a lista de parâmetros com os da cláusula WHERE
+    final_params_list = list(parts['where_params'])
+    
+    limit_sql_part = ""
+    if limit is not None:
+        limit_sql_part = "LIMIT %s"
+        final_params_list.append(limit)
+
+    offset_sql_part = ""
+    if offset > 0:
+        offset_sql_part = "OFFSET %s"
+        final_params_list.append(offset)
+        
+    query = f"SELECT {parts['select'].strip()} {parts['from_join'].strip()} {parts['where'].strip()} {parts['group_by'].strip()} {order_by_part.strip()} {limit_sql_part.strip()} {offset_sql_part.strip()};".replace("  ", " ").strip()
+    
+    actual_params_tuple = tuple(final_params_list)
+    logger.debug(f"REPORTS_SPECIFIC - Query get_analise_clientes_pro_data: [{query}], Params (tupla): [{actual_params_tuple}]")
+    
+    try:
+        # Passa a lista de parâmetros completa convertida para tupla
+        return execute_query(query, tuple(final_params_list)) or []
+    except Exception as e:
+        logger.error(f"Erro em get_analise_clientes_pro_data: {e}", exc_info=True)
+        return []
+
+def count_analise_clientes_pro() -> int:
+    """Conta o total de registros para o relatório 'Análise Clientes PRO'."""
+    parts = _get_analise_clientes_pro_query_parts()
+    count_query_sql = f"SELECT COUNT(*) FROM (SELECT c.idcliente {parts['from_join'].strip()} {parts['where'].strip()} {parts['group_by'].strip()}) as subquery;".replace("  ", " ").strip()
+    
+    logger.debug(f"REPORTS_SPECIFIC - Query count_analise_clientes_pro: [{count_query_sql}], Params (tupla): [()])")
+    
+    try:
+        # --- MODIFICAÇÃO AQUI ---
+        # Passa os parâmetros da cláusula WHERE para a query de contagem
+        result = execute_query(count_query_sql, tuple(parts['where_params']), fetch_one=True)
+        return result[0] if result and result[0] is not None else 0
+    except Exception as e:
+        logger.error(f"Erro em count_analise_clientes_pro: {e}", exc_info=True)
+        return 0
+
+# --- FIM FUNÇÕES PARA RELATÓRIO 'Análise Clientes PRO' ---

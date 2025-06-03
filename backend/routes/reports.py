@@ -8,6 +8,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from .. import db
 from ..exporter import ExcelExporter
+from ..db.reports_specific import get_analise_clientes_pro_data, count_analise_clientes_pro
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +77,15 @@ def relatorios():
                     total_items = db.count_boletos_por_cliente(fornecedora=selected_fornecedora)
                     dados = db.get_boletos_por_cliente_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
 
-                # <<< INÍCIO DO BLOCO ADICIONADO >>>
                 elif selected_report_type == 'recebiveis_clientes':
-                    # Busca os dados paginados para recebíveis, passando a fornecedora
                     dados = db.get_recebiveis_clientes_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
-                    # Conta o total de itens para recebíveis, respeitando a fornecedora
                     total_items = db.count_recebiveis_clientes(fornecedora=selected_fornecedora)
+
+                # <<< INÍCIO DO BLOCO ADICIONADO >>>
+                elif selected_report_type == 'analise_clientes_pro':
+                    # Este relatório não usa filtro de fornecedora
+                    total_items = count_analise_clientes_pro()
+                    dados = get_analise_clientes_pro_data(offset=offset, limit=items_per_page)
                 # <<< FIM DO BLOCO ADICIONADO >>>
 
                 else: # Bloco else existente
@@ -198,7 +202,7 @@ def exportar_excel_route():
              excel_bytes = excel_exp.export_multi_sheet_excel_bytes(sheets_to_export)
 
         # --- EXPORTAÇÃO RELATÓRIOS DE ABA ÚNICA ---
-        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'boletos_por_cliente', 'recebiveis_clientes']: # Adicionado 'recebiveis_clientes' aqui
+        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'boletos_por_cliente', 'recebiveis_clientes', 'analise_clientes_pro']:
             forn_fn = secure_filename(selected_fornecedora).replace('_', '') if selected_fornecedora and selected_fornecedora.lower() != 'consolidado' else 'Consolidado'
             dados_completos = []
             sheet_title = selected_report_type.replace('_', ' ').title() # Título padrão
@@ -229,6 +233,14 @@ def exportar_excel_route():
                 filename = f"Recebiveis_Clientes_{forn_fn}_{timestamp}.xlsx"
                 dados_completos = db.get_recebiveis_clientes_data(limit=None, fornecedora=selected_fornecedora) # limit=None
                 sheet_title = f"Recebíveis ({forn_fn})"
+
+            # <<< INÍCIO DO BLOCO ADICIONADO >>>
+            elif selected_report_type == 'analise_clientes_pro':
+                filename = f"Analise_Clientes_PRO_{timestamp}.xlsx"
+                # Chama a função de busca sem limite de paginação
+                dados_completos = get_analise_clientes_pro_data(limit=None)
+                sheet_title = "Análise Clientes PRO"
+            # <<< FIM DO BLOCO ADICIONADO >>>
 
             # Garante que o nome da aba não exceda 31 caracteres
             if len(sheet_title) > 31: sheet_title = sheet_title[:31]
