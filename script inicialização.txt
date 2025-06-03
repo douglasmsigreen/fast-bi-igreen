@@ -1,4 +1,4 @@
-cd "OneDrive\Documentos\Douglas\Nova Aplicação Web BI\exportador web"
+cd "OneDrive\Documentos\Douglas\Nova Aplicação Web BI\exportador_web"
 python -m venv venv
 source venv/bin/activate  # No Windows: venv\Scripts\activate
 

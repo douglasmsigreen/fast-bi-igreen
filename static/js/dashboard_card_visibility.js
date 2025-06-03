@@ -137,29 +137,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     newVisibility[checkbox.dataset.cardId] = checkbox.checked;
                 });
                 
-                // Mostrar indicador de carregamento
-                const saveBtn = this;
-                const originalText = saveBtn.innerHTML;
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-                saveBtn.disabled = true;
-                
-                // Salvar as configurações
                 saveCardVisibility(newVisibility);
-                
-                // Após salvar com sucesso
-                setTimeout(function() {
-                    saveBtn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
-                    
-                    // Restaurar o botão após 1.5 segundos
-                    setTimeout(function() {
-                        saveBtn.innerHTML = originalText;
-                        saveBtn.disabled = false;
-                        
-                        // Fechar o modal
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('dashboardConfigModal'));
-                        if (modal) modal.hide();
-                    }, 1500);
-                }, 1000); // Simula o tempo de processamento do salvamento
+                bootstrapModal.hide();
             });
             
             // Garante que o modal é interativo
@@ -232,57 +211,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 newVisibility[checkbox.dataset.cardId] = checkbox.checked;
             });
             
-            // Mostrar indicador de carregamento
-            const saveBtn = this;
-            const originalText = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-            saveBtn.disabled = true;
-            
-            // Salvar as configurações
             saveCardVisibility(newVisibility);
-            
-            // Após salvar com sucesso
-            setTimeout(function() {
-                saveBtn.innerHTML = '<i class="fas fa-check"></i> Salvo!';
-                
-                // Restaurar o botão após 1.5 segundos
-                setTimeout(function() {
-                    saveBtn.innerHTML = originalText;
-                    saveBtn.disabled = false;
-                    
-                    // Fechar o modal
-                    configModal.style.display = 'none';
-                }, 1500);
-            }, 1000); // Simula o tempo de processamento do salvamento
+            configModal.style.display = 'none';
         });
-    }
-
-    // Botões de selecionar/desmarcar todos
-    const selectAllBtn = document.getElementById('select-all-cards');
-    const deselectAllBtn = document.getElementById('deselect-all-cards');
-    
-    if (selectAllBtn) {
-        selectAllBtn.addEventListener('click', function() {
-            const checkboxes = document.querySelectorAll('#dashboard-cards-config .form-check-input');
-            checkboxes.forEach(checkbox => checkbox.checked = true);
-        });
-    }
-    
-    if (deselectAllBtn) {
-        deselectAllBtn.addEventListener('click', function() {
-            const checkboxes = document.querySelectorAll('#dashboard-cards-config .form-check-input');
-            checkboxes.forEach(checkbox => checkbox.checked = false);
-        });
-    }
-
-    // Funções para salvar e carregar do localStorage
-    function saveCardVisibilityToLocalStorage(visibilitySettings) {
-        localStorage.setItem('dashboardCardVisibility', JSON.stringify(visibilitySettings));
-    }
-
-    function loadCardVisibilityFromLocalStorage() {
-        const savedSettings = localStorage.getItem('dashboardCardVisibility');
-        return savedSettings ? JSON.parse(savedSettings) : null;
     }
 
     // Inicializar os eventos

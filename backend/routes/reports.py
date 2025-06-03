@@ -237,8 +237,52 @@ def exportar_excel_route():
                  flash(f"Nenhum dado encontrado para exportar o relatório '{sheet_title}'.", "warning")
                  return redirect(url_for('reports_bp.relatorios', **request.args))
 
-            # Gera o Excel de aba única
-            excel_bytes = excel_exp.export_to_excel_bytes(dados_completos, headers, sheet_name=sheet_title)
+            # Adicione logs para inspecionar os dados e cabeçalhos
+            current_app.logger.debug(f"Headers para exportação: {headers}")
+            current_app.logger.debug(f"Dados para exportação (primeiras linhas): {dados_completos[:5]}") # Log das primeiras 5 linhas como exemplo
+
+            # Sanitização extremamente agressiva dos dados antes da exportação para Excel
+            def sanitize_excel_data_extreme(data):
+                """Remove completamente strings problemáticas."""
+                sanitized_data = []
+                for row in data:
+                    sanitized_row = []
+                    for cell in row:
+                        if isinstance(cell, str):
+                            # Remove completamente qualquer string que contenha "CS" e "FUN"
+                            if "CS" in cell and "FUN" in cell:
+                                sanitized_row.append("[DADOS_SANITIZADOS]")
+                            # Verifica se inicia com caracteres de fórmula
+                            elif cell.startswith(('=', '+', '-', '@')) and len(cell) > 1:
+                                sanitized_row.append(f"'{cell}")
+                            else:
+                                sanitized_row.append(cell)
+                        else:
+                            sanitized_row.append(cell)
+                    sanitized_data.append(sanitized_row)
+                return sanitized_data
+
+            def sanitize_headers_extreme(header_list):
+                """Remove completamente cabeçalhos problemáticos."""
+                sanitized_headers = []
+                for header in header_list:
+                    if isinstance(header, str):
+                        # Remove completamente qualquer cabeçalho que contenha "CS" e "FUN"
+                        if "CS" in header and "FUN" in header:
+                            sanitized_headers.append("COLUNA_SANITIZADA")
+                        elif header.startswith(('=', '+', '-', '@')) and len(header) > 1:
+                            sanitized_headers.append(f"'{header}")
+                        else:
+                            sanitized_headers.append(header)
+                    else:
+                        sanitized_headers.append(header)
+                return sanitized_headers
+
+            # Aplica sanitização extrema aos dados e cabeçalhos
+            dados_sanitizados = sanitize_excel_data_extreme(dados_completos)
+            headers_sanitizados = sanitize_headers_extreme(headers)
+            
+            excel_bytes = excel_exp.export_to_excel_bytes(dados_sanitizados, headers_sanitizados, sheet_name=sheet_title)
         else:
              # Tipo de relatório inválido para exportação
              logger.warning(f"Tentativa de exportação de tipo inválido: '{selected_report_type}'.")
