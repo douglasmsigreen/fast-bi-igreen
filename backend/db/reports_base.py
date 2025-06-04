@@ -1,283 +1,172 @@
+# backend/db/reports_base.py
 import logging
-from typing import List, Tuple, Optional, Dict, Any
-from enum import Enum
+from typing import List, Tuple, Optional
 from .executor import execute_query # Import local
 
 logger = logging.getLogger(__name__)
 
-# --- Constantes ---
-CONSOLIDADO_PROVIDER = "consolidado"
-TABLE_CLIENTES = 'public."CLIENTES"'
-TABLE_CLIENTES_CONTRATOS = 'public."CLIENTES_CONTRATOS"'
-TABLE_CLIENTES_CONTRATOS_SIGNER = 'public."CLIENTES_CONTRATOS_SIGNER"'
-TABLE_DEVOLUTIVAS = 'public."DEVOLUTIVAS"'
-TABLE_CONSULTOR = 'public."CONSULTOR"'
-
-# Cláusula de filtro de origem comum, com parênteses para garantir a precedência correta
-ORIGEM_FILTER_CLAUSE = "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
-
-class ReportType(Enum):
-    BASE_CLIENTES = "base_clientes"
-    RATEIO = "rateio"
-    RATEIO_RZK = "rateio_rzk"
-    CLIENTES_POR_LICENCIADO = "clientes_por_licenciado"
-    BOLETOS_POR_CLIENTE = "boletos_por_cliente"
-
-# --- Definições de Campos para Relatórios ---
-# Movido para constantes globais para melhor organização e reutilização
-BASE_CLIENTES_FIELDS: List[str] = [
-    "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
-    "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
-    "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura",
-    "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
-    "c.\"cpf/cnpj\"", "c.numcliente", "TO_CHAR(c.dtultalteracao, 'DD/MM/YYYY') AS dtultalteracao",
-    "c.celular_2", "c.email", "c.rg", "c.emissor", "TO_CHAR(c.datainjecao, 'DD/MM/YYYY') AS datainjecao",
-    "c.idconsultor", "co.nome AS consultor_nome", "co.celular AS consultor_celular", "c.cep",
-    "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia",
-    "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli",
-    "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio",
-    "c.validadosucesso", "CASE WHEN c.validadosucesso = 'S' THEN 'Aprovado' ELSE 'Rejeitado' END AS status_sucesso",
-    "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj",
-    "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
-    "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo",
-    "c.elegibilidade", "c.idplanopj", "TO_CHAR(c.dtcancelado, 'DD/MM/YYYY') AS dtcancelado",
-    "TO_CHAR(c.data_ativo_original, 'DD/MM/YYYY') AS data_ativo_original", "c.fornecedora",
-    "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.origem",
-    "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora",
-    "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
-]
-
-BASE_RATEIO_FIELDS: List[str] = [
-    "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
-    "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
-    "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio",
-    "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente",
-    "c.email", "c.rg", "c.emissor", "c.cep", "co.nome AS consultor_nome",
-    "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao",
-    "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento",
-    "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1",
-    "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
-    "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf",
-    "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
-    "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio",
-    "c.nacionalidade", "c.profissao", "c.estadocivil"
-]
-
-RATEIO_RZK_FIELDS: List[str] = [
-    "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
-    "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
-    "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio",
-    "c.status AS devolutiva", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
-    "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor",
-    "co.nome AS licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro",
-    "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo",
-    "c.classificacao", "c.keycontrato AS chave_contrato", "c.link_documento",
-    "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1",
-    "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
-    "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf",
-    "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
-    "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio",
-    "c.nacionalidade", "c.profissao", "c.estadocivil"
-]
-
-CLIENTES_POR_LICENCIADO_FIELDS: List[str] = [
-    "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos"
-]
-
-BOLETOS_POR_CLIENTE_FIELDS: List[str] = [
-    "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao",
-    "c.fornecedora", "data_ativo", "quantidade_registros_rcb"
-]
-
-REPORT_TYPE_TO_FIELDS_MAP: Dict[ReportType, List[str]] = {
-    ReportType.BASE_CLIENTES: BASE_CLIENTES_FIELDS,
-    ReportType.RATEIO: BASE_RATEIO_FIELDS,
-    ReportType.RATEIO_RZK: RATEIO_RZK_FIELDS,
-    ReportType.CLIENTES_POR_LICENCIADO: CLIENTES_POR_LICENCIADO_FIELDS,
-    ReportType.BOLETOS_POR_CLIENTE: BOLETOS_POR_CLIENTE_FIELDS,
-}
-
-# --- Funções Auxiliares ---
-def _execute_query_and_fetch_ids(query: str, params: tuple, error_message_prefix: str) -> List[int]:
-    """Executa uma query que retorna IDs, loga erros e retorna uma lista de inteiros."""
-    try:
-        results = execute_query(query, params)
-        return [r[0] for r in results] if results else []
-    except Exception as e:
-        logger.error(f"{error_message_prefix}: {e}", exc_info=True)
-        return []
-
-def _build_common_filters(fornecedora: Optional[str] = None, use_origem_filter: bool = True) -> Tuple[List[str], List[Any]]:
-    """Constrói cláusulas WHERE comuns e seus parâmetros."""
-    where_clauses: List[str] = []
-    params_list: List[Any] = []
-
-    if use_origem_filter:
-        where_clauses.append(ORIGEM_FILTER_CLAUSE)
-
-    if fornecedora and fornecedora.lower() != CONSOLIDADO_PROVIDER:
-        where_clauses.append("c.fornecedora = %s")
-        params_list.append(fornecedora)
-    return where_clauses, params_list
-
-# --- Funções Específicas para Bases Rateio (Geral) ---
+# --- Funções Específicas para Bases Rateio (Geral) - SEM ALTERAÇÕES AQUI ---
 def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
     """Busca IDs para 'Base Nova' do Rateio Geral."""
-    query_base = f"""
-        SELECT DISTINCT cc.idcliente
-        FROM {TABLE_CLIENTES_CONTRATOS} cc
-        INNER JOIN {TABLE_CLIENTES_CONTRATOS_SIGNER} ccs ON cc.idcliente_contrato = ccs.idcliente_contrato
-        INNER JOIN {TABLE_CLIENTES} c ON cc.idcliente = c.idcliente
-    """
-    specific_where_clauses = [
-        "cc.type_document = 'procuracao_igreen'",
-        "UPPER(cc.status) = 'ATIVO'",
-        "c.data_ativo IS NOT NULL",
-        "c.status IS NULL",
-        "c.validadosucesso = 'S'",
-        "c.rateio = 'N'",
-        f"NOT EXISTS (SELECT 1 FROM {TABLE_DEVOLUTIVAS} d WHERE d.idcliente = c.idcliente)"
+    query_base = """
+        SELECT DISTINCT cc.idcliente FROM public."CLIENTES_CONTRATOS" cc
+        INNER JOIN public."CLIENTES_CONTRATOS_SIGNER" ccs ON cc.idcliente_contrato = ccs.idcliente_contrato
+        INNER JOIN public."CLIENTES" c ON cc.idcliente = c.idcliente """
+    group_by = " GROUP BY cc.idcliente_contrato, cc.idcliente HAVING bool_and(ccs.signature_at IS NOT NULL) "
+    where_clauses = [
+        "cc.type_document = 'procuracao_igreen'", "upper(cc.status) = 'ATIVO'",
+        "c.data_ativo IS NOT NULL", "c.status IS NULL", "c.validadosucesso = 'S'",
+        "c.rateio = 'N'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) ",
+        " NOT EXISTS ( SELECT 1 FROM public.\"DEVOLUTIVAS\" d WHERE d.idcliente = c.idcliente ) "
     ]
-    common_where_clauses, params_list = _build_common_filters(fornecedora)
-    
-    all_where_clauses = specific_where_clauses + common_where_clauses
-    
-    group_by_having = "GROUP BY cc.idcliente_contrato, cc.idcliente HAVING bool_and(ccs.signature_at IS NOT NULL)"
-    
-    full_query = f"{query_base} WHERE {' AND '.join(all_where_clauses)} {group_by_having};"
-    
-    return _execute_query_and_fetch_ids(full_query, tuple(params_list), "Erro get_base_nova_ids")
+    params = []
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+    full_query = query_base + " WHERE " + " AND ".join(where_clauses) + group_by + ";"
+    try: results = execute_query(full_query, tuple(params)); return [r[0] for r in results] if results else []
+    except Exception as e: logger.error(f"Erro get_base_nova_ids: {e}"); return []
 
 def get_base_enviada_ids(fornecedora: Optional[str] = None) -> List[int]:
     """Busca IDs para 'Base Enviada' do Rateio Geral."""
-    query_base = f"SELECT c.idcliente FROM {TABLE_CLIENTES} c"
+    query_base = 'SELECT c.idcliente FROM public."CLIENTES" c'
+    where_clauses = [ "c.rateio = 'S'", " (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]
+    params = []
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+    full_query = query_base + " WHERE " + " AND ".join(where_clauses) + ";"
+    try: results = execute_query(full_query, tuple(params)); return [r[0] for r in results] if results else []
+    except Exception as e: logger.error(f"Erro get_base_enviada_ids: {e}"); return []
+
+
+# --- Função para buscar detalhes completos por lista de IDs (Base Clientes ou Rateio Geral) ---
+def _get_query_fields(report_type: str) -> List[str]:
+    """Retorna a lista de campos SQL BASE para Base Clientes ou Rateio Geral."""
+    report_type = report_type.lower()
     
-    specific_where_clauses = ["c.rateio = 'S'"]
-    common_where_clauses, params_list = _build_common_filters(fornecedora)
+    ### ALTERAÇÃO INICIADA: Simplificado para retornar apenas '*' para base_clientes ###
+    if report_type == "base_clientes":
+        # Como vamos usar a view V_CUSTOMER, podemos selecionar todas as colunas diretamente.
+        # A ordem será definida em `utils.py`.
+        return ["*"] 
+    ### FIM DA ALTERAÇÃO ###
 
-    all_where_clauses = specific_where_clauses + common_where_clauses
-
-    full_query = f"{query_base} WHERE {' AND '.join(all_where_clauses)};"
+    # Campos Rateio Geral (sem alteração)
+    base_rateio_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", 
+        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", 
+        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio", 
+        "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad", "c.\"cpf/cnpj\"", "c.numcliente", 
+        "c.email", "c.rg", "c.emissor", "c.cep", "co.nome AS consultor_nome", 
+        "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", 
+        "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", 
+        "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", 
+        "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", 
+        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", 
+        "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", 
+        "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio", 
+        "c.nacionalidade", "c.profissao", "c.estadocivil"
+    ]
     
-    return _execute_query_and_fetch_ids(full_query, tuple(params_list), "Erro get_base_enviada_ids")
+    if report_type == "rateio":
+        return base_rateio_fields
+    else:
+        logger.warning(f"_get_query_fields: Tipo '{report_type}' não mapeado para campos genéricos.")
+        return []
 
-
-# --- Função para buscar detalhes completos por lista de IDs ---
-def _get_query_fields(report_type_str: str) -> List[str]:
-    """Retorna a lista de campos SQL com base no tipo de relatório string."""
+def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_size: int = 1000) -> List[tuple]:
+    """Busca detalhes base para Rateio Geral ou Base Clientes por IDs."""
+    if not client_ids: return []
+    all_details = []
     try:
-        # Converte a string para o Enum para validação e para usar como chave no mapa
-        report_type_enum = ReportType(report_type_str.lower()) 
-        fields = REPORT_TYPE_TO_FIELDS_MAP.get(report_type_enum)
-        if fields:
-            return fields
-        logger.warning(f"_get_query_fields: Campos não encontrados para o tipo '{report_type_str}'.")
-        return []
-    except ValueError: # Caso report_type_str não seja um membro válido de ReportType
-        logger.warning(f"_get_query_fields: Tipo de relatório '{report_type_str}' inválido.")
-        return []
+        ### ALTERAÇÃO INICIADA: Lógica para base_clientes usa a view V_CUSTOMER ###
+        if report_type.lower() == 'base_clientes':
+            # A view já tem todos os dados, então a busca por ID é mais simples.
+            # O alias "código" na view V_CUSTOMER corresponde ao idcliente.
+            from_sql = 'FROM public."V_CUSTOMER"'
+            where_sql = 'WHERE "código" = ANY(%s)' # Usar o nome da coluna da view
+            order_sql = 'ORDER BY "código"'
+            query = f"SELECT * {from_sql} {where_sql} {order_sql};"
+        else:
+            # Lógica antiga para outros tipos de relatório (rateio)
+            campos = _get_query_fields(report_type)
+            if not campos: logger.error(f"Campos não definidos para get_client_details_by_ids tipo: {report_type}"); return []
+            select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
+            needs_consultor_join = any(f.startswith("co.") for f in campos)
+            join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
+            where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
+            order = "ORDER BY c.idcliente"; query = f"{select} {from_}{join} {where} {order};"
+        ### FIM DA ALTERAÇÃO ###
 
-def get_client_details_by_ids(report_type_str: str, client_ids: List[int], batch_size: int = 1000) -> List[tuple]:
-    """Busca detalhes base para clientes por IDs, processando em lotes."""
-    if not client_ids:
-        return []
-
-    all_details: List[tuple] = []
-    campos = _get_query_fields(report_type_str)
-    if not campos:
-        logger.error(f"Campos não definidos para get_client_details_by_ids tipo: {report_type_str}")
-        return []
-
-    select_clause = f"SELECT {', '.join(campos)}"
-    from_clause = f"FROM {TABLE_CLIENTES} c"
-    
-    join_clause = ""
-    if any(field.startswith("co.") for field in campos): # Adiciona join se campos do consultor são necessários
-        join_clause = f"LEFT JOIN {TABLE_CONSULTOR} co ON co.idconsultor = c.idconsultor"
-
-    # Cláusula WHERE com filtro de origem e ANY para os IDs
-    # O ORIGEM_FILTER_CLAUSE já tem parênteses, então é seguro concatenar com AND
-    where_clause = f"WHERE c.idcliente = ANY(%s) AND {ORIGEM_FILTER_CLAUSE}"
-    order_clause = "ORDER BY c.idcliente"
-    
-    base_query = f"{select_clause} {from_clause} {join_clause} {where_clause} {order_clause};"
-
-    try:
         for i in range(0, len(client_ids), batch_size):
-            batch_ids = client_ids[i:i + batch_size]
-            # Psycopg2 espera uma lista/tupla para ANY(%s)
-            # O parâmetro para ANY deve ser a lista diretamente, não uma tupla contendo a lista.
-            # Ex: cursor.execute("... ANY(%s)", (batch_ids,))
-            params_tuple = (batch_ids,) 
-            batch_results = execute_query(base_query, params_tuple)
-            if batch_results:
-                all_details.extend(batch_results)
+            batch_ids = client_ids[i:i + batch_size]; params = (batch_ids,)
+            batch_results = execute_query(query, params)
+            if batch_results: all_details.extend(batch_results)
         return all_details
-    except Exception as e:
-        logger.error(f"Erro get_client_details_by_ids ({report_type_str}): {e}", exc_info=True)
-        return []
+    except Exception as e: logger.error(f"Erro get_client_details_by_ids ({report_type}): {e}", exc_info=True); return []
 
-# --- Funções de Construção de Query Genéricas ---
-def _get_report_type_enum_or_raise(report_type_str: str, function_name: str) -> ReportType:
-    """Converte string para ReportType Enum ou levanta ValueError."""
-    try:
-        return ReportType(report_type_str.lower())
-    except ValueError:
-        raise ValueError(f"{function_name} não adequado para o tipo de relatório '{report_type_str}'.")
+def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int = 0, limit: Optional[int] = None) -> Tuple[str, tuple]:
+     """Constrói a query paginada para relatórios Base Clientes e Rateio."""
+     ### ALTERAÇÃO INICIADA: Lógica para 'base_clientes' agora usa a view ###
+     if report_type == "base_clientes":
+         select = 'SELECT *' 
+         from_ = 'FROM public."V_CUSTOMER"'
+         where_clauses = []
+         params = []
 
-def build_query(report_type_str: str, fornecedora: Optional[str] = None, offset: int = 0, limit: Optional[int] = None) -> Tuple[str, tuple]:
-    """Constrói a query paginada para relatórios Base Clientes e Rateio Geral."""
-    report_type_enum = _get_report_type_enum_or_raise(report_type_str, "build_query")
+         # A view V_CUSTOMER já tem a coluna "fornecedora".
+         if fornecedora and fornecedora.lower() != "consolidado":
+             where_clauses.append('"fornecedora" = %s')
+             params.append(fornecedora)
+         
+         where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+         order = 'ORDER BY "código"' # Ordenar pela coluna "código" da view
+         limit_clause = "LIMIT %s" if limit is not None else ""
+         if limit is not None: params.append(limit)
+         offset_clause = "OFFSET %s" if offset > 0 else ""
+         if offset > 0: params.append(offset)
+         
+         query = f"{select} {from_} {where} {order} {limit_clause} {offset_clause};"
+         return query, tuple(params)
+     ### FIM DA ALTERAÇÃO ###
 
-    if report_type_enum not in [ReportType.BASE_CLIENTES, ReportType.RATEIO]:
-        raise ValueError(f"build_query não adequado para o tipo de relatório '{report_type_str}'.")
+     # Lógica para "rateio" (sem alteração)
+     if report_type == "rateio":
+        campos = _get_query_fields(report_type);
+        if not campos: raise ValueError(f"Campos não definidos para '{report_type}'")
+        select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
+        needs_consultor_join = any(f.startswith("co.") for f in campos)
+        join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
+        where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
+        if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+        where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; order = "ORDER BY c.idcliente"; limit_clause = ""; offset_clause = ""
+        if limit is not None: limit_clause = f"LIMIT %s"; params.append(limit)
+        if offset > 0: offset_clause = f"OFFSET %s"; params.append(offset)
+        query = f"{select} {from_}{join} {where} {order} {limit_clause} {offset_clause};"
+        return query, tuple(params)
+     
+     raise ValueError(f"build_query não adequado para '{report_type}'.")
 
-    campos = _get_query_fields(report_type_str) # _get_query_fields espera string
-    if not campos:
-        raise ValueError(f"Campos não definidos para '{report_type_str}'")
 
-    select_clause = f"SELECT {', '.join(campos)}"
-    from_clause = f"FROM {TABLE_CLIENTES} c"
-    
-    join_clause = ""
-    if any(field.startswith("co.") for field in campos):
-        join_clause = f"LEFT JOIN {TABLE_CONSULTOR} co ON co.idconsultor = c.idconsultor"
+def count_query(report_type: str, fornecedora: Optional[str] = None) -> Tuple[str, tuple]:
+     """Constrói a query de contagem para relatórios Base Clientes e Rateio."""
+     ### ALTERAÇÃO INICIADA: Lógica de contagem para 'base_clientes' usa a view ###
+     if report_type == "base_clientes":
+        from_ = 'FROM public."V_CUSTOMER"'
+        where_clauses = []
+        params = []
+        if fornecedora and fornecedora.lower() != "consolidado":
+            where_clauses.append('"fornecedora" = %s')
+            params.append(fornecedora)
+        where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+        query = f"SELECT COUNT(*) {from_} {where};"
+        return query, tuple(params)
+     ### FIM DA ALTERAÇÃO ###
 
-    where_clauses, params_list = _build_common_filters(fornecedora)
-    where_string = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-    
-    order_clause = "ORDER BY c.idcliente"
-    limit_string = ""
-    offset_string = ""
+     # Lógica para "rateio" (sem alteração)
+     if report_type == "rateio":
+        from_ = 'FROM public."CLIENTES" c'; where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
+        if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+        where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; query = f"SELECT COUNT(c.idcliente) {from_} {where};"
+        return query, tuple(params)
 
-    if limit is not None:
-        limit_string = "LIMIT %s"
-        params_list.append(limit)
-    if offset > 0:
-        offset_string = "OFFSET %s"
-        params_list.append(offset)
-    
-    # Garante que não haja espaços duplos e remove espaços no início/fim
-    query_parts = [select_clause, from_clause, join_clause, where_string, order_clause, limit_string, offset_string]
-    query = " ".join(part for part in query_parts if part) + ";"
-    
-    return query, tuple(params_list)
-
-def count_query(report_type_str: str, fornecedora: Optional[str] = None) -> Tuple[str, tuple]:
-    """Constrói a query de contagem para relatórios Base Clientes e Rateio Geral."""
-    report_type_enum = _get_report_type_enum_or_raise(report_type_str, "count_query")
-
-    if report_type_enum not in [ReportType.BASE_CLIENTES, ReportType.RATEIO]:
-        raise ValueError(f"count_query não adequado para o tipo de relatório '{report_type_str}'.")
-
-    from_clause = f"FROM {TABLE_CLIENTES} c"
-    # JOIN não é necessário para contagem simples baseada apenas na tabela CLIENTES
-    # Se a contagem dependesse de filtros na tabela CONSULTOR, o join seria necessário aqui também.
-
-    where_clauses, params_list = _build_common_filters(fornecedora)
-    where_string = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-    
-    query_parts = [f"SELECT COUNT(c.idcliente)", from_clause, where_string]
-    query = " ".join(part for part in query_parts if part) + ";"
-
-    return query, tuple(params_list)
+     raise ValueError(f"count_query não adequado para '{report_type}'.")

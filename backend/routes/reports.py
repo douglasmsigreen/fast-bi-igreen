@@ -18,117 +18,46 @@ reports_bp = Blueprint('reports_bp', __name__,
 @reports_bp.route('/relatorios')
 @login_required
 def relatorios():
-    """Rota principal para visualização de relatórios."""
+    """Rota principal para visualização de relatórios.
+       Agora carrega apenas a 'casca' da página. Os dados são carregados via API.
+    """
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Anónimo'
-    logger.info(f"Acessando /relatorios. Utilizador: {user_nome}")
+    logger.info(f"Acessando /relatorios (carregamento assíncrono). Utilizador: {user_nome}")
     try:
-        page = request.args.get('page', 1, type=int)
-        page = max(1, page) # Garante que a página seja pelo menos 1
+        # Apenas obtemos os parâmetros para pré-selecionar os filtros no HTML
         selected_report_type = request.args.get('report_type', 'base_clientes')
         selected_fornecedora = request.args.get('fornecedora', 'Consolidado')
 
-        # Obter lista de fornecedoras
+        # Busca a lista de fornecedoras para o dropdown
         try:
             fornecedoras_db = db.get_fornecedoras()
         except Exception as db_err:
             logger.error(f"Erro ao buscar lista de fornecedoras: {db_err}", exc_info=True)
             flash("Erro ao carregar a lista de fornecedoras.", "warning")
             fornecedoras_db = []
-        # Garante que 'Consolidado' esteja sempre presente e no início
+        
         fornecedoras_list = ['Consolidado'] + [f for f in fornecedoras_db if f != 'Consolidado']
 
-        items_per_page = current_app.config.get('ITEMS_PER_PAGE', 50)
-        offset = (page - 1) * items_per_page
-
-        dados = []
-        headers = []
-        total_items = 0
-        total_pages = 0
-        error_message = None
-
-        logger.info(f"Processando relatório: Tipo='{selected_report_type}', Fornecedora='{selected_fornecedora}', Página={page}")
-
-        # Lógica para buscar dados e cabeçalhos com base no tipo de relatório
-        try:
-            headers = db.get_headers(selected_report_type) # Pega cabeçalhos primeiro
-            if not headers:
-                 error_message = f"Cabeçalhos não definidos para o tipo de relatório: '{selected_report_type}'."
-                 logger.error(error_message)
-                 flash(error_message, 'danger')
-            else:
-                if selected_report_type in ['base_clientes', 'rateio']:
-                    data_query, data_params = db.build_query(selected_report_type, selected_fornecedora, offset, items_per_page)
-                    dados = db.execute_query(data_query, data_params) or []
-                    count_q, count_p = db.count_query(selected_report_type, selected_fornecedora)
-                    total_items_result = db.execute_query(count_q, count_p, fetch_one=True)
-                    total_items = total_items_result[0] if total_items_result else 0
-
-                elif selected_report_type == 'rateio_rzk':
-                    total_items = db.count_rateio_rzk()
-                    dados = db.get_rateio_rzk_data(offset=offset, limit=items_per_page)
-                    selected_fornecedora = 'RZK' # Força a fornecedora para este relatório
-
-                elif selected_report_type == 'clientes_por_licenciado':
-                    total_items = db.count_clientes_por_licenciado()
-                    dados = db.get_clientes_por_licenciado_data(offset=offset, limit=items_per_page)
-
-                elif selected_report_type == 'recebiveis_clientes':
-                    # Busca os dados paginados para recebíveis, passando a fornecedora
-                    dados = db.get_recebiveis_clientes_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
-                    # Conta o total de itens para recebíveis, respeitando a fornecedora
-                    total_items = db.count_recebiveis_clientes(fornecedora=selected_fornecedora)
-
-                else: # Bloco else existente
-                    error_message = f"Tipo de relatório desconhecido ou não implementado: '{selected_report_type}'."
-                    logger.warning(f"Tentativa de acesso a relatório inválido: '{selected_report_type}'.")
-                    flash(error_message, "warning")
-                    headers = [] # Limpa cabeçalhos se o tipo for inválido
-
-        except Exception as e:
-             logger.error(f"Erro ao buscar dados para o relatório '{selected_report_type}': {e}", exc_info=True)
-             error_message = "Ocorreu um erro ao buscar os dados do relatório."
-             flash(error_message, 'danger')
-             dados = []
-             total_items = 0
-
-        # Calcular paginação
-        if not error_message and total_items > 0 and items_per_page > 0:
-            total_pages = math.ceil(total_items / items_per_page)
-            if page > total_pages and total_pages > 0: # Corrige se a página pedida for maior que o total
-                logger.warning(f"Página solicitada ({page}) maior que o total ({total_pages}). Redirecionando para a última página.")
-                page = total_pages
-                offset = (page - 1) * items_per_page
-        elif not error_message:
-            total_pages = 0 if total_items == 0 else 1 # 0 páginas se 0 itens, 1 página se itens <= items_per_page
-
-        # Renderiza o template de relatórios
+        # Não buscamos mais dados aqui. Apenas renderizamos o template.
+        # Os valores de dados, headers, paginação, etc., são deixados vazios ou nulos.
         return render_template(
             'relatorios.html',
             fornecedoras=fornecedoras_list,
             selected_fornecedora=selected_fornecedora,
             selected_report_type=selected_report_type,
-            headers=headers,
-            dados=dados,
-            page=page,
-            total_pages=total_pages,
-            total_items=total_items,
-            items_per_page=items_per_page,
-            error=error_message,
-            title=f"{selected_report_type.replace('_', ' ').title()} - Relatórios" # Título dinâmico
+            headers=[], # Vazio
+            dados=None, # Nulo ou vazio
+            page=request.args.get('page', 1, type=int), # Passamos a página para o JS saber qual buscar
+            total_pages=0, # Vazio
+            total_items=0, # Vazio
+            error=None,
+            title="Relatórios - Fast BI"
         )
 
     except Exception as e:
-        logger.error(f"Erro GERAL na rota /relatorios: {e}", exc_info=True)
-        flash("Ocorreu um erro inesperado ao processar sua solicitação de relatório.", "error")
-        return render_template(
-            'relatorios.html',
-            title="Erro Crítico - Relatórios",
-            fornecedoras=['Consolidado'],
-            error="Erro interno grave ao carregar a página de relatórios.",
-            dados=[], headers=[], page=1, total_pages=0, total_items=0,
-            selected_report_type='base_clientes', selected_fornecedora='Consolidado'
-            ), 500
-
+        logger.error(f"Erro GERAL na rota /relatorios (casca): {e}", exc_info=True)
+        flash("Ocorreu um erro inesperado ao carregar a página de relatórios.", "error")
+        return render_template('relatorios.html', error="Erro interno grave.", fornecedoras=['Consolidado'])
 
 @reports_bp.route('/export')
 @login_required

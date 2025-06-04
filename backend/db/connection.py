@@ -17,7 +17,7 @@ def init_pool():
     try:
         logger.info("Inicializando pool de conexões com o banco de dados...")
         db_pool = psycopg2.pool.SimpleConnectionPool(
-            minconn=1, maxconn=5, **Config.DB_CONFIG
+            minconn=1, maxconn=15, **Config.DB_CONFIG
         )
         # Verifica a conexão inicial
         conn = db_pool.getconn()
