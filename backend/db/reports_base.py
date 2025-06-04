@@ -43,7 +43,7 @@ def _get_query_fields(report_type: str) -> List[str]:
     """Retorna a lista de campos SQL BASE para Base Clientes ou Rateio Geral."""
     report_type = report_type.lower()
     
-    # Lista completa de campos para Base Clientes
+    # <<< INÍCIO DA MODIFICAÇÃO: Lista de campos completa para base_clientes >>>
     base_clientes_fields = [
         "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
         "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
@@ -65,8 +65,9 @@ def _get_query_fields(report_type: str) -> List[str]:
         "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora",
         "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
     ]
+    # <<< FIM DA MODIFICAÇÃO >>>
     
-    # Campos Rateio Geral
+    # Campos Rateio Geral (sem alteração)
     base_rateio_fields = [
         "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", 
         "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", 

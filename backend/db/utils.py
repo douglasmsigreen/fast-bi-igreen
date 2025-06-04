@@ -1,4 +1,5 @@
 # backend/db/utils.py
+
 import logging
 from typing import List
 from .executor import execute_query # Import local
@@ -17,23 +18,16 @@ def get_fornecedoras() -> List[str]:
 
 def get_headers(report_type: str) -> List[str]:
      """Retorna cabeçalhos legíveis baseados no tipo de relatório."""
+     # O mapa de cabeçalhos completo
      header_map = {
-         # Mapeamentos para Base Clientes
          "c.idcliente": "ID Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular", "c.cidade": "Cidade",
          "regiao": "Região", "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas", "c.consumomedio": "Consumo Médio",
          "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ", "c.numcliente": "Num Cliente",
          "c.email": "Email", "consultor_nome": "Licenciado", "c.fornecedora": "Fornecedora",
-         # Mapeamentos para Rateio Geral (alguns são iguais a Base Clientes)
-         # "c.idcliente": "ID Cliente", ...
-         # Mapeamentos para Rateio RZK
          "devolutiva": "Devolutiva", "licenciado": "Licenciado RZK", "chave_contrato": "Chave Contrato",
-         "nome_cliente_rateio": "Nome Cliente (RZK)", # Exemplo de alias específico
-         # Mapeamentos para Clientes por Licenciado
-         "c.idconsultor": "ID Licenciado", "c.cpf": "CPF Licenciado", "c.email": "Email Licenciado",
-         "c.uf": "UF Licenciado", "quantidade_clientes_ativos": "Qtd Clientes Ativos",
-         # Mapeamentos para Boletos por Cliente
+         "nome_cliente_rateio": "Nome Cliente (RZK)",
+         "c.idconsultor": "ID Licenciado", "c.cpf": "CPF Licenciado", "c.uf": "UF Licenciado", "quantidade_clientes_ativos": "Qtd Clientes Ativos",
          "dias_ativo": "Dias Ativo", "quantidade_registros_rcb": "Qtd Boletos",
-         # Mapeamentos para Recebíveis Clientes
          "rcb.idrcb": "Idrcb", "codigo_cliente": "Codigo Cliente", "cliente_nome": "Cliente",
          "rcb.valorseria": "Quanto Seria", "rcb.valorapagar": "Valor A Pagar",
          "rcb.valorcomcashback": "Valor Com Cashback", "data_referencia": "Data Referencia",
@@ -49,7 +43,6 @@ def get_headers(report_type: str) -> List[str]:
          "rcb.energiacompensada": "Energia Compensada", "rcb.energiaacumulada": "Energia Acumulada",
          "rcb.energiaajuste": "Energia Ajuste", "rcb.energiafaturamento": "Energia Faturamento",
          "c.desconto_cliente": "Desconto Cliente", "qtd_rcb_cliente": "Qt de Rcb",
-         # Adicione outros mapeamentos faltantes do seu database.py original aqui
           "c.rg": "RG", "c.emissor": "Emissor", "datainjecao": "Data Injeção",
           "consultor_celular": "Celular Licenciado", "c.cep": "CEP", "c.endereco": "Endereço", "c.numero": "Número",
           "c.bairro": "Bairro", "c.complemento": "Complemento", "c.cnpj": "CNPJ", "c.razao": "Razão Social",
@@ -72,24 +65,33 @@ def get_headers(report_type: str) -> List[str]:
           "c.obs_compartilhada": "Obs Compartilhada", "c.linkassinatura1": "Link Assinatura 1",
           "dtultalteracao": "Dt Ult Alteracao", "c.celular_2": "Celular 2",
      }
-
+     
+     # Define a ORDEM das colunas para cada relatório
      keys_order = {
-         "base_clientes": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ],
+         # <<< LISTA COMPLETA PARA BASE CLIENTES (MANTIDA) >>>
+         "base_clientes": [
+             "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura",
+             "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2",
+             "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular",
+             "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia",
+             "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli",
+             "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio",
+             "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo",
+             "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2",
+             "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao",
+             "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original",
+             "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro",
+             "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil",
+             "c.obs_compartilhada", "c.linkassinatura1"
+         ],
          "rateio": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
          "rateio_rzk": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "devolutiva", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
          "clientes_por_licenciado": [ "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos" ],
+         # <<< DEFINIÇÃO ORIGINAL PARA BOLETOS/ANÁLISE PRO (RESTAURADA) >>>
          "boletos_por_cliente": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "c.fornecedora", "data_ativo", "dias_ativo", "quantidade_registros_rcb" ],
-         "recebiveis_clientes": [ "rcb.idrcb", "codigo_cliente", "cliente_nome", "rcb.numinstalacao", "rcb.valorseria", "rcb.valorapagar", "rcb.valorcomcashback", "data_referencia", "data_vencimento", "data_pagamento", "data_vencimento_original", "c.celular", "c.email", "status_financeiro_cliente", "c.numcliente", "id_licenciado", "nome_licenciado", "celular_licenciado", "status_calculado", "rcb.urldemonstrativo", "rcb.urlboleto", "rcb.qrcode", "rcb.urlcontacemig", "valor_distribuidora", "rcb.codigobarra", "c.ufconsumo", "fornecedora_cliente", "c.concessionaria", "c.cnpj", "cpf_cnpj_cliente", "rcb.nrodocumento", "rcb.idcomerc", "rcb.idbomfuturo", "rcb.energiainjetada", "rcb.energiacompensada", "rcb.energiaacumulada", "rcb.energiaajuste", "rcb.energiafaturamento", "c.desconto_cliente", "qtd_rcb_cliente" ],
-         
-         # Nova entrada para Análise Clientes PRO
-         "analise_clientes_pro": [
-             "codigo", "nome_cliente", "instalacao", "numero_cliente", "cpf_cnpj", "cidade", "regiao",
-             "fornecedora_calculada", "consumo_medio", "data_ativo_fmt", "dias_desde_ativacao",
-             "validado_sucesso", "devolutiva", "id_licenciado", "nome_licenciado",
-             "status_pro", "data_graduacao_pro", "quantidade_boletos"
-         ]
+         "recebiveis_clientes": [ "rcb.idrcb", "codigo_cliente", "cliente_nome", "rcb.numinstalacao", "rcb.valorseria", "rcb.valorapagar", "rcb.valorcomcashback", "data_referencia", "data_vencimento", "data_pagamento", "data_vencimento_original", "c.celular", "c.email", "status_financeiro_cliente", "c.numcliente", "id_licenciado", "nome_licenciado", "celular_licenciado", "status_calculado", "rcb.urldemonstrativo", "rcb.urlboleto", "rcb.qrcode", "rcb.urlcontacemig", "valor_distribuidora", "rcb.codigobarra", "c.ufconsumo", "fornecedora_cliente", "c.concessionaria", "c.cnpj", "cpf_cnpj_cliente", "rcb.nrodocumento", "rcb.idcomerc", "rcb.idbomfuturo", "rcb.energiainjetada", "rcb.energiacompensada", "rcb.energiaacumulada", "rcb.energiaajuste", "rcb.energiafaturamento", "c.desconto_cliente", "qtd_rcb_cliente" ]
      }
-     
+
      report_keys = keys_order.get(report_type.lower())
      if not report_keys:
          logger.warning(f"Ordem de chaves não definida para '{report_type}' em get_headers.")
@@ -100,7 +102,7 @@ def get_headers(report_type: str) -> List[str]:
                   logger.info(f"Usando ordem de campos da query como fallback para headers de '{report_type}'.")
               except Exception: return []
          else:
-              return [] # Retorna vazio se não for 'recebiveis_clientes' e não houver ordem
+              return [] 
 
      headers_list = []
      missing_in_map = []
@@ -108,12 +110,12 @@ def get_headers(report_type: str) -> List[str]:
          header = header_map.get(key)
          if not header:
              # Tenta mapear a parte base (ex: 'c.idcliente' -> 'idcliente')
-             base_key = key.split('.')[-1].replace('"', '') # Remove prefixo e aspas
+             base_key = key.split('.')[-1].replace('"', '') 
              header = header_map.get(base_key)
              if not header:
                  # Usa a chave original como fallback, formatando-a
                  header = key.split(' AS ')[-1].strip().replace('_', ' ').replace('"', '').title()
-                 missing_in_map.append(key) # Adiciona à lista de não mapeados
+                 missing_in_map.append(key) 
 
          headers_list.append(header)
 
@@ -121,5 +123,3 @@ def get_headers(report_type: str) -> List[str]:
          logger.debug(f"Chaves/Aliases não encontrados em header_map (usado fallback) para '{report_type}': {missing_in_map}")
 
      return headers_list
-
-# --- FIM DA FUNÇÃO get_headers ---
