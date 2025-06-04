@@ -5,7 +5,7 @@ from .executor import execute_query # Import local
 
 logger = logging.getLogger(__name__)
 
-# --- Funções para Relatórios Específicos (Clientes por Licenciado, Boletos) ---
+# --- Funções para Relatórios Específicos (Clientes por Licenciado, etc.) ---
 def get_clientes_por_licenciado_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
     """Busca os dados para 'Quantidade de Clientes por Licenciado'."""
     base_query = """
@@ -41,98 +41,12 @@ def count_clientes_por_licenciado() -> int:
     logger.debug(f"REPORTS_SPECIFIC - Query count_clientes_por_licenciado: [{count_query_sql}], Params (tupla): [()]")
     try:
         result = execute_query(count_query_sql, (), fetch_one=True)
-        # --- CORREÇÃO DE INDENTAÇÃO APLICADA AQUI ---
         return result[0] if result and result[0] is not None else 0
     except Exception as e:
         logger.error(f"Erro count_clientes_por_licenciado: {e}", exc_info=True)
         return 0
 
-# --- FUNÇÕES PARA RELATÓRIO 'Quantidade de Boletos por Cliente' ---
-def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, fornecedora: Optional[str] = None) -> List[tuple]:
-    """Busca os dados para 'Quantidade de Boletos por Cliente'."""
-    base_query = """
-        SELECT c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade,
-               CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN '' ELSE (c.uf || '-' || c.concessionaria) END AS regiao,
-               c.fornecedora, TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo_formatado,
-               CASE
-                   WHEN c.data_ativo IS NOT NULL THEN EXTRACT(DAY FROM (NOW() - c.data_ativo))::INTEGER
-                   ELSE NULL
-               END AS dias_ativo,
-               COUNT(rcb.numinstalacao) AS quantidade_registros_rcb
-        FROM public."CLIENTES" c
-        LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao """
-    
-    params_for_where = []  # Parâmetros para a cláusula WHERE
-    where_clauses = [
-        "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))",
-        "c.data_ativo IS NOT NULL",
-        # --- MODIFICAÇÃO: Usar placeholder %s para o padrão ILIKE ---
-        "(c.status NOT ILIKE %s OR c.status IS NULL)"
-    ]
-    # --- MODIFICAÇÃO: Adicionar o valor do padrão à lista de parâmetros ---
-    params_for_where.append('CANCELADO%')
-    
-    if fornecedora and fornecedora.lower() != 'consolidado':
-        where_clauses.append("c.fornecedora = %s")
-        params_for_where.append(fornecedora)  # Adicionar parâmetro da fornecedora
-    
-    where_sql_part = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-    group_by_sql_part = " GROUP BY c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade, regiao, c.fornecedora, c.data_ativo, dias_ativo "
-    order_by_sql_part = "ORDER BY c.idcliente"
-    
-    # Construir a lista final de parâmetros na ordem correta
-    final_params_list = list(params_for_where)  # Começa com os parâmetros do WHERE
-    
-    limit_sql_part = ""
-    if limit is not None:
-        limit_sql_part = "LIMIT %s"
-        final_params_list.append(limit)  # Adicionar parâmetro do LIMIT
-
-    offset_sql_part = ""
-    if offset > 0:
-        offset_sql_part = "OFFSET %s"
-        final_params_list.append(offset)  # Adicionar parâmetro do OFFSET
-        
-    paginated_query = f"{base_query.strip()} {where_sql_part.strip()} {group_by_sql_part.strip()} {order_by_sql_part.strip()} {limit_sql_part.strip()} {offset_sql_part.strip()};".replace("  ", " ").strip()
-        
-    actual_params_tuple = tuple(final_params_list)
-    # Log para verificar a query e os parâmetros finais
-    logger.debug(f"REPORTS_SPECIFIC - Query get_boletos_por_cliente_data: [{paginated_query}], Params (tupla): [{actual_params_tuple}]")
-    
-    try: return execute_query(paginated_query, actual_params_tuple) or []
-    except Exception as e: logger.error(f"Erro get_boletos_por_cliente_data: {e}", exc_info=True); return []
-
-def count_boletos_por_cliente(fornecedora: Optional[str] = None) -> int:
-    """Conta o total de clientes para 'Boletos por Cliente'."""
-    params_list = []  # Parâmetros para esta query
-    where_clauses = [
-        "(c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))",
-        "c.data_ativo IS NOT NULL",
-        # --- MODIFICAÇÃO: Usar placeholder %s para o padrão ILIKE ---
-        "(c.status NOT ILIKE %s OR c.status IS NULL)"
-    ]
-    # --- MODIFICAÇÃO: Adicionar o valor do padrão à lista de parâmetros ---
-    params_list.append('CANCELADO%')
-    
-    if fornecedora and fornecedora.lower() != 'consolidado':
-        where_clauses.append("c.fornecedora = %s")
-        params_list.append(fornecedora)  # Adicionar parâmetro da fornecedora
-    
-    where_sql_part = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-    count_query_sql = f'SELECT COUNT(DISTINCT c.idcliente) FROM public."CLIENTES" c {where_sql_part.strip()};'.replace("  ", " ").strip()
-    
-    actual_params_tuple = tuple(params_list)
-    # Log para verificar a query e os parâmetros finais
-    logger.debug(f"REPORTS_SPECIFIC - Query count_boletos_por_cliente: [{count_query_sql}], Params (tupla): [{actual_params_tuple}]")
-
-    try: 
-        result = execute_query(count_query_sql, actual_params_tuple, fetch_one=True)
-        return result[0] if result and result[0] is not None else 0
-    except Exception as e: 
-        logger.error(f"Erro count_boletos_por_cliente: {e}", exc_info=True)
-        return 0
-
-# --- FUNÇÕES PARA RATEIO RZK --- (Manter código original, mas aplicar .strip() e .replace("  ", " ") na construção final da query se usar f-strings)
+# --- FUNÇÕES PARA RATEIO RZK ---
 def get_rateio_rzk_base_nova_ids() -> List[int]:
     """Busca IDs para 'Base Nova' do Rateio RZK."""
     query_base = """ SELECT DISTINCT cc.idcliente FROM public."CLIENTES_CONTRATOS" cc
@@ -148,7 +62,7 @@ def get_rateio_rzk_base_nova_ids() -> List[int]:
     full_query = f"{query_base.strip()} WHERE {' AND '.join(where_clauses)} {group_by.strip()};".replace("  ", " ").strip()
     logger.debug(f"REPORTS_SPECIFIC - Query get_rateio_rzk_base_nova_ids: [{full_query}], Params (tupla): [()]")
     try: 
-        results = execute_query(full_query, ()) # Passar tupla vazia
+        results = execute_query(full_query, ())
         return [r[0] for r in results] if results else []
     except Exception as e: 
         logger.error(f"Erro get_rateio_rzk_base_nova_ids: {e}")
@@ -161,7 +75,7 @@ def get_rateio_rzk_base_enviada_ids() -> List[int]:
     full_query = f"{query_base.strip()} WHERE {' AND '.join(where_clauses)};".replace("  ", " ").strip()
     logger.debug(f"REPORTS_SPECIFIC - Query get_rateio_rzk_base_enviada_ids: [{full_query}], Params (tupla): [()]")
     try: 
-        results = execute_query(full_query, ()) # Passar tupla vazia
+        results = execute_query(full_query, ())
         return [r[0] for r in results] if results else []
     except Exception as e: 
         logger.error(f"Erro get_rateio_rzk_base_enviada_ids: {e}")
@@ -181,12 +95,12 @@ def get_rateio_rzk_client_details_by_ids(client_ids: List[int], batch_size: int 
         select_sql = f"SELECT {', '.join(campos)}"
         from_sql = 'FROM public."CLIENTES" c'
         join_sql = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor'
-        where_sql = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))" # Placeholder para ANY
+        where_sql = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
         order_sql = "ORDER BY c.idcliente"
         query = f"{select_sql.strip()} {from_sql.strip()}{join_sql.strip()} {where_sql.strip()} {order_sql.strip()};".replace("  ", " ").strip()
         for i in range(0, len(client_ids), batch_size):
             batch_ids = client_ids[i:i + batch_size]
-            actual_params_tuple = (batch_ids,) # O parâmetro para ANY(%s) é uma lista/tupla
+            actual_params_tuple = (batch_ids,)
             logger.debug(f"REPORTS_SPECIFIC - Query get_rateio_rzk_client_details_by_ids (batch): [{query}], Params (tupla): [{actual_params_tuple}]")
             batch_results = execute_query(query, actual_params_tuple)
             if batch_results: all_details.extend(batch_results)
@@ -233,16 +147,15 @@ def count_rateio_rzk() -> int:
     count_query_sql = f'SELECT COUNT(c.idcliente) FROM public."CLIENTES" c {where_sql_part.strip()};'.replace("  ", " ").strip()
     logger.debug(f"REPORTS_SPECIFIC - Query count_rateio_rzk: [{count_query_sql}], Params (tupla): [()]")
     try: 
-        result = execute_query(count_query_sql, (), fetch_one=True) # Passar tupla vazia
+        result = execute_query(count_query_sql, (), fetch_one=True)
         return result[0] if result and result[0] is not None else 0
     except Exception as e: 
         logger.error(f"Erro count_rateio_rzk (display): {e}", exc_info=True)
         return 0
 
-# --- INÍCIO FUNÇÕES PARA RELATÓRIO 'Recebíveis Clientes' ---
+# --- FUNÇÕES PARA RELATÓRIO 'Recebíveis Clientes' ---
 def _get_recebiveis_clientes_fields() -> List[str]:
     """Retorna a lista de campos SQL para o relatório Recebíveis Clientes."""
-    # (código original da função mantido)
     return [
         "rcb.idrcb", "c.idcliente AS codigo_cliente", "c.nome AS cliente_nome", "rcb.numinstalacao",
         "rcb.valorseria", "rcb.valorapagar", "rcb.valorcomcashback",
@@ -331,94 +244,3 @@ def count_recebiveis_clientes(fornecedora: Optional[str] = None) -> int:
     except Exception as e: 
         logger.error(f"Erro count_recebiveis_clientes: {e}", exc_info=True)
         return 0
-# --- FIM FUNÇÕES RECEBÍVEIS CLIENTES ---
-
-# --- INÍCIO FUNÇÕES PARA RELATÓRIO 'Análise Clientes PRO' ---
-def _get_analise_clientes_pro_query_parts() -> dict:
-    """Retorna as partes da query para evitar repetição."""
-    select_fields = """
-        c.idcliente AS codigo, c.nome AS nome_cliente, c.numinstalacao AS instalacao,
-        c.numcliente AS numero_cliente, COALESCE(NULLIF(c.cnpj, ''), c."cpf/cnpj") AS cpf_cnpj,
-        c.cidade, CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN '' ELSE (c.uf || '-' || c.concessionaria) END AS regiao,
-        CASE WHEN COALESCE(c.fornecedora, '')::text <> ''::text THEN c.fornecedora::text WHEN COALESCE(c.idcomerc, '')::text <> ''::text AND c.ufconsumo::text = 'MG'::text THEN 'COMERC MG'::text WHEN c.ufconsumo::text = 'MT'::text THEN 'BOM FUTURO'::text WHEN c.ufconsumo::text = 'PE'::text THEN 'COMERC PE'::text WHEN c.ufconsumo::text = 'GO'::text THEN 'BC ENERGIA'::text WHEN COALESCE(c.idcomerc, '')::text = ''::text AND c.ufconsumo::text = 'MG'::text THEN 'SOLATIO'::text ELSE ''::text END AS fornecedora_calculada,
-        c.consumomedio AS consumo_medio, TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo_fmt,
-        CASE WHEN c.data_ativo IS NOT NULL THEN EXTRACT(DAY FROM (NOW() - c.data_ativo))::INTEGER ELSE NULL END AS dias_desde_ativacao,
-        c.validadosucesso AS validado_sucesso, c.status AS devolutiva, c.idconsultor AS id_licenciado, cons.nome AS nome_licenciado,
-        CASE WHEN cp.dtgraduacao IS NULL THEN 'NÃO' ELSE 'SIM' END AS status_pro,
-        TO_CHAR(cp.dtgraduacao, 'DD/MM/YYYY') AS data_graduacao_pro, COUNT(rcb.numinstalacao) AS quantidade_boletos
-    """
-    from_join_part = """
-        FROM public."CLIENTES" c
-        LEFT JOIN public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao
-        LEFT JOIN public."CONSULTOR" cons ON c.idconsultor = cons.idconsultor
-        LEFT JOIN (
-            SELECT idconsultor, MAX(dtgraduacao) AS dtgraduacao
-            FROM public."CONTROLE_PRO"
-            GROUP BY idconsultor
-        ) cp ON c.idconsultor = cp.idconsultor
-    """
-    # --- MODIFICAÇÃO AQUI ---
-    # A condição ILIKE agora usa um placeholder %s
-    where_part = "WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) AND (c.status NOT ILIKE %s OR c.status IS NULL)"
-    # O valor para o placeholder %s
-    where_params = ['CANCELADO%']
-    
-    group_by_part = "GROUP BY c.idcliente, cons.nome, cp.dtgraduacao, c.consumomedio"
-    
-    # Retorna também os parâmetros da cláusula WHERE
-    return {
-        "select": select_fields,
-        "from_join": from_join_part,
-        "where": where_part,
-        "where_params": where_params, # <-- NOVO
-        "group_by": group_by_part
-    }
-
-def get_analise_clientes_pro_data(offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
-    """Busca os dados paginados para o relatório 'Análise Clientes PRO'."""
-    parts = _get_analise_clientes_pro_query_parts()
-    order_by_part = "ORDER BY c.idcliente"
-    
-    # --- MODIFICAÇÃO AQUI ---
-    # Começa a lista de parâmetros com os da cláusula WHERE
-    final_params_list = list(parts['where_params'])
-    
-    limit_sql_part = ""
-    if limit is not None:
-        limit_sql_part = "LIMIT %s"
-        final_params_list.append(limit)
-
-    offset_sql_part = ""
-    if offset > 0:
-        offset_sql_part = "OFFSET %s"
-        final_params_list.append(offset)
-        
-    query = f"SELECT {parts['select'].strip()} {parts['from_join'].strip()} {parts['where'].strip()} {parts['group_by'].strip()} {order_by_part.strip()} {limit_sql_part.strip()} {offset_sql_part.strip()};".replace("  ", " ").strip()
-    
-    actual_params_tuple = tuple(final_params_list)
-    logger.debug(f"REPORTS_SPECIFIC - Query get_analise_clientes_pro_data: [{query}], Params (tupla): [{actual_params_tuple}]")
-    
-    try:
-        # Passa a lista de parâmetros completa convertida para tupla
-        return execute_query(query, tuple(final_params_list)) or []
-    except Exception as e:
-        logger.error(f"Erro em get_analise_clientes_pro_data: {e}", exc_info=True)
-        return []
-
-def count_analise_clientes_pro() -> int:
-    """Conta o total de registros para o relatório 'Análise Clientes PRO'."""
-    parts = _get_analise_clientes_pro_query_parts()
-    count_query_sql = f"SELECT COUNT(*) FROM (SELECT c.idcliente {parts['from_join'].strip()} {parts['where'].strip()} {parts['group_by'].strip()}) as subquery;".replace("  ", " ").strip()
-    
-    logger.debug(f"REPORTS_SPECIFIC - Query count_analise_clientes_pro: [{count_query_sql}], Params (tupla): [()])")
-    
-    try:
-        # --- MODIFICAÇÃO AQUI ---
-        # Passa os parâmetros da cláusula WHERE para a query de contagem
-        result = execute_query(count_query_sql, tuple(parts['where_params']), fetch_one=True)
-        return result[0] if result and result[0] is not None else 0
-    except Exception as e:
-        logger.error(f"Erro em count_analise_clientes_pro: {e}", exc_info=True)
-        return 0
-
-# --- FIM FUNÇÕES PARA RELATÓRIO 'Análise Clientes PRO' ---

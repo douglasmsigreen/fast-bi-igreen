@@ -8,7 +8,6 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from .. import db
 from ..exporter import ExcelExporter
-from ..db.reports_specific import get_analise_clientes_pro_data, count_analise_clientes_pro
 
 logger = logging.getLogger(__name__)
 
@@ -73,20 +72,11 @@ def relatorios():
                     total_items = db.count_clientes_por_licenciado()
                     dados = db.get_clientes_por_licenciado_data(offset=offset, limit=items_per_page)
 
-                elif selected_report_type == 'boletos_por_cliente':
-                    total_items = db.count_boletos_por_cliente(fornecedora=selected_fornecedora)
-                    dados = db.get_boletos_por_cliente_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
-
                 elif selected_report_type == 'recebiveis_clientes':
+                    # Busca os dados paginados para recebíveis, passando a fornecedora
                     dados = db.get_recebiveis_clientes_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
+                    # Conta o total de itens para recebíveis, respeitando a fornecedora
                     total_items = db.count_recebiveis_clientes(fornecedora=selected_fornecedora)
-
-                # <<< INÍCIO DO BLOCO ADICIONADO >>>
-                elif selected_report_type == 'analise_clientes_pro':
-                    # Este relatório não usa filtro de fornecedora
-                    total_items = count_analise_clientes_pro()
-                    dados = get_analise_clientes_pro_data(offset=offset, limit=items_per_page)
-                # <<< FIM DO BLOCO ADICIONADO >>>
 
                 else: # Bloco else existente
                     error_message = f"Tipo de relatório desconhecido ou não implementado: '{selected_report_type}'."
@@ -106,11 +96,8 @@ def relatorios():
             total_pages = math.ceil(total_items / items_per_page)
             if page > total_pages and total_pages > 0: # Corrige se a página pedida for maior que o total
                 logger.warning(f"Página solicitada ({page}) maior que o total ({total_pages}). Redirecionando para a última página.")
-                # O ideal seria redirecionar, mas por simplicidade vamos apenas ajustar a página para renderizar
                 page = total_pages
                 offset = (page - 1) * items_per_page
-                # Refazer a query com a página corrigida seria o mais correto
-                # (Omitido aqui por brevidade)
         elif not error_message:
             total_pages = 0 if total_items == 0 else 1 # 0 páginas se 0 itens, 1 página se itens <= items_per_page
 
@@ -133,8 +120,6 @@ def relatorios():
     except Exception as e:
         logger.error(f"Erro GERAL na rota /relatorios: {e}", exc_info=True)
         flash("Ocorreu um erro inesperado ao processar sua solicitação de relatório.", "error")
-        # Renderiza uma página de erro ou redireciona
-        # Aqui, renderizamos o template com uma mensagem de erro geral
         return render_template(
             'relatorios.html',
             title="Erro Crítico - Relatórios",
@@ -160,12 +145,9 @@ def exportar_excel_route():
 
         logger.info(f"Iniciando exportação Excel: Tipo='{selected_report_type}', Fornecedora='{selected_fornecedora}'. Utilizador: {user_nome}")
 
-        # Lógica de exportação baseada no tipo (similar ao app.py original)
-        # --- EXPORTAÇÃO RATEIO GERAL (MULTI-ABA) ---
         if selected_report_type == 'rateio':
             forn_fn = 'Consolidado' if selected_fornecedora.lower() == "consolidado" else secure_filename(selected_fornecedora).replace('_', '')
             filename = f"Clientes_Rateio_{forn_fn}_{timestamp}.xlsx"
-            # Busca TODOS os IDs (sem paginação)
             nova_ids = db.get_base_nova_ids(fornecedora=selected_fornecedora)
             enviada_ids = db.get_base_enviada_ids(fornecedora=selected_fornecedora)
             if not nova_ids and not enviada_ids:
@@ -173,7 +155,6 @@ def exportar_excel_route():
                 return redirect(url_for('reports_bp.relatorios', **request.args))
 
             rateio_headers = db.get_headers('rateio') # Pega cabeçalhos
-            # Busca detalhes completos para os IDs encontrados
             nova_data = db.get_client_details_by_ids('rateio', nova_ids) if nova_ids else []
             enviada_data = db.get_client_details_by_ids('rateio', enviada_ids) if enviada_ids else []
 
@@ -183,14 +164,13 @@ def exportar_excel_route():
             ]
             excel_bytes = excel_exp.export_multi_sheet_excel_bytes(sheets_to_export)
 
-        # --- EXPORTAÇÃO RATEIO RZK (MULTI-ABA) ---
         elif selected_report_type == 'rateio_rzk':
              filename = f"Clientes_Rateio_RZK_MultiBase_{timestamp}.xlsx"
              nova_ids_rzk = db.get_rateio_rzk_base_nova_ids()
              enviada_ids_rzk = db.get_rateio_rzk_base_enviada_ids()
              if not nova_ids_rzk and not enviada_ids_rzk:
                  flash("Nenhum dado encontrado para exportar o Rateio RZK.", "warning")
-                 return redirect(url_for('reports_bp.relatorios', report_type='rateio_rzk')) # Redireciona mantendo o tipo
+                 return redirect(url_for('reports_bp.relatorios', report_type='rateio_rzk'))
 
              rzk_headers = db.get_headers('rateio_rzk')
              nova_data_rzk = db.get_rateio_rzk_client_details_by_ids(nova_ids_rzk) if nova_ids_rzk else []
@@ -201,8 +181,7 @@ def exportar_excel_route():
              ]
              excel_bytes = excel_exp.export_multi_sheet_excel_bytes(sheets_to_export)
 
-        # --- EXPORTAÇÃO RELATÓRIOS DE ABA ÚNICA ---
-        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'boletos_por_cliente', 'recebiveis_clientes', 'analise_clientes_pro']:
+        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'recebiveis_clientes']:
             forn_fn = secure_filename(selected_fornecedora).replace('_', '') if selected_fornecedora and selected_fornecedora.lower() != 'consolidado' else 'Consolidado'
             dados_completos = []
             sheet_title = selected_report_type.replace('_', ' ').title() # Título padrão
@@ -212,59 +191,39 @@ def exportar_excel_route():
                  flash(f"Configuração de cabeçalhos ausente para exportar '{selected_report_type}'.", "error")
                  return redirect(url_for('reports_bp.relatorios', **request.args))
 
-            # Busca todos os dados (sem paginação - limit=None)
             if selected_report_type == 'base_clientes':
                  filename = f"Clientes_Base_{forn_fn}_{timestamp}.xlsx"
-                 data_query, data_params = db.build_query(selected_report_type, selected_fornecedora, 0, None) # limit=None
+                 data_query, data_params = db.build_query(selected_report_type, selected_fornecedora, 0, None)
                  dados_completos = db.execute_query(data_query, data_params) or []
                  sheet_title = f"Base Clientes ({forn_fn})"
 
             elif selected_report_type == 'clientes_por_licenciado':
                  filename = f"Qtd_Clientes_Licenciado_{timestamp}.xlsx"
-                 dados_completos = db.get_clientes_por_licenciado_data(limit=None) # limit=None
+                 dados_completos = db.get_clientes_por_licenciado_data(limit=None)
                  sheet_title = "Clientes por Licenciado"
 
-            elif selected_report_type == 'boletos_por_cliente':
-                 filename = f"Qtd_Boletos_Cliente_{forn_fn}_{timestamp}.xlsx"
-                 dados_completos = db.get_boletos_por_cliente_data(limit=None, fornecedora=selected_fornecedora) # limit=None
-                 sheet_title = f"Boletos Cliente ({forn_fn})"
-
-            elif selected_report_type == 'recebiveis_clientes': # Novo bloco para exportação de recebíveis
+            elif selected_report_type == 'recebiveis_clientes':
                 filename = f"Recebiveis_Clientes_{forn_fn}_{timestamp}.xlsx"
-                dados_completos = db.get_recebiveis_clientes_data(limit=None, fornecedora=selected_fornecedora) # limit=None
+                dados_completos = db.get_recebiveis_clientes_data(limit=None, fornecedora=selected_fornecedora)
                 sheet_title = f"Recebíveis ({forn_fn})"
 
-            # <<< INÍCIO DO BLOCO ADICIONADO >>>
-            elif selected_report_type == 'analise_clientes_pro':
-                filename = f"Analise_Clientes_PRO_{timestamp}.xlsx"
-                # Chama a função de busca sem limite de paginação
-                dados_completos = get_analise_clientes_pro_data(limit=None)
-                sheet_title = "Análise Clientes PRO"
-            # <<< FIM DO BLOCO ADICIONADO >>>
-
-            # Garante que o nome da aba não exceda 31 caracteres
             if len(sheet_title) > 31: sheet_title = sheet_title[:31]
 
             if not dados_completos:
                  flash(f"Nenhum dado encontrado para exportar o relatório '{sheet_title}'.", "warning")
                  return redirect(url_for('reports_bp.relatorios', **request.args))
 
-            # Adicione logs para inspecionar os dados e cabeçalhos
             current_app.logger.debug(f"Headers para exportação: {headers}")
-            current_app.logger.debug(f"Dados para exportação (primeiras linhas): {dados_completos[:5]}") # Log das primeiras 5 linhas como exemplo
+            current_app.logger.debug(f"Dados para exportação (primeiras linhas): {dados_completos[:5]}")
 
-            # Sanitização extremamente agressiva dos dados antes da exportação para Excel
             def sanitize_excel_data_extreme(data):
-                """Remove completamente strings problemáticas."""
                 sanitized_data = []
                 for row in data:
                     sanitized_row = []
                     for cell in row:
                         if isinstance(cell, str):
-                            # Remove completamente qualquer string que contenha "CS" e "FUN"
                             if "CS" in cell and "FUN" in cell:
                                 sanitized_row.append("[DADOS_SANITIZADOS]")
-                            # Verifica se inicia com caracteres de fórmula
                             elif cell.startswith(('=', '+', '-', '@')) and len(cell) > 1:
                                 sanitized_row.append(f"'{cell}")
                             else:
@@ -275,11 +234,9 @@ def exportar_excel_route():
                 return sanitized_data
 
             def sanitize_headers_extreme(header_list):
-                """Remove completamente cabeçalhos problemáticos."""
                 sanitized_headers = []
                 for header in header_list:
                     if isinstance(header, str):
-                        # Remove completamente qualquer cabeçalho que contenha "CS" e "FUN"
                         if "CS" in header and "FUN" in header:
                             sanitized_headers.append("COLUNA_SANITIZADA")
                         elif header.startswith(('=', '+', '-', '@')) and len(header) > 1:
@@ -290,18 +247,15 @@ def exportar_excel_route():
                         sanitized_headers.append(header)
                 return sanitized_headers
 
-            # Aplica sanitização extrema aos dados e cabeçalhos
             dados_sanitizados = sanitize_excel_data_extreme(dados_completos)
             headers_sanitizados = sanitize_headers_extreme(headers)
             
             excel_bytes = excel_exp.export_to_excel_bytes(dados_sanitizados, headers_sanitizados, sheet_name=sheet_title)
         else:
-             # Tipo de relatório inválido para exportação
              logger.warning(f"Tentativa de exportação de tipo inválido: '{selected_report_type}'.")
              flash(f"Tipo de relatório inválido para exportação: '{selected_report_type}'.", "error")
              return redirect(url_for('reports_bp.relatorios'))
 
-        # --- Envia a Resposta com o Arquivo Excel ---
         if excel_bytes:
             logger.info(f"Exportação Excel concluída. Enviando ficheiro: {filename} ({len(excel_bytes)} bytes)")
             return Response(
@@ -310,13 +264,10 @@ def exportar_excel_route():
                 headers={'Content-Disposition': f'attachment;filename="{filename}"'}
             )
         else:
-            # Se excel_bytes for None (erro na geração ou nenhum dado)
             logger.error(f"Falha ao gerar bytes Excel para '{selected_report_type}' (Forn: {selected_fornecedora}). Nenhum ficheiro será enviado.")
-            # A mensagem flash já deve ter sido definida no bloco acima
             return redirect(url_for('reports_bp.relatorios', **request.args))
 
     except Exception as exp_err:
         logger.error(f"Erro Inesperado durante a exportação Excel: {exp_err}", exc_info=True)
         flash("Ocorreu um erro inesperado durante a geração do arquivo Excel.", "error")
-        # Redireciona de volta para a página de relatórios com os mesmos parâmetros
         return redirect(url_for('reports_bp.relatorios', **request.args))

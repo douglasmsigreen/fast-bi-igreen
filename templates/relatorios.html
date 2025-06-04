@@ -16,14 +16,13 @@
                 <option value="rateio" {% if selected_report_type == 'rateio' %}selected{% endif %}>Rateio (Geral)</option>
                 <option value="rateio_rzk" {% if selected_report_type == 'rateio_rzk' %}selected{% endif %}>Rateio RZK (Especial)</option>
                 <option value="clientes_por_licenciado" {% if selected_report_type == 'clientes_por_licenciado' %}selected{% endif %}>Clientes por Licenciado</option>
-                <option value="boletos_por_cliente" {% if selected_report_type == 'boletos_por_cliente' %}selected{% endif %}>Análise Clientes PRO</option>
                 <option value="recebiveis_clientes" {% if selected_report_type == 'recebiveis_clientes' %}selected{% endif %}>Recebíveis Clientes</option>
             </select>
         </div>
         <div class="form-group">
             <label for="fornecedora">Fornecedora:</label>
-             {# <<< MODIFICADO: Adicionado 'analise_clientes_pro' na condição 'disabled' >>> #}
-            <select name="fornecedora" id="fornecedora" {% if selected_report_type in ['rateio_rzk', 'clientes_por_licenciado', 'analise_clientes_pro'] %}disabled{% endif %}>
+             {# <<< MODIFICADO: Removido 'recebiveis_clientes' da condição 'disabled' >>> #}
+            <select name="fornecedora" id="fornecedora" {% if selected_report_type in ['rateio_rzk', 'clientes_por_licenciado'] %}disabled{% endif %}>
                 {# Loop para popular as fornecedoras #}
                 {% for forn in fornecedoras %}
                 <option value="{{ forn }}" {% if forn == selected_fornecedora %}selected{% endif %}>{{ forn }}</option>
@@ -48,9 +47,8 @@
                  <input type="hidden" name="fornecedora" value="RZK">
             {% elif selected_report_type == 'clientes_por_licenciado' %}
                  <small data-info-type="clientes_por_licenciado" style="display: none;">(Filtro não aplicável)</small>
-            {% elif selected_report_type == 'analise_clientes_pro' %}
-                 <small data-info-type="analise_clientes_pro" style="display: none;">(Filtro não aplicável)</small>
             {% endif %}
+            {# <<< REMOVIDO: Bloco elif para 'recebiveis_clientes' que mostrava a mensagem "Filtro não aplicável" >>> #}
         </div>
         <button type="submit" class="btn btn-primary">Buscar</button>
          {# Link para Exportar Excel - ajustado para incluir o novo tipo e passar fornecedora se aplicável #}
@@ -58,7 +56,7 @@
              {# Gera a URL de exportação com os parâmetros atuais #}
              {% set export_args = {'report_type': selected_report_type} %}
              {# <<< MODIFICADO: Condição para adicionar fornecedora NÃO exclui mais 'recebiveis_clientes' >>> #}
-             {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado', 'analise_clientes_pro'] %}
+             {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado'] %}
                  {% set _ = export_args.update({'fornecedora': selected_fornecedora}) %}
              {% endif %}
              <a href="{{ url_for('reports_bp.exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" target="_blank">
@@ -107,7 +105,8 @@
     <ul>
         {# Lógica de paginação otimizada com parâmetros corretos #}
         {% set base_args = {'report_type': selected_report_type} %}
-        {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado', 'analise_clientes_pro'] %}
+        {# <<< MODIFICADO: Condição para adicionar fornecedora NÃO exclui mais 'recebiveis_clientes' >>> #}
+        {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado'] %}
             {% set _ = base_args.update({'fornecedora': selected_fornecedora}) %}
         {% endif %}
 
@@ -166,7 +165,7 @@
 
                 // Define quais tipos de relatório AINDA desabilitam a fornecedora
                 // --- ATUALIZADO: REMOVIDO 'recebiveis_clientes' ---
-                const disableTypes = ['rateio_rzk', 'clientes_por_licenciado', 'analise_clientes_pro'];
+                const disableTypes = ['rateio_rzk', 'clientes_por_licenciado'];
 
                 if (disableTypes.includes(selectedType)) {
                     disableFornecedora = true;
