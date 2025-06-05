@@ -6,7 +6,7 @@ from .executor import execute_query
 logger = logging.getLogger(__name__)
 
 def get_boletos_por_cliente_data(fornecedora: Optional[str] = None, offset: int = 0, limit: Optional[int] = None) -> List[tuple]:
-    """Busca dados completos para o relatório Boletos por Cliente com a nova query."""
+    """Busca dados completos para o relatório Boletos por Cliente, agora sem excluir CANCELADOS."""
     try:
         query = """
         SELECT 
@@ -74,11 +74,10 @@ def get_boletos_por_cliente_data(fornecedora: Optional[str] = None, offset: int 
         ) cp ON c.idconsultor = cp.idconsultor
         WHERE 
             (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-            AND (c.status NOT ILIKE %s OR c.status IS NULL)
         """
         
-        # Inicia a lista de parâmetros com o valor para o ILIKE
-        params = ['CANCELADO%']
+        # A lista de parâmetros agora começa vazia.
+        params = []
         
         if fornecedora and fornecedora.lower() != 'consolidado':
             query += " AND c.fornecedora = %s"
@@ -109,18 +108,17 @@ def get_boletos_por_cliente_data(fornecedora: Optional[str] = None, offset: int 
         return []
 
 def count_boletos_por_cliente(fornecedora: Optional[str] = None) -> int:
-    """Conta total de clientes para paginação no relatório Boletos por Cliente."""
+    """Conta total de clientes para paginação, agora sem excluir CANCELADOS."""
     try:
         query = """
         SELECT COUNT(DISTINCT c.idcliente)
         FROM public."CLIENTES" c
         WHERE 
             (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-            AND (c.status NOT ILIKE %s OR c.status IS NULL)
         """
         
-        # Inicia a lista de parâmetros com o valor para o ILIKE
-        params = ['CANCELADO%']
+        # A lista de parâmetros agora começa vazia.
+        params = []
         
         if fornecedora and fornecedora.lower() != 'consolidado':
             query += " AND c.fornecedora = %s"
