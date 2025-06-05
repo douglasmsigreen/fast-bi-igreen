@@ -1,4 +1,4 @@
-{# templates/relatorios.html #}
+{# templates/relatorios.html - ATUALIZADO COM FILTROS DE DATA #}
 
 {% extends "base.html" %}
 
@@ -7,64 +7,81 @@
 
 {% block content %}
 
-{# Formulário de Filtros #}
-    <form method="GET" action="{{ url_for('reports_bp.relatorios') }}" class="filter-form">
-        <div class="form-group">
-            <label for="report_type">Tipo Relatório:</label>
-            <select name="report_type" id="report_type" onchange="this.form.submit()">
-                <option value="base_clientes" {% if selected_report_type == 'base_clientes' %}selected{% endif %}>Base Clientes</option>
-                <option value="rateio" {% if selected_report_type == 'rateio' %}selected{% endif %}>Rateio (Geral)</option>
-                <option value="rateio_rzk" {% if selected_report_type == 'rateio_rzk' %}selected{% endif %}>Rateio RZK (Especial)</option>
-                <option value="clientes_por_licenciado" {% if selected_report_type == 'clientes_por_licenciado' %}selected{% endif %}>Clientes por Licenciado</option>
-                <option value="boletos_por_cliente" {% if selected_report_type == 'boletos_por_cliente' %}selected{% endif %}>Boletos por Cliente</option>
-                <option value="recebiveis_clientes" {% if selected_report_type == 'recebiveis_clientes' %}selected{% endif %}>Recebíveis Clientes</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="fornecedora">Fornecedora:</label>
-             {# <<< MODIFICADO: Removido 'recebiveis_clientes' da condição 'disabled' >>> #}
-            <select name="fornecedora" id="fornecedora" {% if selected_report_type in ['rateio_rzk', 'clientes_por_licenciado'] %}disabled{% endif %}>
-                {# Loop para popular as fornecedoras #}
-                {% for forn in fornecedoras %}
-                <option value="{{ forn }}" {% if forn == selected_fornecedora %}selected{% endif %}>{{ forn }}</option>
-                {% endfor %}
-                {# Adiciona "Consolidado" se não estiver na lista e nenhum outro fornecedor estiver selecionado #}
-                {# Garante que a opção selecionada (ou Consolidado) esteja sempre presente #}
-                {% if selected_fornecedora not in fornecedoras and selected_fornecedora == 'Consolidado' %}
-                     <option value="Consolidado" selected>Consolidado</option>
-                {% elif selected_fornecedora not in fornecedoras and selected_fornecedora != 'Consolidado' and selected_fornecedora %}
-                     {# Se uma fornecedora específica foi selecionada mas não veio do DB (improvável), mostra ela #}
-                     <option value="{{ selected_fornecedora }}" selected>{{ selected_fornecedora }}</option>
-                {% endif %}
+{# Formulário de Filtros ATUALIZADO #}
+<form method="GET" action="{{ url_for('reports_bp.relatorios') }}" class="filter-form">
+    {# Campo oculto para manter o tipo de relatório ao submeter com novas datas #}
+    <input type="hidden" name="report_type" value="{{ selected_report_type }}">
 
-                {% if not fornecedoras and selected_fornecedora != 'Consolidado' %}
-                     <option value="" disabled>Nenhuma fornecedora disponível</option>
-                {% endif %}
-            </select>
-             {# Mensagens informativas e campo oculto para tipos específicos #}
-             {# Adicionando data-info-type para melhor seleção no JS #}
-            {% if selected_report_type == 'rateio_rzk' %}
-                <small data-info-type="rateio_rzk" style="display: none;">(Fornecedora RZK implícita)</small>
-                 <input type="hidden" name="fornecedora" value="RZK">
-            {% elif selected_report_type == 'clientes_por_licenciado' %}
-                 <small data-info-type="clientes_por_licenciado" style="display: none;">(Filtro não aplicável)</small>
+    <div class="form-group">
+        <label for="report_type_select">Tipo Relatório:</label>
+        {# O 'onchange' agora chama uma função JS para submeter, em vez de 'this.form.submit()' #}
+        <select name="report_type_select" id="report_type_select" onchange="handleReportTypeChange(this)">
+            <option value="base_clientes" {% if selected_report_type == 'base_clientes' %}selected{% endif %}>Base Clientes</option>
+            <option value="rateio" {% if selected_report_type == 'rateio' %}selected{% endif %}>Rateio (Geral)</option>
+            <option value="rateio_rzk" {% if selected_report_type == 'rateio_rzk' %}selected{% endif %}>Rateio RZK (Especial)</option>
+            <option value="clientes_por_licenciado" {% if selected_report_type == 'clientes_por_licenciado' %}selected{% endif %}>Clientes por Licenciado</option>
+            <option value="boletos_por_cliente" {% if selected_report_type == 'boletos_por_cliente' %}selected{% endif %}>Boletos por Cliente</option>
+            <option value="graduacao_licenciado" {% if selected_report_type == 'graduacao_licenciado' %}selected{% endif %}>Tempo até Graduação</option>
+            <option value="recebiveis_clientes" {% if selected_report_type == 'recebiveis_clientes' %}selected{% endif %}>Recebíveis Clientes</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="fornecedora">Fornecedora:</label>
+        <select name="fornecedora" id="fornecedora" {% if selected_report_type in ['rateio_rzk', 'clientes_por_licenciado', 'graduacao_licenciado'] %}disabled{% endif %}>
+            {# Loop para popular as fornecedoras #}
+            {% for forn in fornecedoras %}
+            <option value="{{ forn }}" {% if forn == selected_fornecedora %}selected{% endif %}>{{ forn }}</option>
+            {% endfor %}
+            {# Adiciona "Consolidado" se não estiver na lista e nenhum outro fornecedor estiver selecionado #}
+            {# Garante que a opção selecionada (ou Consolidado) esteja sempre presente #}
+            {% if selected_fornecedora not in fornecedoras and selected_fornecedora == 'Consolidado' %}
+                 <option value="Consolidado" selected>Consolidado</option>
+            {% elif selected_fornecedora not in fornecedoras and selected_fornecedora != 'Consolidado' and selected_fornecedora %}
+                 {# Se uma fornecedora específica foi selecionada mas não veio do DB (improvável), mostra ela #}
+                 <option value="{{ selected_fornecedora }}" selected>{{ selected_fornecedora }}</option>
             {% endif %}
-            {# <<< REMOVIDO: Bloco elif para 'recebiveis_clientes' que mostrava a mensagem "Filtro não aplicável" >>> #}
-        </div>
-        <button type="submit" class="btn btn-primary">Buscar</button>
-         {# Link para Exportar Excel - ajustado para incluir o novo tipo e passar fornecedora se aplicável #}
-         {% if dados %}
-             {# Gera a URL de exportação com os parâmetros atuais #}
-             {% set export_args = {'report_type': selected_report_type} %}
-             {# <<< MODIFICADO: Condição para adicionar fornecedora NÃO exclui mais 'recebiveis_clientes' >>> #}
-             {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado'] %}
-                 {% set _ = export_args.update({'fornecedora': selected_fornecedora}) %}
-             {% endif %}
-             <a href="{{ url_for('reports_bp.exportar_excel_route', fornecedora=selected_fornecedora, report_type=selected_report_type) }}" class="btn btn-success" target="_blank">
-                 <i class="fas fa-file-excel"></i> Exportar Excel {# Adicionado ícone #}
-             </a>
+
+            {% if not fornecedoras and selected_fornecedora != 'Consolidado' %}
+                 <option value="" disabled>Nenhuma fornecedora disponível</option>
+            {% endif %}
+        </select>
+         {% if selected_report_type == 'graduacao_licenciado' %}
+             <small data-info-type="graduacao_licenciado" style="display: none;">(Filtro não aplicável)</small>
          {% endif %}
-    </form>
+    </div>
+
+    {# --- NOVOS CAMPOS DE DATA --- #}
+    <div class="form-group">
+        <label for="start_date">Data Início:</label>
+        <input type="date" id="start_date" name="start_date" value="{{ selected_start_date or '' }}" class="form-control" style="width: auto;">
+    </div>
+    <div class="form-group">
+        <label for="end_date">Data Fim:</label>
+        <input type="date" id="end_date" name="end_date" value="{{ selected_end_date or '' }}" class="form-control" style="width: auto;">
+    </div>
+    {# --- FIM DOS NOVOS CAMPOS DE DATA --- #}
+
+    <button type="submit" class="btn btn-primary">Buscar</button>
+    
+    {# Link para Exportar Excel #}
+    {% if dados %}
+        {# Gera a URL de exportação com os parâmetros atuais, incluindo as datas #}
+        {% set export_args = {'report_type': selected_report_type} %}
+        {% if selected_fornecedora and selected_report_type not in ['rateio_rzk', 'clientes_por_licenciado', 'graduacao_licenciado'] %}
+            {% set _ = export_args.update({'fornecedora': selected_fornecedora}) %}
+        {% endif %}
+        {% if selected_start_date %}
+            {% set _ = export_args.update({'start_date': selected_start_date}) %}
+        {% endif %}
+        {% if selected_end_date %}
+            {% set _ = export_args.update({'end_date': selected_end_date}) %}
+        {% endif %}
+        <a href="{{ url_for('reports_bp.exportar_excel_route', **export_args) }}" class="btn btn-success" target="_blank">
+            <i class="fas fa-file-excel"></i> Exportar Excel
+        </a>
+    {% endif %}
+</form>
 
 {# Caixa de Pesquisa #}
 <div class="search-box">
@@ -165,8 +182,8 @@
                 let activeInfoType = null; // Guarda qual tipo de info mostrar
 
                 // Define quais tipos de relatório AINDA desabilitam a fornecedora
-                // --- ATUALIZADO: REMOVIDO 'recebiveis_clientes' ---
-                const disableTypes = ['rateio_rzk', 'clientes_por_licenciado'];
+                // --- ATUALIZADO: ADICIONADO 'graduacao_licenciado' ---
+                const disableTypes = ['rateio_rzk', 'clientes_por_licenciado', 'graduacao_licenciado'];
 
                 if (disableTypes.includes(selectedType)) {
                     disableFornecedora = true;
@@ -204,5 +221,17 @@
                 if (!fornecedoraSelect) console.error("Elemento #fornecedora não encontrado.");
             }
         });
+    </script>
+
+    {# NOVO SCRIPT para lidar com a mudança do tipo de relatório #}
+    <script>
+        function handleReportTypeChange(selectElement) {
+            // Cria uma URL base para a página de relatórios
+            const url = new URL("{{ url_for('reports_bp.relatorios') }}");
+            // Adiciona o novo tipo de relatório como parâmetro
+            url.searchParams.set('report_type', selectElement.value);
+            // Redireciona para a nova URL (isso irá recarregar a página com o relatório correto)
+            window.location.href = url.toString();
+        }
     </script>
 {% endblock %}

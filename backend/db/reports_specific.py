@@ -332,3 +332,92 @@ def count_recebiveis_clientes(fornecedora: Optional[str] = None) -> int:
         logger.error(f"Erro count_recebiveis_clientes: {e}", exc_info=True)
         return 0
 # --- FIM FUNÇÕES RECEBÍVEIS CLIENTES ---
+
+# --- FUNÇÕES PARA RELATÓRIO 'Tempo até Graduação' (ATUALIZADAS) ---
+
+def get_graduacao_licenciado_data(
+    offset: int = 0, 
+    limit: Optional[int] = None, 
+    start_date: Optional[str] = None, 
+    end_date: Optional[str] = None
+) -> List[tuple]:
+    """
+    Busca os dados para 'Tempo até Graduação', com filtros de data opcionais.
+    """
+    base_query = """
+        SELECT
+            c.idconsultor, c.nome,
+            TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo_formatada,
+            TO_CHAR(cp.dtgraduacao, 'DD/MM/YYYY') AS data_graduacao_formatada,
+            (cp.dtgraduacao - c.data_ativo) AS dias_para_graduacao
+        FROM public."CONSULTOR" c
+        JOIN public."CONTROLE_PRO" cp ON c.idconsultor = cp.idconsultor
+    """
+    
+    where_clauses = [
+        "c.data_ativo IS NOT NULL",
+        "cp.dtgraduacao IS NOT NULL",
+        "cp.dtgraduacao >= c.data_ativo"
+    ]
+    params = []
+
+    if start_date:
+        where_clauses.append("c.data_ativo >= %s")
+        params.append(start_date)
+    
+    if end_date:
+        where_clauses.append("c.data_ativo <= %s")
+        params.append(end_date)
+
+    query = base_query + " WHERE " + " AND ".join(where_clauses) + " ORDER BY dias_para_graduacao ASC"
+    
+    if limit is not None:
+        query += " LIMIT %s"
+        params.append(limit)
+    if offset > 0:
+        query += " OFFSET %s"
+        params.append(offset)
+    
+    query += ";"
+    
+    logger.debug(f"REPORTS_SPECIFIC - Query get_graduacao_licenciado_data: [{query}], Params: {params}")
+    try:
+        return execute_query(query, tuple(params)) or []
+    except Exception as e:
+        logger.error(f"Erro em get_graduacao_licenciado_data: {e}", exc_info=True)
+        return []
+
+def count_graduacao_licenciado(start_date: Optional[str] = None, end_date: Optional[str] = None) -> int:
+    """
+    Conta o total de registros para 'Tempo até Graduação', com filtros de data opcionais.
+    """
+    base_query = """
+        SELECT COUNT(*)
+        FROM public."CONSULTOR" c
+        JOIN public."CONTROLE_PRO" cp ON c.idconsultor = cp.idconsultor
+    """
+    
+    where_clauses = [
+        "c.data_ativo IS NOT NULL",
+        "cp.dtgraduacao IS NOT NULL",
+        "cp.dtgraduacao >= c.data_ativo"
+    ]
+    params = []
+
+    if start_date:
+        where_clauses.append("c.data_ativo >= %s")
+        params.append(start_date)
+    
+    if end_date:
+        where_clauses.append("c.data_ativo <= %s")
+        params.append(end_date)
+        
+    query = base_query + " WHERE " + " AND ".join(where_clauses) + ";"
+
+    logger.debug(f"REPORTS_SPECIFIC - Query count_graduacao_licenciado: [{query}], Params: {params}")
+    try:
+        result = execute_query(query, tuple(params), fetch_one=True)
+        return result[0] if result and result[0] is not None else 0
+    except Exception as e:
+        logger.error(f"Erro em count_graduacao_licenciado: {e}", exc_info=True)
+        return 0

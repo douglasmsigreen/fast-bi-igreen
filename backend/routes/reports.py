@@ -22,35 +22,34 @@ def relatorios():
     user_nome = current_user.nome if hasattr(current_user, 'nome') else 'Anónimo'
     logger.info(f"Acessando /relatorios. Utilizador: {user_nome}")
     try:
+        # --- LEITURA DOS PARÂMETROS DA URL ---
         page = request.args.get('page', 1, type=int)
-        page = max(1, page) # Garante que a página seja pelo menos 1
-        selected_report_type = request.args.get('report_type', 'base_clientes')
+        # O tipo de relatório agora vem do 'report_type_select' ou do 'report_type' oculto
+        selected_report_type = request.args.get('report_type_select') or request.args.get('report_type', 'base_clientes')
         selected_fornecedora = request.args.get('fornecedora', 'Consolidado')
+        # Novos parâmetros de data
+        start_date = request.args.get('start_date', None)
+        end_date = request.args.get('end_date', None)
 
-        # Obter lista de fornecedoras
+        page = max(1, page)
+        
+        # Obter lista de fornecedoras (lógica existente)
         try:
             fornecedoras_db = db.get_fornecedoras()
         except Exception as db_err:
             logger.error(f"Erro ao buscar lista de fornecedoras: {db_err}", exc_info=True)
             flash("Erro ao carregar a lista de fornecedoras.", "warning")
             fornecedoras_db = []
-        # Garante que 'Consolidado' esteja sempre presente e no início
         fornecedoras_list = ['Consolidado'] + [f for f in fornecedoras_db if f != 'Consolidado']
 
         items_per_page = current_app.config.get('ITEMS_PER_PAGE', 50)
         offset = (page - 1) * items_per_page
+        dados, headers, total_items, error_message = [], [], 0, None
 
-        dados = []
-        headers = []
-        total_items = 0
-        total_pages = 0
-        error_message = None
+        logger.info(f"Processando relatório: Tipo='{selected_report_type}', Fornecedora='{selected_fornecedora}', Página={page}, Data Início='{start_date}', Data Fim='{end_date}'")
 
-        logger.info(f"Processando relatório: Tipo='{selected_report_type}', Fornecedora='{selected_fornecedora}', Página={page}")
-
-        # Lógica para buscar dados e cabeçalhos com base no tipo de relatório
         try:
-            headers = db.get_headers(selected_report_type) # Pega cabeçalhos primeiro
+            headers = db.get_headers(selected_report_type)
             if not headers:
                  error_message = f"Cabeçalhos não definidos para o tipo de relatório: '{selected_report_type}'."
                  logger.error(error_message)
@@ -76,13 +75,19 @@ def relatorios():
                     total_items = db.count_boletos_por_cliente(fornecedora=selected_fornecedora)
                     dados = db.get_boletos_por_cliente_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
 
-                # <<< INÍCIO DO BLOCO ADICIONADO >>>
+                # <<< INÍCIO DO NOVO BLOCO >>>
+                elif selected_report_type == 'graduacao_licenciado':
+                    # Chama as funções de DB passando as datas
+                    total_items = db.count_graduacao_licenciado(start_date=start_date, end_date=end_date)
+                    dados = db.get_graduacao_licenciado_data(offset=offset, limit=items_per_page, start_date=start_date, end_date=end_date)
+                
+                # <<< FIM DO NOVO BLOCO >>>
+
                 elif selected_report_type == 'recebiveis_clientes':
                     # Busca os dados paginados para recebíveis, passando a fornecedora
                     dados = db.get_recebiveis_clientes_data(offset=offset, limit=items_per_page, fornecedora=selected_fornecedora)
                     # Conta o total de itens para recebíveis, respeitando a fornecedora
                     total_items = db.count_recebiveis_clientes(fornecedora=selected_fornecedora)
-                # <<< FIM DO BLOCO ADICIONADO >>>
 
                 else: # Bloco else existente
                     error_message = f"Tipo de relatório desconhecido ou não implementado: '{selected_report_type}'."
@@ -110,12 +115,14 @@ def relatorios():
         elif not error_message:
             total_pages = 0 if total_items == 0 else 1 # 0 páginas se 0 itens, 1 página se itens <= items_per_page
 
-        # Renderiza o template de relatórios
+        # --- RENDERIZAÇÃO DO TEMPLATE (PASSANDO AS DATAS) ---
         return render_template(
             'relatorios.html',
             fornecedoras=fornecedoras_list,
             selected_fornecedora=selected_fornecedora,
             selected_report_type=selected_report_type,
+            selected_start_date=start_date, # <-- Passa a data de início para o template
+            selected_end_date=end_date,     # <-- Passa a data de fim para o template
             headers=headers,
             dados=dados,
             page=page,
@@ -123,21 +130,18 @@ def relatorios():
             total_items=total_items,
             items_per_page=items_per_page,
             error=error_message,
-            title=f"{selected_report_type.replace('_', ' ').title()} - Relatórios" # Título dinâmico
+            title=f"{selected_report_type.replace('_', ' ').title()} - Relatórios"
         )
 
     except Exception as e:
         logger.error(f"Erro GERAL na rota /relatorios: {e}", exc_info=True)
         flash("Ocorreu um erro inesperado ao processar sua solicitação de relatório.", "error")
-        # Renderiza uma página de erro ou redireciona
-        # Aqui, renderizamos o template com uma mensagem de erro geral
         return render_template(
             'relatorios.html',
-            title="Erro Crítico - Relatórios",
-            fornecedoras=['Consolidado'],
-            error="Erro interno grave ao carregar a página de relatórios.",
+            title="Erro Crítico - Relatórios", error="Erro interno grave.",
             dados=[], headers=[], page=1, total_pages=0, total_items=0,
-            selected_report_type='base_clientes', selected_fornecedora='Consolidado'
+            selected_report_type='base_clientes', selected_fornecedora='Consolidado',
+            selected_start_date=None, selected_end_date=None
             ), 500
 
 
@@ -198,7 +202,7 @@ def exportar_excel_route():
              excel_bytes = excel_exp.export_multi_sheet_excel_bytes(sheets_to_export)
 
         # --- EXPORTAÇÃO RELATÓRIOS DE ABA ÚNICA ---
-        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'boletos_por_cliente', 'recebiveis_clientes']: # Adicionado 'recebiveis_clientes' aqui
+        elif selected_report_type in ['base_clientes', 'clientes_por_licenciado', 'boletos_por_cliente', 'recebiveis_clientes', 'graduacao_licenciado']: # Adicionado 'recebiveis_clientes' aqui
             forn_fn = secure_filename(selected_fornecedora).replace('_', '') if selected_fornecedora and selected_fornecedora.lower() != 'consolidado' else 'Consolidado'
             dados_completos = []
             sheet_title = selected_report_type.replace('_', ' ').title() # Título padrão
@@ -214,6 +218,11 @@ def exportar_excel_route():
                  data_query, data_params = db.build_query(selected_report_type, selected_fornecedora, 0, None) # limit=None
                  dados_completos = db.execute_query(data_query, data_params) or []
                  sheet_title = f"Base Clientes ({forn_fn})"
+
+            elif selected_report_type == 'graduacao_licenciado':
+                 filename = f"Tempo_Graduacao_Licenciado_{timestamp}.xlsx"
+                 dados_completos = db.get_graduacao_licenciado_data(limit=None) # limit=None para todos os dados
+                 sheet_title = "Tempo para Graduação"
 
             elif selected_report_type == 'clientes_por_licenciado':
                  filename = f"Qtd_Clientes_Licenciado_{timestamp}.xlsx"
