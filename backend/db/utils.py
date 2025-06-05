@@ -17,17 +17,24 @@ def get_fornecedoras() -> List[str]:
 
 def get_headers(report_type: str) -> List[str]:
      """Retorna cabeçalhos legíveis baseados no tipo de relatório."""
-     # O header_map continua útil para outros relatórios
+     # (Mesma função que estava no database.py original, pode ser movida para cá)
      header_map = {
-         "c.idcliente": "ID Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular",
+         # Mapeamentos para Base Clientes
+         "c.idcliente": "ID Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular", "c.cidade": "Cidade",
          "regiao": "Região", "data_ativo": "Data Ativo", "qtdeassinatura": "Assinaturas", "c.consumomedio": "Consumo Médio",
          "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ", "c.numcliente": "Num Cliente",
-         "consultor_nome": "Licenciado",
+         "c.email": "Email", "consultor_nome": "Licenciado", "c.fornecedora": "Fornecedora",
+         # Mapeamentos para Rateio Geral (alguns são iguais a Base Clientes)
+         # "c.idcliente": "ID Cliente", ...
+         # Mapeamentos para Rateio RZK
          "devolutiva": "Devolutiva", "licenciado": "Licenciado RZK", "chave_contrato": "Chave Contrato",
-         "nome_cliente_rateio": "Nome Cliente (RZK)",
+         "nome_cliente_rateio": "Nome Cliente (RZK)", # Exemplo de alias específico
+         # Mapeamentos para Clientes por Licenciado
          "c.idconsultor": "ID Licenciado", "c.cpf": "CPF Licenciado", "c.email": "Email Licenciado",
          "c.uf": "UF Licenciado", "quantidade_clientes_ativos": "Qtd Clientes Ativos",
+         # Mapeamentos para Boletos por Cliente
          "dias_ativo": "Dias Ativo", "quantidade_registros_rcb": "Qtd Boletos",
+         # Mapeamentos para Recebíveis Clientes
          "rcb.idrcb": "Idrcb", "codigo_cliente": "Codigo Cliente", "cliente_nome": "Cliente",
          "rcb.valorseria": "Quanto Seria", "rcb.valorapagar": "Valor A Pagar",
          "rcb.valorcomcashback": "Valor Com Cashback", "data_referencia": "Data Referencia",
@@ -43,32 +50,32 @@ def get_headers(report_type: str) -> List[str]:
          "rcb.energiacompensada": "Energia Compensada", "rcb.energiaacumulada": "Energia Acumulada",
          "rcb.energiaajuste": "Energia Ajuste", "rcb.energiafaturamento": "Energia Faturamento",
          "c.desconto_cliente": "Desconto Cliente", "qtd_rcb_cliente": "Qt de Rcb",
+         # Adicione outros mapeamentos faltantes do seu database.py original aqui
+          "c.rg": "RG", "c.emissor": "Emissor", "datainjecao": "Data Injeção",
+          "consultor_celular": "Celular Licenciado", "c.cep": "CEP", "c.endereco": "Endereço", "c.numero": "Número",
+          "c.bairro": "Bairro", "c.complemento": "Complemento", "c.cnpj": "CNPJ", "c.razao": "Razão Social",
+          "c.fantasia": "Nome Fantasia", "c.ufconsumo": "UF Consumo", "c.classificacao": "Classificação",
+          "c.keycontrato": "Key Contrato", "c.keysigner": "Key Signer", "c.leadidsolatio": "Lead ID Solatio",
+          "c.indcli": "Indicação Cliente", "c.enviadocomerc": "Enviado Comercial", "c.obs": "Obs",
+          "c.posvenda": "Pós Venda", "c.retido": "Retido", "c.contrato_verificado": "Contrato Verificado",
+          "c.rateio": "Rateio", "c.validadosucesso": "Validado Sucesso", "status_sucesso": "Status Sucesso",
+          "c.documentos_enviados": "Docs Enviados", "c.link_documento": "Link Documento",
+          "c.caminhoarquivo": "Caminho Arquivo", "c.caminhoarquivocnpj": "Caminho CNPJ",
+          "c.caminhoarquivodoc1": "Caminho Doc 1", "c.caminhoarquivodoc2": "Caminho Doc 2",
+          "c.caminhoarquivoenergia2": "Caminho Energia 2", "c.caminhocontratosocial": "Caminho CS",
+          "c.caminhocomprovante": "Caminho Comprovante", "c.caminhoarquivoestatutoconvencao": "Caminho Estatuto",
+          "c.senhapdf": "Senha PDF", "c.codigo": "Código", "c.elegibilidade": "Elegibilidade",
+          "c.idplanopj": "ID Plano PJ", "dtcancelado": "Data Cancelado", "data_ativo_original": "Data Ativo Original",
+          "dtnasc": "Data Nascimento", "c.origem": "Origem", "c.cm_tipo_pagamento": "CM Tipo Pagamento",
+          "c.status_financeiro": "Status Financeiro", "c.logindistribuidora": "Login Distribuidora",
+          "c.senhadistribuidora": "Senha Distribuidora", "c.nacionalidade": "Nacionalidade",
+          "c.profissao": "Profissão", "c.estadocivil": "Estado Civil",
+          "c.obs_compartilhada": "Obs Compartilhada", "c.linkassinatura1": "Link Assinatura 1",
+          "dtultalteracao": "Dt Ult Alteracao", "c.celular_2": "Celular 2",
      }
-     
+     # Define a ORDEM das colunas para cada relatório (copiado do database.py original)
      keys_order = {
-         ### ALTERAÇÃO INICIADA: A lista de 'base_clientes' agora reflete as colunas da VIEW V_CUSTOMER ###
-         "base_clientes": [
-            "código", "nome", "instalacao", "celular", "cidade", "região", "data ativo", 
-            "assinaturas", "Sequencia Assinaturas", "média consumo", "devolutiva", "data cadastro", 
-            "cpf", "numero cliente", "data ult. alteração", "celular 2", "email", "rg", 
-            "orgão emissor", "data injeção", "id licenciado", "licenciado", "celular consultor", 
-            "cep", "endereco", "numero", "bairro", "complemento", "cnpj", "razao", "fantasia", 
-            "UF consumo", "classificacao", "chave contrato", "chave assinatura cliente", 
-            "chave solatio", "cashback", "codigo solatio", "enviado comerc", "obs", 
-            "posvenda", "retido", "verificado", "rateio", "validado sucesso", "status sucesso", 
-            "doc. enviado", "link Documento", "link Conta Energia", "link Cartão CNPJ", 
-            "link Documento Frente", "link Documento Verso", "link Conta Energia 2", 
-            "link Contrato Social", "link Comprovante de pagamento", "link Estatuto Convenção", 
-            "senha pdf", "usuario ult alteracao", "elegibilidade", "id plano club pj", 
-            "data cancelamento", "data ativação original", "fornecedora", "desconto cliente", 
-            "data nascimento", "Origem", "Forma de pagamento", "Status Financeiro", 
-            "Login Distribuidora", "Senha Distribuidora", "Cliente", "Representante", 
-            "nacionalidade", "profissao", "estadocivil", "forma pagamento", 
-            "Observação Compartilhada", "Auto Conexão", "Link assinatura"
-         ],
-         ### FIM DA ALTERAÇÃO ###
-
-         # Ordens dos outros relatórios permanecem as mesmas
+         "base_clientes": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ],
          "rateio": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
          "rateio_rzk": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "devolutiva", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
          "clientes_por_licenciado": [ "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos" ],
@@ -79,25 +86,27 @@ def get_headers(report_type: str) -> List[str]:
      report_keys = keys_order.get(report_type.lower())
      if not report_keys:
          logger.warning(f"Ordem de chaves não definida para '{report_type}' em get_headers.")
+         # Fallback específico para 'recebiveis_clientes' se a ordem não estiver definida
          if report_type.lower() == 'recebiveis_clientes':
               try:
                   report_keys = [f.split(' AS ')[-1].strip().replace('"', '') for f in _get_recebiveis_clientes_fields()]
                   logger.info(f"Usando ordem de campos da query como fallback para headers de '{report_type}'.")
               except Exception: return []
          else:
-              return [] 
+              return [] # Retorna vazio se não for 'recebiveis_clientes' e não houver ordem
 
      headers_list = []
      missing_in_map = []
      for key in report_keys:
          header = header_map.get(key)
          if not header:
-             base_key = key.split('.')[-1].replace('"', '') 
+             # Tenta mapear a parte base (ex: 'c.idcliente' -> 'idcliente')
+             base_key = key.split('.')[-1].replace('"', '') # Remove prefixo e aspas
              header = header_map.get(base_key)
              if not header:
-                 # O fallback agora simplesmente capitaliza a chave, o que funciona perfeitamente para as colunas da view.
-                 header = key.replace('_', ' ').title()
-                 missing_in_map.append(key)
+                 # Usa a chave original como fallback, formatando-a
+                 header = key.split(' AS ')[-1].strip().replace('_', ' ').replace('"', '').title()
+                 missing_in_map.append(key) # Adiciona à lista de não mapeados
 
          headers_list.append(header)
 
@@ -105,3 +114,5 @@ def get_headers(report_type: str) -> List[str]:
          logger.debug(f"Chaves/Aliases não encontrados em header_map (usado fallback) para '{report_type}': {missing_in_map}")
 
      return headers_list
+
+# --- FIM DA FUNÇÃO get_headers ---

@@ -5,7 +5,7 @@ from .executor import execute_query # Import local
 
 logger = logging.getLogger(__name__)
 
-# --- Funções Específicas para Bases Rateio (Geral) - SEM ALTERAÇÕES AQUI ---
+# --- Funções Específicas para Bases Rateio (Geral) ---
 def get_base_nova_ids(fornecedora: Optional[str] = None) -> List[int]:
     """Busca IDs para 'Base Nova' do Rateio Geral."""
     query_base = """
@@ -43,14 +43,30 @@ def _get_query_fields(report_type: str) -> List[str]:
     """Retorna a lista de campos SQL BASE para Base Clientes ou Rateio Geral."""
     report_type = report_type.lower()
     
-    ### ALTERAÇÃO INICIADA: Simplificado para retornar apenas '*' para base_clientes ###
-    if report_type == "base_clientes":
-        # Como vamos usar a view V_CUSTOMER, podemos selecionar todas as colunas diretamente.
-        # A ordem será definida em `utils.py`.
-        return ["*"] 
-    ### FIM DA ALTERAÇÃO ###
-
-    # Campos Rateio Geral (sem alteração)
+    # Lista completa de campos para Base Clientes
+    base_clientes_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
+        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
+        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "(COALESCE(c.qtdeassinatura, 0)::text || '/4') AS qtdeassinatura",
+        "c.consumomedio", "c.status", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
+        "c.\"cpf/cnpj\"", "c.numcliente", "TO_CHAR(c.dtultalteracao, 'DD/MM/YYYY') AS dtultalteracao",
+        "c.celular_2", "c.email", "c.rg", "c.emissor", "TO_CHAR(c.datainjecao, 'DD/MM/YYYY') AS datainjecao",
+        "c.idconsultor", "co.nome AS consultor_nome", "co.celular AS consultor_celular", "c.cep",
+        "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia",
+        "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli",
+        "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio",
+        "c.validadosucesso", "CASE WHEN c.validadosucesso = 'S' THEN 'Aprovado' ELSE 'Rejeitado' END AS status_sucesso",
+        "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj",
+        "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
+        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo",
+        "c.elegibilidade", "c.idplanopj", "TO_CHAR(c.dtcancelado, 'DD/MM/YYYY') AS dtcancelado",
+        "TO_CHAR(c.data_ativo_original, 'DD/MM/YYYY') AS data_ativo_original", "c.fornecedora",
+        "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc", "c.origem",
+        "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora",
+        "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1"
+    ]
+    
+    # Campos Rateio Geral
     base_rateio_fields = [
         "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", 
         "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao", 
@@ -67,8 +83,45 @@ def _get_query_fields(report_type: str) -> List[str]:
         "c.nacionalidade", "c.profissao", "c.estadocivil"
     ]
     
-    if report_type == "rateio":
+    # Campos para Rateio RZK
+    rateio_rzk_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade",
+        "CASE WHEN c.concessionaria IS NULL OR c.concessionaria = '' THEN c.uf ELSE (c.uf || '-' || c.concessionaria) END AS regiao",
+        "TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo", "c.consumomedio",
+        "c.status AS devolutiva", "TO_CHAR(c.dtcad, 'DD/MM/YYYY') AS dtcad",
+        "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor",
+        "co.nome AS licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro",
+        "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo",
+        "c.classificacao", "c.keycontrato AS chave_contrato", "c.link_documento",
+        "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1",
+        "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial",
+        "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf",
+        "c.fornecedora", "c.desconto_cliente", "TO_CHAR(c.dtnasc, 'DD/MM/YYYY') AS dtnasc",
+        "c.logindistribuidora", "c.senhadistribuidora", "c.nome AS nome_cliente_rateio",
+        "c.nacionalidade", "c.profissao", "c.estadocivil"
+    ]
+    
+    # Campos para Clientes por Licenciado
+    clientes_por_licenciado_fields = [
+        "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos"
+    ]
+    
+    # Campos para Boletos por Cliente
+    boletos_por_cliente_fields = [
+        "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao",
+        "c.fornecedora", "data_ativo", "quantidade_registros_rcb"
+    ]
+
+    if report_type == "base_clientes":
+        return base_clientes_fields
+    elif report_type == "rateio":
         return base_rateio_fields
+    elif report_type == "rateio_rzk":
+        return rateio_rzk_fields
+    elif report_type == "clientes_por_licenciado":
+        return clientes_por_licenciado_fields
+    elif report_type == "boletos_por_cliente":
+        return boletos_por_cliente_fields
     else:
         logger.warning(f"_get_query_fields: Tipo '{report_type}' não mapeado para campos genéricos.")
         return []
@@ -78,25 +131,13 @@ def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_siz
     if not client_ids: return []
     all_details = []
     try:
-        ### ALTERAÇÃO INICIADA: Lógica para base_clientes usa a view V_CUSTOMER ###
-        if report_type.lower() == 'base_clientes':
-            # A view já tem todos os dados, então a busca por ID é mais simples.
-            # O alias "código" na view V_CUSTOMER corresponde ao idcliente.
-            from_sql = 'FROM public."V_CUSTOMER"'
-            where_sql = 'WHERE "código" = ANY(%s)' # Usar o nome da coluna da view
-            order_sql = 'ORDER BY "código"'
-            query = f"SELECT * {from_sql} {where_sql} {order_sql};"
-        else:
-            # Lógica antiga para outros tipos de relatório (rateio)
-            campos = _get_query_fields(report_type)
-            if not campos: logger.error(f"Campos não definidos para get_client_details_by_ids tipo: {report_type}"); return []
-            select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
-            needs_consultor_join = any(f.startswith("co.") for f in campos)
-            join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
-            where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
-            order = "ORDER BY c.idcliente"; query = f"{select} {from_}{join} {where} {order};"
-        ### FIM DA ALTERAÇÃO ###
-
+        campos = _get_query_fields(report_type)
+        if not campos: logger.error(f"Campos não definidos para get_client_details_by_ids tipo: {report_type}"); return []
+        select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
+        needs_consultor_join = any(f.startswith("co.") for f in campos)
+        join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
+        where = "WHERE c.idcliente = ANY(%s) AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))"
+        order = "ORDER BY c.idcliente"; query = f"{select} {from_}{join} {where} {order};"
         for i in range(0, len(client_ids), batch_size):
             batch_ids = client_ids[i:i + batch_size]; params = (batch_ids,)
             batch_results = execute_query(query, params)
@@ -105,68 +146,25 @@ def get_client_details_by_ids(report_type: str, client_ids: List[int], batch_siz
     except Exception as e: logger.error(f"Erro get_client_details_by_ids ({report_type}): {e}", exc_info=True); return []
 
 def build_query(report_type: str, fornecedora: Optional[str] = None, offset: int = 0, limit: Optional[int] = None) -> Tuple[str, tuple]:
-     """Constrói a query paginada para relatórios Base Clientes e Rateio."""
-     ### ALTERAÇÃO INICIADA: Lógica para 'base_clientes' agora usa a view ###
-     if report_type == "base_clientes":
-         select = 'SELECT *' 
-         from_ = 'FROM public."V_CUSTOMER"'
-         where_clauses = []
-         params = []
-
-         # A view V_CUSTOMER já tem a coluna "fornecedora".
-         if fornecedora and fornecedora.lower() != "consolidado":
-             where_clauses.append('"fornecedora" = %s')
-             params.append(fornecedora)
-         
-         where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-         order = 'ORDER BY "código"' # Ordenar pela coluna "código" da view
-         limit_clause = "LIMIT %s" if limit is not None else ""
-         if limit is not None: params.append(limit)
-         offset_clause = "OFFSET %s" if offset > 0 else ""
-         if offset > 0: params.append(offset)
-         
-         query = f"{select} {from_} {where} {order} {limit_clause} {offset_clause};"
-         return query, tuple(params)
-     ### FIM DA ALTERAÇÃO ###
-
-     # Lógica para "rateio" (sem alteração)
-     if report_type == "rateio":
-        campos = _get_query_fields(report_type);
-        if not campos: raise ValueError(f"Campos não definidos para '{report_type}'")
-        select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
-        needs_consultor_join = any(f.startswith("co.") for f in campos)
-        join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
-        where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
-        if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
-        where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; order = "ORDER BY c.idcliente"; limit_clause = ""; offset_clause = ""
-        if limit is not None: limit_clause = f"LIMIT %s"; params.append(limit)
-        if offset > 0: offset_clause = f"OFFSET %s"; params.append(offset)
-        query = f"{select} {from_}{join} {where} {order} {limit_clause} {offset_clause};"
-        return query, tuple(params)
-     
-     raise ValueError(f"build_query não adequado para '{report_type}'.")
-
+     """Constrói a query paginada para relatórios Base Clientes e Rateio Geral."""
+     if report_type not in ["base_clientes", "rateio"]: raise ValueError(f"build_query não adequado para '{report_type}'.")
+     campos = _get_query_fields(report_type);
+     if not campos: raise ValueError(f"Campos não definidos para '{report_type}'")
+     select = f"SELECT {', '.join(campos)}"; from_ = 'FROM public."CLIENTES" c'
+     needs_consultor_join = any(f.startswith("co.") for f in campos)
+     join = ' LEFT JOIN public."CONSULTOR" co ON co.idconsultor = c.idconsultor' if needs_consultor_join else ""
+     where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
+     if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; order = "ORDER BY c.idcliente"; limit_clause = ""; offset_clause = ""
+     if limit is not None: limit_clause = f"LIMIT %s"; params.append(limit)
+     if offset > 0: offset_clause = f"OFFSET %s"; params.append(offset)
+     query = f"{select} {from_}{join} {where} {order} {limit_clause} {offset_clause};"
+     return query, tuple(params)
 
 def count_query(report_type: str, fornecedora: Optional[str] = None) -> Tuple[str, tuple]:
-     """Constrói a query de contagem para relatórios Base Clientes e Rateio."""
-     ### ALTERAÇÃO INICIADA: Lógica de contagem para 'base_clientes' usa a view ###
-     if report_type == "base_clientes":
-        from_ = 'FROM public."V_CUSTOMER"'
-        where_clauses = []
-        params = []
-        if fornecedora and fornecedora.lower() != "consolidado":
-            where_clauses.append('"fornecedora" = %s')
-            params.append(fornecedora)
-        where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-        query = f"SELECT COUNT(*) {from_} {where};"
-        return query, tuple(params)
-     ### FIM DA ALTERAÇÃO ###
-
-     # Lógica para "rateio" (sem alteração)
-     if report_type == "rateio":
-        from_ = 'FROM public."CLIENTES" c'; where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
-        if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
-        where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; query = f"SELECT COUNT(c.idcliente) {from_} {where};"
-        return query, tuple(params)
-
-     raise ValueError(f"count_query não adequado para '{report_type}'.")
+     """Constrói a query de contagem para relatórios Base Clientes e Rateio Geral."""
+     if report_type not in ["base_clientes", "rateio"]: raise ValueError(f"count_query não adequado para '{report_type}'.")
+     from_ = 'FROM public."CLIENTES" c'; where_clauses = [" (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) "]; params = []
+     if fornecedora and fornecedora.lower() != "consolidado": where_clauses.append("c.fornecedora = %s"); params.append(fornecedora)
+     where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""; query = f"SELECT COUNT(c.idcliente) {from_} {where};"
+     return query, tuple(params)

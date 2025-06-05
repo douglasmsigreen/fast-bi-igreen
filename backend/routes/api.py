@@ -1,8 +1,7 @@
 # backend/routes/api.py
 import logging
 import re
-import math # Adicionar import para math
-from flask import Blueprint, request, jsonify, current_app # Adicionar import para current_app
+from flask import Blueprint, request, jsonify
 from flask_login import login_required
 from .. import db
 
@@ -322,81 +321,3 @@ def api_overdue_payments_chart():
         logger.error(f"API Vencidos: Erro inesperado para {days} dias: {e}", exc_info=True)
         return jsonify({"error": f"Erro inesperado no servidor ao buscar dados de vencidos ({days} dias)."}), 500
 # --- FIM DA ROTA API VENCIDOS ---
-
-### INÍCIO DA NOVA ROTA PARA RELATÓRIOS ###
-@api_bp.route('/reports/get-data')
-@login_required
-def api_get_report_data():
-    """
-    Endpoint da API para buscar dados de relatórios de forma assíncrona.
-    Recebe os mesmos parâmetros que a página de relatórios.
-    """
-    try:
-        # 1. Obter parâmetros da requisição
-        page = request.args.get('page', 1, type=int)
-        page = max(1, page)
-        report_type = request.args.get('report_type', 'base_clientes')
-        fornecedora = request.args.get('fornecedora', 'Consolidado')
-
-        logger.info(f"API /reports/get-data: Buscando dados para '{report_type}', Forn: '{fornecedora}', Pág: {page}")
-
-        # 2. Configurações de paginação
-        items_per_page = current_app.config.get('ITEMS_PER_PAGE', 50)
-        offset = (page - 1) * items_per_page
-
-        # 3. Buscar dados e cabeçalhos (lógica movida de reports.py)
-        headers = db.get_headers(report_type)
-        if not headers:
-            logger.error(f"API: Cabeçalhos não definidos para o tipo de relatório: '{report_type}'.")
-            return jsonify({"error": f"Configuração de relatório inválida para '{report_type}'"}), 400
-
-        dados = []
-        total_items = 0
-
-        # Lógica de busca de dados específica por tipo de relatório
-        if report_type in ['base_clientes', 'rateio']:
-            data_query, data_params = db.build_query(report_type, fornecedora, offset, items_per_page)
-            dados = db.execute_query(data_query, data_params) or []
-            count_q, count_p = db.count_query(report_type, fornecedora)
-            total_items_result = db.execute_query(count_q, count_p, fetch_one=True)
-            total_items = total_items_result[0] if total_items_result else 0
-
-        elif report_type == 'rateio_rzk':
-            total_items = db.count_rateio_rzk()
-            dados = db.get_rateio_rzk_data(offset=offset, limit=items_per_page)
-
-        elif report_type == 'clientes_por_licenciado':
-            total_items = db.count_clientes_por_licenciado()
-            dados = db.get_clientes_por_licenciado_data(offset=offset, limit=items_per_page)
-
-        elif report_type == 'boletos_por_cliente':
-            total_items = db.count_boletos_por_cliente(fornecedora=fornecedora)
-            dados = db.get_boletos_por_cliente_data(offset=offset, limit=items_per_page, fornecedora=fornecedora)
-
-        elif report_type == 'recebiveis_clientes':
-            dados = db.get_recebiveis_clientes_data(offset=offset, limit=items_per_page, fornecedora=fornecedora)
-            total_items = db.count_recebiveis_clientes(fornecedora=fornecedora)
-        else:
-            return jsonify({"error": f"Tipo de relatório desconhecido: '{report_type}'"}), 400
-
-        # 4. Calcular paginação
-        total_pages = 0
-        if total_items > 0 and items_per_page > 0:
-            total_pages = math.ceil(total_items / items_per_page)
-
-        # 5. Retornar dados em formato JSON
-        return jsonify({
-            "headers": headers,
-            "dados": dados,
-            "page": page,
-            "total_pages": total_pages,
-            "total_items": total_items,
-            "report_type": report_type, # Devolve para consistência
-            "fornecedora": fornecedora, # Devolve para consistência
-        })
-
-    except Exception as e:
-        logger.error(f"Erro na API /reports/get-data: {e}", exc_info=True)
-        return jsonify({"error": "Ocorreu um erro interno no servidor ao buscar os dados."}), 500
-
-### FIM DA NOVA ROTA PARA RELATÓRIOS ###
