@@ -1,12 +1,10 @@
 # backend/db/utils.py
 import logging
 from typing import List
-from .executor import execute_query # Import local
-from .reports_specific import _get_recebiveis_clientes_fields # Importar função privada para fallback
+from .executor import execute_query 
+from .reports_specific import _get_recebiveis_clientes_fields
 
 logger = logging.getLogger(__name__)
-
-# --- Funções Auxiliares para Relatórios (Cabeçalhos e Fornecedoras) ---
 
 def get_fornecedoras() -> List[str]:
     """Busca lista única de fornecedoras."""
@@ -17,7 +15,17 @@ def get_fornecedoras() -> List[str]:
 
 def get_headers(report_type: str) -> List[str]:
      """Retorna cabeçalhos legíveis baseados no tipo de relatório."""
-     # (Mesma função que estava no database.py original, pode ser movida para cá)
+
+     # Bloco específico adicionado para os novos cabeçalhos do relatório
+     if report_type.lower() == 'boletos_por_cliente':
+        return [
+            "Código", "Nome", "Instalação", "Número Cliente", "CPF/CNPJ", "Cidade",
+            "Região", "Fornecedora", "Consumo Médio", "Data Ativo", "Dias desde Ativação",
+            "Validado Sucesso", "Devolutiva", "ID Licenciado", "Licenciado",
+            "Status PRO", "Data Graduação PRO", "Quantidade Boletos"
+        ]
+     
+     # Lógica existente para os outros relatórios
      header_map = {
          # Mapeamentos para Base Clientes
          "c.idcliente": "ID Cliente", "c.nome": "Nome", "c.numinstalacao": "Instalação", "c.celular": "Celular", "c.cidade": "Cidade",
@@ -76,12 +84,13 @@ def get_headers(report_type: str) -> List[str]:
           "data_ativo_formatada": "Data Ativo",
           "data_graduacao_formatada": "Data Graduação",
      }
-     # Define a ORDEM das colunas para cada relatório (copiado do database.py original)
      keys_order = {
          "base_clientes": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "qtdeassinatura", "c.consumomedio", "c.status", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "dtultalteracao", "c.celular_2", "c.email", "c.rg", "c.emissor", "datainjecao", "c.idconsultor", "consultor_nome", "consultor_celular", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.keycontrato", "c.keysigner", "c.leadidsolatio", "c.indcli", "c.enviadocomerc", "c.obs", "c.posvenda", "c.retido", "c.contrato_verificado", "c.rateio", "c.validadosucesso", "status_sucesso", "c.documentos_enviados", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.codigo", "c.elegibilidade", "c.idplanopj", "dtcancelado", "data_ativo_original", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.origem", "c.cm_tipo_pagamento", "c.status_financeiro", "c.logindistribuidora", "c.senhadistribuidora", "c.nacionalidade", "c.profissao", "c.estadocivil", "c.obs_compartilhada", "c.linkassinatura1" ],
          "rateio": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "c.cep", "consultor_nome", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
          "rateio_rzk": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "data_ativo", "c.consumomedio", "devolutiva", "dtcad", "c.\"cpf/cnpj\"", "c.numcliente", "c.email", "c.rg", "c.emissor", "licenciado", "c.cep", "c.endereco", "c.numero", "c.bairro", "c.complemento", "c.cnpj", "c.razao", "c.fantasia", "c.ufconsumo", "c.classificacao", "chave_contrato", "c.link_documento", "c.caminhoarquivo", "c.caminhoarquivocnpj", "c.caminhoarquivodoc1", "c.caminhoarquivodoc2", "c.caminhoarquivoenergia2", "c.caminhocontratosocial", "c.caminhocomprovante", "c.caminhoarquivoestatutoconvencao", "c.senhapdf", "c.fornecedora", "c.desconto_cliente", "dtnasc", "c.logindistribuidora", "c.senhadistribuidora", "nome_cliente_rateio", "c.nacionalidade", "c.profissao", "c.estadocivil" ],
          "clientes_por_licenciado": [ "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos" ],
+         # Esta linha abaixo se torna obsoleta com a adição do bloco acima
+         # "boletos_por_cliente": [ "c.idcliente", "c.nome", ... ],
          "boletos_por_cliente": [ "c.idcliente", "c.nome", "c.numinstalacao", "c.celular", "c.cidade", "regiao", "c.fornecedora", "data_ativo", "dias_ativo", "quantidade_registros_rcb" ],
          "graduacao_licenciado": [
             "c.idconsultor",
@@ -96,32 +105,29 @@ def get_headers(report_type: str) -> List[str]:
      report_keys = keys_order.get(report_type.lower())
      if not report_keys:
          logger.warning(f"Ordem de chaves não definida para '{report_type}' em get_headers.")
-         # Fallback específico para 'recebiveis_clientes' se a ordem não estiver definida
          if report_type.lower() == 'recebiveis_clientes':
               try:
                   report_keys = [f.split(' AS ')[-1].strip().replace('"', '') for f in _get_recebiveis_clientes_fields()]
                   logger.info(f"Usando ordem de campos da query como fallback para headers de '{report_type}'.")
               except Exception: return []
          else:
-              return [] # Retorna vazio se não for 'recebiveis_clientes' e não houver ordem
+              return [] 
 
      headers_list = []
      missing_in_map = []
      for key in report_keys:
          header = header_map.get(key)
          if not header:
-             # Tenta mapear a parte base (ex: 'c.idcliente' -> 'idcliente')
-             base_key = key.split('.')[-1].replace('"', '') # Remove prefixo e aspas
+             base_key = key.split('.')[-1].replace('"', '')
              header = header_map.get(base_key)
              if not header:
-                 # Usa a chave original como fallback, formatando-a
                  header = key.split(' AS ')[-1].strip().replace('_', ' ').replace('"', '').title()
-                 missing_in_map.append(key) # Adiciona à lista de não mapeados
+                 missing_in_map.append(key)
 
          headers_list.append(header)
 
      if missing_in_map:
-         logger.debug(f"Chaves/Aliases não encontrados em header_map (usado fallback) para '{report_type}': {missing_in_map}")
+         logger.debug(f"Chaves/Aliases não encontrados em header_map para '{report_type}': {missing_in_map}")
 
      return headers_list
 

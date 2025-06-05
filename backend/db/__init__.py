@@ -1,5 +1,5 @@
 # backend/db/__init__.py
-import logging # <--- ADICIONE ESTA LINHA
+import logging
 
 # Importações do connection.py
 from .connection import init_pool, get_db, close_db, close_pool, db_pool
@@ -21,8 +21,6 @@ from .reports_base import (
 from .reports_specific import (
     get_clientes_por_licenciado_data,
     count_clientes_por_licenciado,
-    get_boletos_por_cliente_data,
-    count_boletos_por_cliente,
     get_rateio_rzk_base_nova_ids,
     get_rateio_rzk_base_enviada_ids,
     _get_rateio_rzk_fields, # Exportar se usado externamente
@@ -34,6 +32,12 @@ from .reports_specific import (
     count_recebiveis_clientes,
     get_graduacao_licenciado_data,
     count_graduacao_licenciado
+)
+
+# NOVA importação do reports_boletos.py
+from .reports_boletos import (
+    get_boletos_por_cliente_data,
+    count_boletos_por_cliente
 )
 
 # Importações do dashboard.py

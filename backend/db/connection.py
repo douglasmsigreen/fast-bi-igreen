@@ -16,13 +16,18 @@ def init_pool():
         return
     try:
         logger.info("Inicializando pool de conexões com o banco de dados...")
+        
+        # Aumentando o número máximo de conexões de 5 para 15.
+        # Você pode ajustar este valor conforme a necessidade.
         db_pool = psycopg2.pool.SimpleConnectionPool(
-            minconn=1, maxconn=5, **Config.DB_CONFIG
+            minconn=2,  # Aumentar o mínimo para ter conexões prontas
+            maxconn=15, # <<<< ALTERAÇÃO PRINCIPAL AQUI <<<<
+            **Config.DB_CONFIG
         )
-        # Verifica a conexão inicial
+        
         conn = db_pool.getconn()
         db_pool.putconn(conn)
-        logger.info("Pool de conexões inicializado com sucesso.")
+        logger.info("Pool de conexões inicializado com sucesso (min=2, max=15).")
     except (psycopg2.Error, KeyError, Exception) as e:
         logger.critical(f"Falha CRÍTICA ao inicializar pool de conexões: {e}", exc_info=True)
         db_pool = None
