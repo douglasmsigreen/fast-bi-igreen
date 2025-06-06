@@ -30,10 +30,14 @@ def get_headers(report_type: str) -> List[str]:
          "dias_em_atraso": "Dias em Atraso",
          "c.idcliente": "ID Cliente", "c.numinstalacao": "Instalação", "c.celular": "Celular",
          "regiao": "Região", "qtdeassinatura": "Assinaturas", "c.consumomedio": "Consumo Médio",
-         "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ",
+         "consumomedio": "Consumo Médio", "c.status": "Status Cliente", "dtcad": "Data Cadastro", "c.\"cpf/cnpj\"": "CPF/CNPJ",
          "c.numcliente": "Num Cliente", "c.email": "Email", "consultor_nome": "Licenciado",
          "chave_contrato": "Chave Contrato", "nome_cliente_rateio": "Nome Cliente (RZK)",
-         "c.idconsultor": "ID Licenciado", "c.cpf": "CPF Licenciado", "c.uf": "UF Licenciado",
+         "c.idconsultor": "ID Licenciado", "c.nome": "Nome Licenciado",
+         "data_ativo_formatada": "Data Ativo",
+         "data_graduacao_formatada": "Data Graduação",
+         "dias_para_graduacao": "Dias para Graduar",
+         "c.cpf": "CPF Licenciado", "c.uf": "UF Licenciado",
          "quantidade_clientes_ativos": "Qtd Clientes Ativos", "rcb.idrcb": "Idrcb",
          "codigo_cliente": "Codigo Cliente", "cliente_nome": "Cliente", "rcb.valorseria": "Quanto Seria",
          "rcb.valorapagar": "Valor A Pagar", "rcb.valorcomcashback": "Valor Com Cashback",
@@ -59,6 +63,7 @@ def get_headers(report_type: str) -> List[str]:
          "c.indcli": "Indicação Cliente", "c.enviadocomerc": "Enviado Comercial", "c.obs": "Obs",
          "c.posvenda": "Pós Venda", "c.retido": "Retido", "c.contrato_verificado": "Contrato Verificado",
          "c.rateio": "Rateio", "c.validadosucesso": "Validado Sucesso", "status_sucesso": "Status Sucesso",
+         "retorno_fornecedora": "Retorno Fornecedora",
          "c.documentos_enviados": "Docs Enviados", "c.link_documento": "Link Documento",
          "c.caminhoarquivo": "Caminho Arquivo", "c.caminhoarquivocnpj": "Caminho CNPJ",
          "c.caminhoarquivodoc1": "Caminho Doc 1", "c.caminhoarquivodoc2": "Caminho Doc 2",
@@ -81,15 +86,24 @@ def get_headers(report_type: str) -> List[str]:
         "clientes_por_licenciado": [ "c.idconsultor", "c.nome", "c.cpf", "c.email", "c.uf", "quantidade_clientes_ativos" ],
         "boletos_por_cliente": [
              "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
-             "ufconsumo", "concessionaria", "fornecedora", "data_ativo", 
+             "ufconsumo", "concessionaria", "fornecedora",
+             "consumomedio",
+             "data_ativo", 
              "dias_desde_ativacao",
              "injecao",
              "atraso_na_injecao",
              "dias_em_atraso",
-             "validado_sucesso", "devolutiva", "id_licenciado", "licenciado", "status_pro",
+             "validado_sucesso", "devolutiva", "retorno_fornecedora", "id_licenciado", "licenciado", "status_pro",
              "data_graduacao_pro", "quantidade_boletos"
         ],
-        "recebiveis_clientes": [ "rcb.idrcb", "codigo_cliente", "cliente_nome", "rcb.numinstalacao", "rcb.valorseria", "rcb.valorapagar", "rcb.valorcomcashback", "data_referencia", "data_vencimento", "data_pagamento", "data_vencimento_original", "c.celular", "c.email", "status_financeiro_cliente", "c.numcliente", "id_licenciado", "nome_licenciado", "celular_licenciado", "status_calculado", "rcb.urldemonstrativo", "rcb.urlboleto", "rcb.qrcode", "rcb.urlcontacemig", "valor_distribuidora", "rcb.codigobarra", "c.ufconsumo", "fornecedora_cliente", "c.concessionaria", "c.cnpj", "cpf_cnpj_cliente", "rcb.nrodocumento", "rcb.idcomerc", "rcb.idbomfuturo", "rcb.energiainjetada", "rcb.energiacompensada", "rcb.energiaacumulada", "rcb.energiaajuste", "rcb.energiafaturamento", "c.desconto_cliente", "qtd_rcb_cliente" ]
+        "recebiveis_clientes": [ "rcb.idrcb", "codigo_cliente", "cliente_nome", "rcb.numinstalacao", "rcb.valorseria", "rcb.valorapagar", "rcb.valorcomcashback", "data_referencia", "data_vencimento", "data_pagamento", "data_vencimento_original", "c.celular", "c.email", "status_financeiro_cliente", "c.numcliente", "id_licenciado", "nome_licenciado", "celular_licenciado", "status_calculado", "rcb.urldemonstrativo", "rcb.urlboleto", "rcb.qrcode", "rcb.urlcontacemig", "valor_distribuidora", "rcb.codigobarra", "c.ufconsumo", "fornecedora_cliente", "c.concessionaria", "c.cnpj", "cpf_cnpj_cliente", "rcb.nrodocumento", "rcb.idcomerc", "rcb.idbomfuturo", "rcb.energiainjetada", "rcb.energiacompensada", "rcb.energiaacumulada", "rcb.energiaajuste", "rcb.energiafaturamento", "c.desconto_cliente", "qtd_rcb_cliente" ],
+        "graduacao_licenciado": [
+            "c.idconsultor",
+            "c.nome",
+            "data_ativo_formatada",
+            "data_graduacao_formatada",
+            "dias_para_graduacao"
+        ]
     }
 
     report_keys = keys_order.get(report_type.lower())

@@ -26,7 +26,9 @@ from .reports_specific import (
     get_rateio_rzk_data,
     count_rateio_rzk,
     get_recebiveis_clientes_data,
-    count_recebiveis_clientes
+    count_recebiveis_clientes,
+    get_graduacao_licenciado_data,
+    count_graduacao_licenciado
 )
 
 # Bloco de importação para o arquivo de boletos

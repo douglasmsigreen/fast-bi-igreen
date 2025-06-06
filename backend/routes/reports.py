@@ -231,7 +231,7 @@ def exportar_excel_route():
 
             elif selected_report_type == 'boletos_por_cliente':
                  filename = f"Qtd_Boletos_Cliente_{forn_fn}_{timestamp}.xlsx"
-                 dados_completos = db.get_boletos_por_cliente_data(limit=None, fornecedora=selected_fornecedora) # limit=None
+                 dados_completos = db.get_boletos_por_cliente_data(limit=None, fornecedora=selected_fornecedora, export_mode=True) # limit=None
                  sheet_title = f"Boletos Cliente ({forn_fn})"
 
             elif selected_report_type == 'recebiveis_clientes': # Novo bloco para exportação de recebíveis
