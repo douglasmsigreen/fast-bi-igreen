@@ -9,7 +9,19 @@ from .executor import execute_query
 logger = logging.getLogger(__name__)
 
 CTE_BASE = """
-WITH BaseQuery AS (
+WITH LatestDevolutiva AS (
+    -- 1. Seleciona a devolução mais recente para cada cliente, incluindo a flag 'corrigida'
+    SELECT DISTINCT ON (idcliente)
+        idcliente,
+        obs,
+        corrigida -- <<< COLUNA ADICIONADA AQUI
+    FROM public."DEVOLUTIVAS"
+    -- Ordena por cliente e depois pela data de atualização em ordem decrescente
+    -- DISTINCT ON pega a primeira linha desta ordenação, que será a mais recente
+    ORDER BY idcliente, updated_at DESC
+),
+BaseQuery AS (
+    -- 2. A query principal agora usa o resultado da CTE acima
     SELECT 
         c.idcliente AS codigo, 
         c.nome, 
@@ -30,7 +42,7 @@ WITH BaseQuery AS (
                 ELSE ''::text
             END
         END AS fornecedora,
-        c.consumomedio, -- <-- COLUNA ADICIONADA AO SELECT
+        c.consumomedio,
         TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo,
         CASE
             WHEN c.data_ativo IS NOT NULL 
@@ -38,7 +50,17 @@ WITH BaseQuery AS (
             ELSE NULL
         END AS dias_desde_ativacao,
         c.validadosucesso AS validado_sucesso,
-        c.status AS devolutiva,
+        
+        -- <<< LÓGICA DO CASE ATUALIZADA COM A NOVA REGRA >>>
+        CASE
+            -- Se a devolução mais recente foi corrigida, usa o status do cliente
+            WHEN d.corrigida = TRUE THEN c.status
+            -- Se não foi corrigida E o status do cliente está vazio, usa a observação da devolução
+            WHEN COALESCE(c.status, '')::text = '' THEN d.obs
+            -- Caso contrário (status do cliente preenchido e devolução não corrigida), usa o status do cliente
+            ELSE c.status
+        END AS devolutiva,
+
         c.idconsultor AS id_licenciado,
         cons.nome AS licenciado,
         CASE
@@ -57,14 +79,20 @@ WITH BaseQuery AS (
         FROM public."CONTROLE_PRO"
         GROUP BY idconsultor
     ) cp ON c.idconsultor = cp.idconsultor
+    
+    -- <<< JOIN ALTERADO PARA USAR A CTE COM A DEVOLUÇÃO MAIS RECENTE >>>
+    LEFT JOIN LatestDevolutiva d ON c.idcliente = d.idcliente
+
     WHERE 
         (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND (c.status NOT ILIKE %s OR c.status IS NULL)
     GROUP BY 
         c.idcliente, c.nome, c.numinstalacao, c.celular, c.cidade,
-        c.ufconsumo, c.concessionaria, fornecedora, c.consumomedio, -- <-- COLUNA ADICIONADA AO GROUP BY
+        c.ufconsumo, c.concessionaria, fornecedora, c.consumomedio,
         c.data_ativo, dias_desde_ativacao, c.validadosucesso, c.status, 
-        c.idconsultor, cons.nome, cp.dtgraduacao, c.cnpj, c."cpf/cnpj", c.numcliente
+        c.idconsultor, cons.nome, cp.dtgraduacao, c.cnpj, c."cpf/cnpj", c.numcliente,
+        d.obs,
+        d.corrigida -- <<< CAMPO ADICIONADO AO GROUP BY >>>
 )
 """
 
