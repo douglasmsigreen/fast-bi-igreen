@@ -3,6 +3,12 @@ import logging
 from typing import List, Tuple, Optional
 from datetime import datetime
 from .executor import execute_query # Import local
+from collections import defaultdict
+# A importação do reports_boletos deve ser feita no __init__.py do módulo 'db'
+# mas para garantir o acesso, podemos referenciar via db.reports_boletos se necessário.
+# Vamos assumir que está acessível.
+from . import reports_boletos
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -422,58 +428,70 @@ def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[st
 # --- INÍCIO DA NOVA FUNÇÃO PARA GREEN SCORE ---
 def get_green_score_by_fornecedora() -> List[Tuple[str, float]] or None:
     """
-    Calcula o "Green Score" para cada fornecedora.
-    O score é (1 - (Clientes Ativos Vencidos / Total Clientes Ativos)) * 100.
+    Calcula o "Green Score" para cada fornecedora baseado na pontualidade de injeção.
+    O score é a porcentagem de clientes ativos que NÃO estão com a injeção atrasada.
+    Lógica derivada do relatório 'Boletos por Cliente'.
     """
-    query = """
-        WITH TotalAtivos AS (
-            -- Contagem de todos os clientes ativos por fornecedora
-            SELECT
-                fornecedora,
-                COUNT(idcliente) AS total_ativos
-            FROM public."CLIENTES"
-            WHERE
-                data_ativo IS NOT NULL
-                AND (origem IS NULL OR origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-                AND fornecedora IS NOT NULL AND fornecedora <> ''
-            GROUP BY fornecedora
-        ),
-        Vencidos AS (
-            -- Contagem de clientes ativos distintos com pelo menos um pagamento vencido
-            SELECT
-                c.fornecedora,
-                COUNT(DISTINCT c.idcliente) AS total_vencidos
-            FROM public."CLIENTES" c
-            JOIN public."RCB_CLIENTES" rc ON c.numinstalacao = rc.numinstalacao
-            WHERE
-                c.data_ativo IS NOT NULL
-                AND (c.origem IS NULL OR origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-                AND rc.dtpagamento IS NULL
-                AND rc.dtvencimento < CURRENT_DATE
-            GROUP BY c.fornecedora
-        )
-        -- Cálculo final do Score
-        SELECT
-            ta.fornecedora,
-            -- COALESCE para tratar fornecedoras sem clientes vencidos
-            (1 - (COALESCE(v.total_vencidos, 0)::FLOAT / ta.total_ativos::FLOAT)) * 100 AS green_score
-        FROM TotalAtivos ta
-        LEFT JOIN Vencidos v ON ta.fornecedora = v.fornecedora
-        WHERE ta.total_ativos > 0 -- Garante que não dividimos por zero
-        ORDER BY green_score DESC;
-    """
-    logger.info("Buscando dados para o Green Score por fornecedora...")
+    logger.info("Calculando Green Score baseado no relatório 'Atraso na Injeção'...")
     try:
-        results = execute_query(query, ())
-        if results:
-            # Formata para (str, float) com 2 casas decimais
-            formatted_results = [(str(row[0]), round(float(row[1]), 2)) for row in results]
-            logger.info(f"Dados de Green Score encontrados para {len(formatted_results)} fornecedoras.")
-            return formatted_results
-        else:
-            logger.info("Nenhum dado de Green Score encontrado.")
+        # 1. Obter todos os dados do relatório de boletos, sem paginação.
+        # A função get_boletos_por_cliente_data já contém toda a lógica de cálculo necessária.
+        all_clients_data = reports_boletos.get_boletos_por_cliente_data(limit=None, export_mode=True)
+
+        if not all_clients_data:
+            logger.warning("Nenhum dado retornado do relatório de boletos para calcular o Green Score.")
             return []
+
+        # 2. ATENÇÃO: A lógica abaixo depende da ordem das colunas definida em `reports_boletos.py`.
+        # Se a ordem lá mudar, aqui também precisará ser ajustado.
+        # Esta é a ordem esperada, conforme o arquivo `reports_boletos.py`:
+        final_columns_order = [
+             "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
+             "ufconsumo", "concessionaria", "fornecedora", 
+             "consumomedio", "data_ativo", "dias_desde_ativacao",
+             "injecao", "atraso_na_injecao", "dias_em_atraso",
+             "validado_sucesso", "devolutiva", "retorno_fornecedora",
+             "id_licenciado", "licenciado", "status_pro",
+             "data_graduacao_pro", "quantidade_boletos"
+        ]
+        
+        try:
+            fornecedora_idx = final_columns_order.index('fornecedora')
+            atraso_idx = final_columns_order.index('atraso_na_injecao')
+        except ValueError as e:
+            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem definida. O cálculo do score falhará.")
+            return None
+
+        # 3. Processar os dados em Python para calcular o score
+        totals_by_supplier = defaultdict(int)
+        on_time_by_supplier = defaultdict(int)
+
+        for row in all_clients_data:
+            fornecedora = row[fornecedora_idx]
+            atraso_status = row[atraso_idx]
+
+            # Ignora registros sem uma fornecedora definida
+            if not fornecedora or pd.isna(fornecedora):
+                continue
+
+            totals_by_supplier[fornecedora] += 1
+            if atraso_status == 'NÃO':
+                on_time_by_supplier[fornecedora] += 1
+        
+        # 4. Calcular o score final para cada fornecedora
+        scores = []
+        for fornecedora, total_count in totals_by_supplier.items():
+            on_time_count = on_time_by_supplier.get(fornecedora, 0)
+            score = (on_time_count / total_count) * 100 if total_count > 0 else 0
+            scores.append((fornecedora, round(score, 2)))
+
+        # 5. Ordenar pelo score, do maior para o menor
+        scores.sort(key=lambda x: x[1], reverse=True)
+        
+        logger.info(f"Green Score (Atraso Injeção) calculado para {len(scores)} fornecedoras.")
+        return scores
+
     except Exception as e:
-        logger.error(f"Erro ao buscar dados do Green Score: {e}", exc_info=True)
+        logger.error(f"Erro inesperado ao calcular o Green Score (Atraso Injeção): {e}", exc_info=True)
         return None
 # --- FIM DA NOVA FUNÇÃO ---
