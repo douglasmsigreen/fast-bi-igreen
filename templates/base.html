@@ -67,6 +67,15 @@
                       </a>
                   </li>
 
+                  {# <<< NOVO ITEM DE MENU PARA GREEN SCORE >>> #}
+                  <li class="{{ 'active' if request.endpoint == 'dashboard_bp.green_score' else '' }}">
+                     <a href="{{ url_for('dashboard_bp.green_score') }}">
+                         <i class="fas fa-tachometer-alt-average fa-fw"></i> {# Ícone de velocímetro #}
+                         <span>Green Score</span>
+                     </a>
+                 </li>
+                 {# <<< FIM DO NOVO ITEM >>> #}
+
                   {# 3. Mapas e Gráficos - Usando endpoint correto #}
                    <li class="{{ 'active' if request.endpoint == 'dashboard_bp.mapa_clientes' else '' }}">
                       <a href="{{ url_for('dashboard_bp.mapa_clientes') }}">

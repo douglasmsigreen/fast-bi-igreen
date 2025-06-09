@@ -417,3 +417,63 @@ def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[st
         logger.error(f"Erro ao buscar pagamentos vencidos ({days_overdue} dias) por fornecedora: {e}", exc_info=True)
         return None
 # --- FIM DA NOVA FUNÇÃO ---
+
+
+# --- INÍCIO DA NOVA FUNÇÃO PARA GREEN SCORE ---
+def get_green_score_by_fornecedora() -> List[Tuple[str, float]] or None:
+    """
+    Calcula o "Green Score" para cada fornecedora.
+    O score é (1 - (Clientes Ativos Vencidos / Total Clientes Ativos)) * 100.
+    """
+    query = """
+        WITH TotalAtivos AS (
+            -- Contagem de todos os clientes ativos por fornecedora
+            SELECT
+                fornecedora,
+                COUNT(idcliente) AS total_ativos
+            FROM public."CLIENTES"
+            WHERE
+                data_ativo IS NOT NULL
+                AND (origem IS NULL OR origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+                AND fornecedora IS NOT NULL AND fornecedora <> ''
+            GROUP BY fornecedora
+        ),
+        Vencidos AS (
+            -- Contagem de clientes ativos distintos com pelo menos um pagamento vencido
+            SELECT
+                c.fornecedora,
+                COUNT(DISTINCT c.idcliente) AS total_vencidos
+            FROM public."CLIENTES" c
+            JOIN public."RCB_CLIENTES" rc ON c.numinstalacao = rc.numinstalacao
+            WHERE
+                c.data_ativo IS NOT NULL
+                AND (c.origem IS NULL OR origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+                AND rc.dtpagamento IS NULL
+                AND rc.dtvencimento < CURRENT_DATE
+            GROUP BY c.fornecedora
+        )
+        -- Cálculo final do Score
+        SELECT
+            ta.fornecedora,
+            -- COALESCE para tratar fornecedoras sem clientes vencidos
+            (1 - (COALESCE(v.total_vencidos, 0)::FLOAT / ta.total_ativos::FLOAT)) * 100 AS green_score
+        FROM TotalAtivos ta
+        LEFT JOIN Vencidos v ON ta.fornecedora = v.fornecedora
+        WHERE ta.total_ativos > 0 -- Garante que não dividimos por zero
+        ORDER BY green_score DESC;
+    """
+    logger.info("Buscando dados para o Green Score por fornecedora...")
+    try:
+        results = execute_query(query, ())
+        if results:
+            # Formata para (str, float) com 2 casas decimais
+            formatted_results = [(str(row[0]), round(float(row[1]), 2)) for row in results]
+            logger.info(f"Dados de Green Score encontrados para {len(formatted_results)} fornecedoras.")
+            return formatted_results
+        else:
+            logger.info("Nenhum dado de Green Score encontrado.")
+            return []
+    except Exception as e:
+        logger.error(f"Erro ao buscar dados do Green Score: {e}", exc_info=True)
+        return None
+# --- FIM DA NOVA FUNÇÃO ---

@@ -98,3 +98,22 @@ def mapa_clientes():
     # O template será buscado em ../templates/mapa_clientes.html
     return render_template('mapa_clientes.html', title="Mapa de Clientes - Fast BI")
 # --- FIM DA ROTA ADICIONADA ---
+
+# --- ROTA PARA A NOVA PÁGINA GREEN SCORE ---
+@dashboard_bp.route('/green-score')
+@login_required
+def green_score():
+    """Rota para a página Green Score."""
+    logger.info(f"Acessando /green-score. Utilizador: {current_user.email if hasattr(current_user, 'email') else 'N/A'}")
+    
+    # Busca a lista de fornecedoras para popular o filtro
+    try:
+        fornecedoras = db.get_fornecedoras()
+    except Exception as e:
+        logger.error(f"Erro ao buscar fornecedoras para Green Score: {e}")
+        fornecedoras = []
+
+    return render_template('green_score.html', 
+                           title="Green Score - Fast BI",
+                           fornecedoras=fornecedoras)
+# --- FIM DA ROTA ---

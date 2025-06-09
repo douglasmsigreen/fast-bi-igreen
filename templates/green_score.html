@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}Green Score por Fornecedora{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <p class="text-center text-muted mb-4">
+        Acompanhe a performance de cada fornecedora com base na saúde financeira dos seus clientes.
+    </p>
+
+    <div class="filter-row justify-content-center mb-4">
+        <div class="filter-group">
+            <label for="fornecedora-filter">Filtrar por Fornecedora:</label>
+            <select id="fornecedora-filter" class="form-control" style="width: 250px;">
+                <option value="all">Todas as Fornecedoras</option>
+                {% for forn in fornecedoras %}
+                    <option value="{{ forn }}">{{ forn }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div id="gauge-container" class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+        {# O JavaScript vai popular esta área #}
+        <div id="loading-placeholder" class="text-center p-5 w-100">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Carregando scores...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+    
+    <script src="{{ url_for('static', filename='js/green_score.js') }}"></script>
+{% endblock %}

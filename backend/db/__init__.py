@@ -49,7 +49,8 @@ from .dashboard import (
     get_active_clients_count_by_concessionaria_month,
     get_state_map_data,
     get_fornecedora_summary_no_rcb,
-    get_overdue_payments_by_fornecedora
+    get_overdue_payments_by_fornecedora,
+    get_green_score_by_fornecedora
 )
 
 # Importações do utils.py
