@@ -100,6 +100,7 @@ def get_headers(report_type: str) -> List[str]:
         "graduacao_licenciado": [
             "c.idconsultor",
             "c.nome",
+            "c.celular",
             "data_ativo_formatada",
             "data_graduacao_formatada",
             "dias_para_graduacao"

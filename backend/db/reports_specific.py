@@ -344,9 +344,10 @@ def get_graduacao_licenciado_data(
     """
     Busca os dados para 'Tempo até Graduação', com filtros de data opcionais.
     """
+    # A ALTERAÇÃO ESTÁ NA LINHA ABAIXO: Adicionamos c.celular após c.nome
     base_query = """
         SELECT
-            c.idconsultor, c.nome,
+            c.idconsultor, c.nome, c.celular,
             TO_CHAR(c.data_ativo, 'DD/MM/YYYY') AS data_ativo_formatada,
             TO_CHAR(cp.dtgraduacao, 'DD/MM/YYYY') AS data_graduacao_formatada,
             (cp.dtgraduacao - c.data_ativo) AS dias_para_graduacao
