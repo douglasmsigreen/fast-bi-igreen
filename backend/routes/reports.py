@@ -220,9 +220,9 @@ def exportar_excel_route():
                  sheet_title = f"Base Clientes ({forn_fn})"
 
             elif selected_report_type == 'graduacao_licenciado':
-                 filename = f"Tempo_Graduacao_Licenciado_{timestamp}.xlsx"
+                 filename = f"PRO_Graduacao_{timestamp}.xlsx" # <-- NOME DO ARQUIVO ALTERADO
                  dados_completos = db.get_graduacao_licenciado_data(limit=None) # limit=None para todos os dados
-                 sheet_title = "Tempo para Graduação"
+                 sheet_title = "PRO - Graduação" # <-- NOME DA ABA ALTERADO
 
             elif selected_report_type == 'clientes_por_licenciado':
                  filename = f"Qtd_Clientes_Licenciado_{timestamp}.xlsx"
