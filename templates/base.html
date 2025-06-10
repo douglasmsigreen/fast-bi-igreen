@@ -54,7 +54,7 @@
                   {# 1. Painel de Controle - Usando endpoint correto #}
                   <li class="{{ 'active' if request.endpoint == 'dashboard_bp.dashboard' else '' }}">
                       <a href="{{ url_for('dashboard_bp.dashboard') }}">
-                          <i class="fas fa-tachometer-alt fa-fw"></i>
+                          <i class="fas fa-home fa-fw"></i>  {# <--- NOVO ÍCONE: 'home' #}
                           <span>Painel</span> {# Texto mais curto #}
                       </a>
                   </li>
