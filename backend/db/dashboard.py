@@ -426,17 +426,25 @@ def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[st
 
 
 # --- INÍCIO DA NOVA FUNÇÃO PARA GREEN SCORE ---
-def get_green_score_by_fornecedora() -> List[Tuple[str, float]] or None:
+def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> List[Tuple[str, float]] or None:
     """
     Calcula o "Green Score" para cada fornecedora baseado na pontualidade de injeção.
     O score é a porcentagem de clientes ativos que NÃO estão com a injeção atrasada.
     Lógica derivada do relatório 'Boletos por Cliente'.
     """
-    logger.info("Calculando Green Score baseado no relatório 'Atraso na Injeção'...")
+    log_msg = "Calculando Green Score"
+    if fornecedora_filter:
+        log_msg += f" para a fornecedora: {fornecedora_filter}"
+    logger.info(log_msg)
+
     try:
         # 1. Obter todos os dados do relatório de boletos, sem paginação.
         # A função get_boletos_por_cliente_data já contém toda a lógica de cálculo necessária.
-        all_clients_data = reports_boletos.get_boletos_por_cliente_data(limit=None, export_mode=True)
+        all_clients_data = reports_boletos.get_boletos_por_cliente_data(
+            limit=None, 
+            export_mode=True, 
+            fornecedora=fornecedora_filter  # <<< Parâmetro de filtro adicionado
+        )
 
         if not all_clients_data:
             logger.warning("Nenhum dado retornado do relatório de boletos para calcular o Green Score.")

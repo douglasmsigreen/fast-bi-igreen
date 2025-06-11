@@ -326,22 +326,36 @@ def api_overdue_payments_chart():
 @api_bp.route('/scores/green-score')
 @login_required
 def api_green_score():
-    """Retorna os dados do Green Score para todas as fornecedoras."""
-    logger.info("Requisição recebida em /api/scores/green-score")
+    """
+    Retorna os dados do Green Score.
+    Se um parâmetro 'fornecedora' for passado na URL, retorna o score apenas para ela.
+    Ex: /api/scores/green-score?fornecedora=NOME_DA_FORNECEDORA
+    """
+    # MODIFICAÇÃO: Captura o parâmetro da URL
+    fornecedora_selecionada = request.args.get('fornecedora', None)
+
+    if fornecedora_selecionada:
+        logger.info(f"Requisição recebida em /api/scores/green-score para a fornecedora: {fornecedora_selecionada}")
+    else:
+        # Se você ainda quiser a opção de buscar todos, pode remover este bloco.
+        # Mas para forçar a seleção, retornamos uma lista vazia.
+        logger.info("Requisição em /api/scores/green-score sem fornecedora especificada. Retornando vazio.")
+        return jsonify([])
+
     try:
-        score_data = db.get_green_score_by_fornecedora()
+        # MODIFICAÇÃO: Passa o filtro para a função do DB
+        score_data = db.get_green_score_by_fornecedora(fornecedora_filter=fornecedora_selecionada)
 
         if score_data is None:
-             logger.error("API Green Score: db.get_green_score_by_fornecedora() retornou None.")
-             return jsonify({"error": "Erro interno ao buscar dados do Green Score."}), 500
+             logger.error("API Green Score: a função do DB retornou None.")
+             return jsonify({"error": "Erro interno ao buscar dados."}), 500
 
-        # Transforma a lista de tuplas em uma lista de dicionários para o JS
         structured_data = [{'fornecedora': row[0], 'score': row[1]} for row in score_data]
         
-        logger.info(f"API Green Score: Enviando {len(structured_data)} scores.")
+        logger.info(f"API Green Score: Enviando {len(structured_data)} score(s).")
         return jsonify(structured_data)
 
     except Exception as e:
         logger.error(f"API Green Score: Erro inesperado: {e}", exc_info=True)
-        return jsonify({"error": "Erro interno inesperado ao processar dados do Green Score."}), 500
+        return jsonify({"error": "Erro interno inesperado."}), 500
 # --- FIM DA ROTA API ---
