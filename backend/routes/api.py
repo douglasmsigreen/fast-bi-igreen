@@ -329,27 +329,29 @@ def api_green_score():
     """
     Retorna os dados do Green Score.
     Se um parâmetro 'fornecedora' for passado na URL, retorna o score apenas para ela.
-    Ex: /api/scores/green-score?fornecedora=NOME_DA_FORNECEDORA
+    Se 'fornecedora' for 'Consolidado' ou ausente, retorna o score para TODAS as fornecedoras.
     """
-    # MODIFICAÇÃO: Captura o parâmetro da URL
     fornecedora_selecionada = request.args.get('fornecedora', None)
 
-    if fornecedora_selecionada:
-        logger.info(f"Requisição recebida em /api/scores/green-score para a fornecedora: {fornecedora_selecionada}")
+    # Se 'fornecedora_selecionada' for uma string vazia ou 'Consolidado', define como None
+    if fornecedora_selecionada == '' or fornecedora_selecionada.lower() == 'consolidado':
+        fornecedora_filter = None
+        log_msg_detail = "TODAS as fornecedoras (Consolidado)"
     else:
-        # Se você ainda quiser a opção de buscar todos, pode remover este bloco.
-        # Mas para forçar a seleção, retornamos uma lista vazia.
-        logger.info("Requisição em /api/scores/green-score sem fornecedora especificada. Retornando vazio.")
-        return jsonify([])
+        fornecedora_filter = fornecedora_selecionada
+        log_msg_detail = f"a fornecedora: {fornecedora_selecionada}"
+
+    logger.info(f"Requisição recebida em /api/scores/green-score para {log_msg_detail}")
 
     try:
-        # MODIFICAÇÃO: Passa o filtro para a função do DB
-        score_data = db.get_green_score_by_fornecedora(fornecedora_filter=fornecedora_selecionada)
+        # Passa o filtro (ou None) para a função do DB
+        score_data = db.get_green_score_by_fornecedora(fornecedora_filter=fornecedora_filter)
 
         if score_data is None:
              logger.error("API Green Score: a função do DB retornou None.")
              return jsonify({"error": "Erro interno ao buscar dados."}), 500
 
+        # Transforma a lista de tuplas em lista de dicionários para o frontend
         structured_data = [{'fornecedora': row[0], 'score': row[1]} for row in score_data]
         
         logger.info(f"API Green Score: Enviando {len(structured_data)} score(s).")

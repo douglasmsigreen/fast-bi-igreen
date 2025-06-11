@@ -4,24 +4,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const placeholderMessage = document.getElementById('placeholder-message');
 
     /**
+     * Determina as cores do gradiente baseado no valor do score.
+     * @param {number} value - O score (0 a 100).
+     * @returns {string[]} Um array com as cores de início e fim do gradiente.
+     */
+    function getScoreColors(value) {
+        // Cores para o gradiente baseado no Green Score
+        if (value >= 80) {
+            // Excelente: Verde claro para Verde escuro
+            return ['#86efac', '#16a34a']; // tailwind green-300 to green-700
+        } else if (value >= 60) {
+            // Bom: Amarelo claro para Laranja
+            return ['#fde047', '#f97316']; // tailwind yellow-300 to orange-500
+        } else if (value >= 40) {
+            // Regular: Laranja claro para Vermelho
+            return ['#fdba74', '#dc2626']; // tailwind orange-300 to red-600
+        } else {
+            // Crítico: Vermelho claro para Vermelho escuro
+            return ['#fca5a5', '#b91c1c']; // tailwind red-300 to red-800
+        }
+    }
+
+    /**
      * Cria um único gráfico de velocímetro (gauge) usando ApexCharts.
      * @param {string} containerId - O ID do div onde o gráfico será renderizado.
-     * @param {string} title - O nome da fornecedora.
+     * @param {string} title - O nome da fornecedora (rótulo principal).
      * @param {number} value - O score (0 a 100).
      */
     function createGauge(containerId, title, value) {
+        const colors = getScoreColors(value); // Obtém as cores baseadas no valor
+
         const options = {
-            // A série de dados, nosso score arredondado para inteiro
-            series: [Math.round(value)], 
+            series: [Math.round(value)], // O valor do score para a série
             chart: {
-                height: 350,
-                type: 'radialBar', // Tipo de gráfico radial (velocímetro)
-                offsetY: -10
+                height: 300, // Altura ajustada para o grid
+                type: 'radialBar',
+                offsetY: -20,
+                sparkline: { enabled: false }
             },
             plotOptions: {
                 radialBar: {
-                    startAngle: -135, // Início do arco
-                    endAngle: 135,    // Fim do arco (criando um semi-círculo)
+                    startAngle: -135,
+                    endAngle: 135,
                     hollow: {
                         margin: 0,
                         size: '70%',
@@ -51,87 +75,134 @@ document.addEventListener('DOMContentLoaded', function() {
                     dataLabels: {
                         show: true,
                         name: {
-                            offsetY: -10,
+                            offsetY: -30,
                             show: true,
                             color: '#888',
-                            fontSize: '17px'
+                            fontSize: '17px',
+                            fontFamily: 'Inter, sans-serif',
+                            fontWeight: 600,
                         },
                         value: {
                             formatter: function(val) {
-                                // Exibe o valor original com uma casa decimal
                                 return value.toFixed(1) + "%";
                             },
+                            offsetY: 7,
                             color: '#111',
                             fontSize: '44px',
+                            fontFamily: 'Inter, sans-serif',
+                            fontWeight: 700,
                             show: true,
                         }
                     }
                 }
             },
-            // Preenchimento com gradiente
             fill: {
                 type: 'gradient',
                 gradient: {
                     shade: 'dark',
                     type: 'horizontal',
                     shadeIntensity: 0.5,
-                    gradientToColors: ['#22c55e'], // Cor final do gradiente
+                    gradientToColors: [colors[1]],
                     inverseColors: true,
                     opacityFrom: 1,
                     opacityTo: 1,
                     stops: [0, 100]
                 }
             },
-            // As cores que o gradiente vai usar
-            colors: ["#86efac"], // Cor inicial do gradiente
-            // O nome da fornecedora
+            colors: [colors[0]],
             labels: [title],
-            stroke: {
-                lineCap: 'round'
+            stroke: { lineCap: 'round' },
+            markers: {
+                size: 0,
+                discrete: [{
+                    seriesIndex: 0,
+                    dataPointIndex: 0,
+                    fillColor: '#242424',
+                    strokeColor: '#fff',
+                    size: 5,
+                    shape: 'circle'
+                }],
             },
+            tooltip: {
+                enabled: true,
+                y: {
+                    formatter: function (val) {
+                        return val.toFixed(1) + " %";
+                    }
+                }
+            }
         };
 
-        // Renderiza o gráfico
         const chart = new ApexCharts(document.getElementById(containerId), options);
         chart.render();
     }
 
     /**
-     * Busca o score para uma fornecedora específica e renderiza o gráfico.
-     * @param {string} fornecedora - O nome da fornecedora selecionada.
+     * Busca o score para uma fornecedora específica ou para todas e renderiza os gráficos.
+     * @param {string} fornecedora - O nome da fornecedora selecionada (ou "Consolidado").
      */
     async function loadScoreFor(fornecedora) {
         // Limpa o container e mostra uma mensagem de carregamento
         gaugeContainer.innerHTML = `
-            <div class="text-center">
-                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                <p class="mt-2">Carregando score para <strong>${fornecedora}</strong>...</p>
+            <div class="message-center">
+                <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                <p class="mt-2 text-muted">Carregando score${fornecedora === 'Consolidado' ? 's' : ''} para **${fornecedora}**...</p>
             </div>`;
 
         try {
-            // Constrói a URL com o parâmetro de busca
-            const response = await fetch(`/api/scores/green-score?fornecedora=${encodeURIComponent(fornecedora)}`);
-            if (!response.ok) {
-                throw new Error(`Erro HTTP ${response.status}`);
+            let apiUrl = '';
+            if (fornecedora === 'Consolidado') {
+                apiUrl = `/api/scores/green-score?fornecedora=Consolidado`; // Chama a API sem filtro específico
+            } else {
+                apiUrl = `/api/scores/green-score?fornecedora=${encodeURIComponent(fornecedora)}`;
             }
-            const data = await response.json();
+            
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Erro HTTP ${response.status}`);
+            }
+            const data = await response.json(); // Data será uma lista de objetos: [{'fornecedora': '...', 'score': ...}, ...]
 
-            // Limpa o container novamente antes de desenhar o gráfico
-            gaugeContainer.innerHTML = ''; 
+            gaugeContainer.innerHTML = ''; // Limpa antes de desenhar os gráficos
 
             if (data.length > 0) {
-                const scoreInfo = data[0];
-                const chartDiv = document.createElement('div');
-                chartDiv.id = 'gauge-chart'; // ID fixo, pois só haverá um
-                gaugeContainer.appendChild(chartDiv);
-                createGauge('gauge-chart', scoreInfo.fornecedora, scoreInfo.score);
+                if (fornecedora === 'Consolidado') {
+                    // Cria múltiplos velocímetros em um grid
+                    data.forEach((scoreInfo, index) => {
+                        const cardDiv = document.createElement('div');
+                        cardDiv.className = 'gauge-card'; // Adiciona classe para estilização individual
+                        
+                        const chartDiv = document.createElement('div');
+                        chartDiv.id = `gauge-chart-${index}`; // ID único para cada gráfico
+                        chartDiv.className = 'gauge-chart-container'; // Adiciona classe para o contêiner do gráfico
+                        cardDiv.appendChild(chartDiv);
+                        gaugeContainer.appendChild(cardDiv);
+
+                        // Cria o gráfico
+                        createGauge(chartDiv.id, scoreInfo.fornecedora, scoreInfo.score);
+                    });
+                } else {
+                    // Cria um único velocímetro (comportamento existente)
+                    const scoreInfo = data[0];
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'gauge-card message-center'; // Centraliza o card único
+                    
+                    const chartDiv = document.createElement('div');
+                    chartDiv.id = 'gauge-chart-single'; // ID fixo para o único
+                    chartDiv.className = 'gauge-chart-container';
+                    cardDiv.appendChild(chartDiv);
+                    gaugeContainer.appendChild(cardDiv);
+
+                    createGauge('gauge-chart-single', scoreInfo.fornecedora, scoreInfo.score);
+                }
             } else {
-                gaugeContainer.innerHTML = `<div class="alert alert-warning">Nenhum score encontrado para ${fornecedora}.</div>`;
+                gaugeContainer.innerHTML = `<div class="message-center alert alert-warning">Nenhum score encontrado para ${fornecedora}.</div>`;
             }
 
         } catch (error) {
             console.error("Erro ao carregar score:", error);
-            gaugeContainer.innerHTML = `<div class="alert alert-danger">Falha ao carregar os dados. Tente novamente mais tarde.</div>`;
+            gaugeContainer.innerHTML = `<div class="message-center alert alert-danger">Falha ao carregar os dados. Tente novamente mais tarde.<br><small>${error.message}</small></div>`;
         }
     }
 
@@ -140,12 +211,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedSupplier = this.value;
 
         if (selectedSupplier) {
-            // Se uma fornecedora for selecionada, busca os dados dela
+            // Se uma fornecedora (ou Consolidado) for selecionada, busca os dados
             loadScoreFor(selectedSupplier);
         } else {
-            // Se a opção "Selecione" for escolhida, volta ao estado inicial
+            // Se a opção "-- Selecione..." for escolhida, volta ao estado inicial
             gaugeContainer.innerHTML = '';
             gaugeContainer.appendChild(placeholderMessage);
+            placeholderMessage.style.display = 'block';
         }
     });
+
+    // Estado inicial: garante que a mensagem de placeholder seja exibida
+    if (fornecedoraFilter.value === "") {
+        gaugeContainer.innerHTML = '';
+        gaugeContainer.appendChild(placeholderMessage);
+        placeholderMessage.style.display = 'block';
+    }
 });

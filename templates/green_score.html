@@ -3,21 +3,65 @@
 {% block title %}{{ title }}{% endblock %}
 {% block page_title %}Green Score por Fornecedora{% endblock %}
 
-{% block content %}
+{% block head_extra %}
+{{ super() }}
 <style>
-    #gauge-container {
+    /* Estilos para o grid de velocímetros */
+    .gauge-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 280px é o min-width do gauge */
+        gap: 30px; /* Espaçamento entre os velocímetros */
+        justify-content: center; /* Centraliza o grid horizontalmente */
+        align-items: start; /* Alinha os itens no topo do grid */
+        padding: 20px;
+        background-color: var(--cor-fundo-elemento);
         border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        padding: 1rem;
-        background-color: #fff;
-        border: 1px solid #e2e8f0;
-        transition: all 0.3s ease-in-out;
+        box-shadow: var(--sombra-card);
+        border: 1px solid var(--cor-borda-suave);
+    }
+
+    /* Estilo para cada card de velocímetro individual, se necessário */
+    .gauge-card {
+        background-color: var(--cor-fundo-elemento); /* Fundo branco para cada velocímetro */
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra mais leve */
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+
+    .gauge-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    /* Estilo para o contêiner do ApexCharts dentro do card */
+    .gauge-chart-container {
+        width: 100%; /* Ocupa a largura total do card */
+        min-height: 250px; /* Altura mínima para o gráfico */
+        display: flex; /* Para centralizar o gráfico internamente */
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Mensagem de carregamento/placeholder centralizada no grid */
+    .gauge-grid .message-center {
+        grid-column: 1 / -1; /* Ocupa todas as colunas */
+        text-align: center;
+        padding: 50px 20px;
+        color: var(--cor-texto-secundario);
     }
 </style>
+{% endblock %}
 
+{% block content %}
 <div class="container-fluid">
     <p class="text-center text-muted mb-4">
-        Selecione uma fornecedora para visualizar sua performance de injeção de clientes.
+        Selecione uma fornecedora ou a opção "Consolidado" para visualizar o Green Score de injeção.
     </p>
 
     <div class="filter-row justify-content-center mb-4">
@@ -25,6 +69,7 @@
             <label for="fornecedora-filter">Selecione a Fornecedora:</label>
             <select id="fornecedora-filter" class="form-control" style="width: 300px;">
                 <option value="">-- Selecione uma Fornecedora --</option>
+                <option value="Consolidado">Consolidado (Todas as Fornecedoras)</option> {# NOVA OPÇÃO #}
                 {% for forn in fornecedoras %}
                     <option value="{{ forn }}">{{ forn }}</option>
                 {% endfor %}
@@ -32,21 +77,17 @@
         </div>
     </div>
 
-    <div id="gauge-container" class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
-        <div id="placeholder-message" class="text-center text-muted">
+    {# O gauge-container será o nosso grid de velocímetros #}
+    <div id="gauge-container" class="gauge-grid" style="min-height: 300px;">
+        {# Mensagem de placeholder inicial, que será removida/substituída por JS #}
+        <div id="placeholder-message" class="message-center">
             <i class="fas fa-hand-pointer fa-2x mb-2"></i>
-            <p>Aguardando a seleção de uma fornecedora...</p>
+            <p>Aguardando a seleção de uma fornecedora ou consolidado...</p>
         </div>
     </div>
 </div>
 {% endblock %}
 
-
-
-
-
-
-{% endblock %}    <script src="{{ url_for('static', filename='js/green_score.js') }}"></script>        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>{% block scripts_extra %}
 {% block scripts_extra %}
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     

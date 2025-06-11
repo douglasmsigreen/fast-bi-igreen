@@ -4,11 +4,8 @@ from typing import List, Tuple, Optional
 from datetime import datetime
 from .executor import execute_query # Import local
 from collections import defaultdict
-# A importação do reports_boletos deve ser feita no __init__.py do módulo 'db'
-# mas para garantir o acesso, podemos referenciar via db.reports_boletos se necessário.
-# Vamos assumir que está acessível.
-from . import reports_boletos
-import pandas as pd
+from . import reports_boletos # Importa o módulo reports_boletos
+import pandas as pd # Importa pandas
 
 logger = logging.getLogger(__name__)
 
@@ -431,19 +428,27 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
     Calcula o "Green Score" para cada fornecedora baseado na pontualidade de injeção.
     O score é a porcentagem de clientes ativos que NÃO estão com a injeção atrasada.
     Lógica derivada do relatório 'Boletos por Cliente'.
+    
+    Args:
+        fornecedora_filter: Se None, retorna scores para todas as fornecedoras.
+                            Se uma string, filtra por essa fornecedora.
+    Returns:
+        Uma lista de tuplas (fornecedora, score) ou None em caso de erro.
     """
     log_msg = "Calculando Green Score"
     if fornecedora_filter:
         log_msg += f" para a fornecedora: {fornecedora_filter}"
+    else:
+        log_msg += " para TODAS as fornecedoras (Consolidado)"
     logger.info(log_msg)
 
     try:
         # 1. Obter todos os dados do relatório de boletos, sem paginação.
-        # A função get_boletos_por_cliente_data já contém toda a lógica de cálculo necessária.
+        # Passa o fornecedora_filter diretamente. Se for None, reports_boletos trará todos.
         all_clients_data = reports_boletos.get_boletos_por_cliente_data(
             limit=None, 
             export_mode=True, 
-            fornecedora=fornecedora_filter  # <<< Parâmetro de filtro adicionado
+            fornecedora=fornecedora_filter
         )
 
         if not all_clients_data:
@@ -457,7 +462,7 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
              "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
              "ufconsumo", "concessionaria", "fornecedora", 
              "consumomedio", "data_ativo", "dias_desde_ativacao",
-             "injecao", "atraso_na_injecao", "dias_em_atraso",
+             "injecao", "atraso_na_injecao", "dias_em_atraso", # <-- 'atraso_na_injecao' é a 14ª coluna (índice 13)
              "validado_sucesso", "devolutiva", "retorno_fornecedora",
              "id_licenciado", "licenciado", "status_pro",
              "data_graduacao_pro", "quantidade_boletos"
@@ -470,7 +475,7 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
             logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem definida. O cálculo do score falhará.")
             return None
 
-        # 3. Processar os dados em Python para calcular o score
+        # 3. Processar os dados em Python para calcular o score por fornecedora
         totals_by_supplier = defaultdict(int)
         on_time_by_supplier = defaultdict(int)
 
@@ -478,9 +483,13 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
             fornecedora = row[fornecedora_idx]
             atraso_status = row[atraso_idx]
 
-            # Ignora registros sem uma fornecedora definida
-            if not fornecedora or pd.isna(fornecedora):
-                continue
+            # >>> MODIFICAÇÃO AQUI: Ignora o registro se a fornecedora for nula, vazia ou 'NÃO ESPECIFICADA' <<<
+            if not fornecedora or (isinstance(fornecedora, str) and fornecedora.strip() == '') or pd.isna(fornecedora):
+                continue # Pula para o próximo registro no loop
+            
+            # Limpa espaços em branco e padroniza para maiúsculas (importante manter)
+            if isinstance(fornecedora, str):
+                fornecedora = fornecedora.strip().upper()
 
             totals_by_supplier[fornecedora] += 1
             if atraso_status == 'NÃO':
