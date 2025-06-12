@@ -2,10 +2,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const gaugeContainer = document.getElementById('gauge-container');
     const fornecedoraFilter = document.getElementById('fornecedora-filter');
     const placeholderMessage = document.getElementById('placeholder-message');
-    const additionalInfoContainer = document.getElementById('additional-info-container'); // Novo!
-    const infoKwhVendidos = document.getElementById('info-kwh-vendidos'); // Novo!
-    const infoClientesRegistrados = document.getElementById('info-clientes-registrados'); // Novo!
-    const infoClientesAtivados = document.getElementById('info-clientes-ativados'); // Novo!
+    // Mude a referência de um container para uma coleção de itens individuais
+    const additionalInfoItems = document.querySelectorAll('.additional-info-item'); // Alterado para querySelectorAll
+
+    const infoKwhVendidos = document.getElementById('info-kwh-vendidos');
+    const infoClientesRegistrados = document.getElementById('info-clientes-registrados');
+    const infoClientesAtivados = document.getElementById('info-clientes-ativados');
 
     /**
      * Determina as cores do gradiente baseado no valor do score.
@@ -153,13 +155,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p class="mt-2 text-muted">Carregando score${fornecedora === 'Consolidado' ? 's' : ''} para **${fornecedora}**...</p>
             </div>`;
         
-        // Esconde informações adicionais por padrão
-        additionalInfoContainer.style.display = 'none';
+        // Esconde informações adicionais individualmente
+        additionalInfoItems.forEach(item => item.style.display = 'none'); // Alterado
 
         try {
             let apiUrl = '';
             if (fornecedora === 'Consolidado') {
-                apiUrl = `/api/scores/green-score?fornecedora=Consolidado`; // Chama a API sem filtro específico
+                apiUrl = `/api/scores/green-score?fornecedora=Consolidado`;
             } else {
                 apiUrl = `/api/scores/green-score?fornecedora=${encodeURIComponent(fornecedora)}`;
             }
@@ -189,11 +191,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Cria o gráfico
                         createGauge(chartDiv.id, scoreInfo.fornecedora, scoreInfo.score);
                     });
+                    // Esconde os cards de informação adicionais quando em modo Consolidado
+                    additionalInfoItems.forEach(item => item.style.display = 'none');
                 } else {
                     // Comportamento para fornecedora específica (um único gauge e informações adicionais)
                     const scoreInfo = data[0]; // Pega o primeiro (e único) score retornado
                     const cardDiv = document.createElement('div');
-                    cardDiv.className = 'gauge-card message-center'; // Centraliza o card único
+                    cardDiv.className = 'gauge-card'; // Não precisa mais de message-center, o grid faz o alinhamento
                     
                     const chartDiv = document.createElement('div');
                     chartDiv.id = 'gauge-chart-single'; // ID fixo para o único
@@ -204,18 +208,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     createGauge('gauge-chart-single', scoreInfo.fornecedora, scoreInfo.score);
 
                     // ***** NOVO: ATUALIZA OS CARDS DE INFORMAÇÃO ADICIONAIS *****
-                    additionalInfoContainer.style.display = 'grid'; // Mostra o contêiner
+                    additionalInfoItems.forEach(item => item.style.display = 'flex'); // Mostra os cards
                     await updateAdditionalInfoCards(fornecedora); // Chama a função para buscar e atualizar os dados
                     // ************************************************************
                 }
             } else {
                 gaugeContainer.innerHTML = `<div class="message-center alert alert-warning">Nenhum score encontrado para ${fornecedora}.</div>`;
+                additionalInfoItems.forEach(item => item.style.display = 'none'); // Esconde se não houver scores
             }
 
         } catch (error) {
             console.error("Erro ao carregar score:", error);
             gaugeContainer.innerHTML = `<div class="message-center alert alert-danger">Falha ao carregar os dados. Tente novamente mais tarde.<br><small>${error.message}</small></div>`;
-            additionalInfoContainer.style.display = 'none'; // Esconde em caso de erro
+            additionalInfoItems.forEach(item => item.style.display = 'none'); // Esconde em caso de erro
         }
     }
 
@@ -267,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
             gaugeContainer.innerHTML = '';
             gaugeContainer.appendChild(placeholderMessage);
             placeholderMessage.style.display = 'block';
-            additionalInfoContainer.style.display = 'none'; // Esconde os cards de informação
+            additionalInfoItems.forEach(item => item.style.display = 'none'); // Esconde os cards de informação
         }
     });
 
@@ -276,6 +281,6 @@ document.addEventListener('DOMContentLoaded', function() {
         gaugeContainer.innerHTML = '';
         gaugeContainer.appendChild(placeholderMessage);
         placeholderMessage.style.display = 'block';
-        additionalInfoContainer.style.display = 'none';
+        additionalInfoItems.forEach(item => item.style.display = 'none');
     }
 });

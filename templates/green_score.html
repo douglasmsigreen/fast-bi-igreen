@@ -9,10 +9,11 @@
     /* Estilos existentes para o grid de velocímetros */
     .gauge-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 280px é o min-width do gauge */
-        gap: 30px; /* Espaçamento entre os velocímetros */
+        /* Define um número de colunas flexível, garantindo que os itens tenham um mínimo de 280px */
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px; /* Espaçamento entre os itens do grid (velocímetros e info cards) */
         justify-content: center; /* Centraliza o grid horizontalmente */
-        align-items: start; /* Alinha os itens no topo do grid */
+        align-items: stretch; /* Garante que todos os cards na linha tenham a mesma altura */
         padding: 20px;
         background-color: var(--cor-fundo-elemento);
         border-radius: 12px;
@@ -20,21 +21,22 @@
         border: 1px solid var(--cor-borda-suave);
     }
 
-    /* Estilo para cada card de velocímetro individual, se necessário */
-    .gauge-card {
-        background-color: var(--cor-fundo-elemento); /* Fundo branco para cada velocímetro */
-        border-radius: 10px;
+    /* Estilo para cada card de velocímetro individual */
+    /* Usar .card para o layout geral e .gauge-card para particularidades */
+    .gauge-card, .info-card { /* Aplicar estilos comuns de card */
+        background-color: var(--cor-fundo-elemento);
+        border-radius: 10px; /* Levemente menor que o container geral */
         box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra mais leve */
         padding: 10px;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        align-items: center; /* Centraliza conteúdo horizontalmente */
+        justify-content: center; /* Centraliza conteúdo verticalmente */
         text-align: center;
-        transition: transform 0.2s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .gauge-card:hover {
+    .gauge-card:hover, .info-card:hover {
         transform: translateY(-3px);
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
@@ -56,28 +58,9 @@
         color: var(--cor-texto-secundario);
     }
 
-    /* Estilos para os novos cards de informação */
-    .info-cards-container {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr); /* Dois cards por linha */
-        gap: 25px; /* Espaçamento entre os cards */
-        margin-top: 25px; /* Espaço acima dos cards de informação */
-        margin-bottom: 25px; /* Espaço abaixo dos cards de informação */
-    }
-
-    /* Reutiliza estilos de card existentes */
-    .info-card {
-        background-color: var(--cor-fundo-elemento);
-        border-radius: 12px;
-        box-shadow: var(--sombra-card);
-        border: 1px solid var(--cor-borda-suave);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .info-card .card-header {
+    /* Estilos para os cards de informação (agora são apenas 'info-card',
+       sem o container adicional que foi removido) */
+    .info-card .card-header { /* Reutiliza o estilo do dashboard.css */
         padding: 12px 18px;
         background: linear-gradient(135deg, var(--cor-fundo-header-card), #f3f3f3);
         border-bottom: 1px solid var(--cor-borda-suave);
@@ -86,9 +69,12 @@
         font-size: 0.8rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        display: flex; /* Para alinhar título e ícone */
+        justify-content: space-between;
+        align-items: center;
     }
 
-    .info-card .card-body {
+    .info-card .card-body { /* Reutiliza o estilo do dashboard.css */
         padding: 20px;
         flex-grow: 1;
         display: flex;
@@ -98,7 +84,7 @@
         text-align: center;
     }
 
-    .info-card .main-value {
+    .info-card .main-value { /* Reutiliza o estilo do dashboard.css */
         font-size: 2.6em;
         font-weight: 700;
         color: var(--cor-primaria);
@@ -106,7 +92,7 @@
         line-height: 1.1;
     }
 
-    .info-card .sub-label {
+    .info-card .sub-label { /* Reutiliza o estilo do dashboard.css */
         display: block;
         color: var(--cor-texto-secundario);
         font-size: 0.9rem;
@@ -114,7 +100,7 @@
     }
     
     /* Para os "Clientes do Mês" com dois valores */
-    .info-card .qualification-numbers {
+    .info-card .qualification-numbers { /* Reutiliza o estilo do dashboard.css */
         display: flex;
         justify-content: center;
         text-align: center;
@@ -122,23 +108,23 @@
         align-items: flex-start;
         width: 100%;
     }
-    .info-card .qual-item .qual-number {
+    .info-card .qual-item .qual-number { /* Reutiliza o estilo do dashboard.css */
         font-size: 2.2em;
         font-weight: 700;
         color: var(--cor-primaria);
         display: block;
         line-height: 1.1;
     }
-    .info-card .qual-item .qual-label {
+    .info-card .qual-item .qual-label { /* Reutiliza o estilo do dashboard.css */
         font-size: 0.85em;
         color: var(--cor-texto-secundario);
         line-height: 1.3;
         margin-top: 3px;
     }
 
-    /* Responsividade para info-cards-container */
+    /* Responsividade para info-cards-container - AGORA O gauge-grid FAZ ESTE PAPEL */
     @media (max-width: 768px) {
-        .info-cards-container {
+        .gauge-grid {
             grid-template-columns: 1fr; /* Uma coluna em telas menores */
             gap: 15px;
         }
@@ -166,10 +152,18 @@
         </div>
     </div>
 
-    {# Contêiner para os cards de informação adicionais #}
-    <div id="additional-info-container" class="info-cards-container" style="display: none;">
-        {# Card: Resultado do Mês #}
-        <div class="info-card kpi-card">
+    {# O gauge-container será o nosso grid principal para todos os cards #}
+    <div id="gauge-container" class="gauge-grid" style="min-height: 300px;">
+        {# Mensagem de placeholder inicial, que será removida/substituída por JS #}
+        <div id="placeholder-message" class="message-center">
+            <i class="fas fa-hand-pointer fa-2x mb-2"></i>
+            <p>Aguardando a seleção de uma fornecedora ou consolidado...</p>
+        </div>
+
+        {# Cards de informação adicionais, agora dentro do mesmo grid #}
+        {# Inicialmente display: none e depois controlados pelo JS #}
+        {# Removido id="additional-info-container" e substituído por classe para ocultar individualmente #}
+        <div class="info-card kpi-card additional-info-item" style="display: none;">
             <div class="card-header">
                 Resultado do Mês
                 <i class="fas fa-info-circle tooltip-icon" title="Soma do consumo médio dos clientes ativos no mês para esta fornecedora."></i>
@@ -183,7 +177,7 @@
         </div>
 
         {# Card: Clientes do Mês (Registrados / Ativados) #}
-        <div class="info-card qualification-card">
+        <div class="info-card qualification-card additional-info-item" style="display: none;">
             <div class="card-header">
                 Clientes do Mês
                 <i class="fas fa-info-circle tooltip-icon" title="Contagem de clientes registrados e ativados no mês para esta fornecedora."></i>
@@ -204,15 +198,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    {# O gauge-container será o nosso grid de velocímetros #}
-    <div id="gauge-container" class="gauge-grid" style="min-height: 300px;">
-        {# Mensagem de placeholder inicial, que será removida/substituída por JS #}
-        <div id="placeholder-message" class="message-center">
-            <i class="fas fa-hand-pointer fa-2x mb-2"></i>
-            <p>Aguardando a seleção de uma fornecedora ou consolidado...</p>
         </div>
     </div>
 </div>
