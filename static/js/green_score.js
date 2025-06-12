@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const gaugeContainer = document.getElementById('gauge-container');
     const fornecedoraFilter = document.getElementById('fornecedora-filter');
     const placeholderMessage = document.getElementById('placeholder-message');
+    const additionalInfoContainer = document.getElementById('additional-info-container'); // Novo!
+    const infoKwhVendidos = document.getElementById('info-kwh-vendidos'); // Novo!
+    const infoClientesRegistrados = document.getElementById('info-clientes-registrados'); // Novo!
+    const infoClientesAtivados = document.getElementById('info-clientes-ativados'); // Novo!
 
     /**
      * Determina as cores do gradiente baseado no valor do score.
@@ -148,6 +152,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
                 <p class="mt-2 text-muted">Carregando score${fornecedora === 'Consolidado' ? 's' : ''} para **${fornecedora}**...</p>
             </div>`;
+        
+        // Esconde informações adicionais por padrão
+        additionalInfoContainer.style.display = 'none';
 
         try {
             let apiUrl = '';
@@ -183,8 +190,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         createGauge(chartDiv.id, scoreInfo.fornecedora, scoreInfo.score);
                     });
                 } else {
-                    // Cria um único velocímetro (comportamento existente)
-                    const scoreInfo = data[0];
+                    // Comportamento para fornecedora específica (um único gauge e informações adicionais)
+                    const scoreInfo = data[0]; // Pega o primeiro (e único) score retornado
                     const cardDiv = document.createElement('div');
                     cardDiv.className = 'gauge-card message-center'; // Centraliza o card único
                     
@@ -195,6 +202,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     gaugeContainer.appendChild(cardDiv);
 
                     createGauge('gauge-chart-single', scoreInfo.fornecedora, scoreInfo.score);
+
+                    // ***** NOVO: ATUALIZA OS CARDS DE INFORMAÇÃO ADICIONAIS *****
+                    additionalInfoContainer.style.display = 'grid'; // Mostra o contêiner
+                    await updateAdditionalInfoCards(fornecedora); // Chama a função para buscar e atualizar os dados
+                    // ************************************************************
                 }
             } else {
                 gaugeContainer.innerHTML = `<div class="message-center alert alert-warning">Nenhum score encontrado para ${fornecedora}.</div>`;
@@ -203,8 +215,45 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error("Erro ao carregar score:", error);
             gaugeContainer.innerHTML = `<div class="message-center alert alert-danger">Falha ao carregar os dados. Tente novamente mais tarde.<br><small>${error.message}</small></div>`;
+            additionalInfoContainer.style.display = 'none'; // Esconde em caso de erro
         }
     }
+
+    /**
+     * Busca e atualiza os cards de informação adicionais (kWh, clientes).
+     * @param {string} fornecedora - A fornecedora selecionada.
+     */
+    async function updateAdditionalInfoCards(fornecedora) {
+        // Mês atual para as APIs de KPI, como no dashboard
+        const currentDate = new Date();
+        const currentMonth = currentDate.getFullYear() + '-' + String(currentDate.getMonth() + 1).padStart(2, '0');
+
+        // Mostra spinners
+        infoKwhVendidos.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i>';
+        infoClientesRegistrados.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i>';
+        infoClientesAtivados.innerHTML = '<i class="fas fa-spinner fa-spin fa-sm"></i>';
+
+        try {
+            // Requisições para os KPIs (modificadas para incluir filtro de fornecedora)
+            const [kwhData, registeredClientsData, activeClientsData] = await Promise.all([
+                fetch(`/api/kpi/total-kwh?month=${currentMonth}&fornecedora=${encodeURIComponent(fornecedora)}`).then(res => res.json()),
+                fetch(`/api/kpi/clientes-registrados?month=${currentMonth}&fornecedora=${encodeURIComponent(fornecedora)}`).then(res => res.json()),
+                fetch(`/api/kpi/clientes-ativos?month=${currentMonth}&fornecedora=${encodeURIComponent(fornecedora)}`).then(res => res.json())
+            ]);
+
+            // Atualiza os elementos HTML
+            infoKwhVendidos.textContent = formatNumber(kwhData.total_kwh || 0, 0);
+            infoClientesRegistrados.textContent = formatNumber(registeredClientsData.clientes_registrados_count || 0, 0);
+            infoClientesAtivados.textContent = formatNumber(activeClientsData.clientes_ativos_count || 0, 0);
+
+        } catch (error) {
+            console.error("Erro ao carregar informações adicionais:", error);
+            infoKwhVendidos.innerHTML = '<span style="color: red;">Erro</span>';
+            infoClientesRegistrados.innerHTML = '<span style="color: red;">Erro</span>';
+            infoClientesAtivados.innerHTML = '<span style="color: red;">Erro</span>';
+        }
+    }
+
 
     // Adiciona o listener para o evento de mudança no filtro
     fornecedoraFilter.addEventListener('change', function() {
@@ -218,13 +267,15 @@ document.addEventListener('DOMContentLoaded', function() {
             gaugeContainer.innerHTML = '';
             gaugeContainer.appendChild(placeholderMessage);
             placeholderMessage.style.display = 'block';
+            additionalInfoContainer.style.display = 'none'; // Esconde os cards de informação
         }
     });
 
-    // Estado inicial: garante que a mensagem de placeholder seja exibida
+    // Estado inicial: garante que a mensagem de placeholder seja exibida e info cards estejam escondidos
     if (fornecedoraFilter.value === "") {
         gaugeContainer.innerHTML = '';
         gaugeContainer.appendChild(placeholderMessage);
         placeholderMessage.style.display = 'block';
+        additionalInfoContainer.style.display = 'none';
     }
 });

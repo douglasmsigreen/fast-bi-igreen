@@ -10,13 +10,16 @@ import pandas as pd # Importa pandas
 logger = logging.getLogger(__name__)
 
 # --- FUNÇÕES PARA O DASHBOARD (KPIs, Resumos, Gráficos) ---
-def get_total_consumo_medio_by_month(month_str: Optional[str] = None) -> float:
-    """Calcula a soma total de 'consumomedio' para clientes ativos no mês (data_ativo)."""
+def get_total_consumo_medio_by_month(month_str: Optional[str] = None, fornecedora_filter: Optional[str] = None) -> float:
+    """Calcula a soma total de 'consumomedio' para clientes ativos no mês (data_ativo), opcionalmente filtrado por fornecedora."""
     base_query = """
         SELECT SUM(COALESCE(c.consumomedio, 0)) FROM public."CLIENTES" c
-        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) AND {date_filter};
+        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        AND {date_filter}
+        {fornecedora_filter_sql};
     """
-    params = []; date_filter_sql = "c.data_ativo IS NOT NULL"
+    params = []
+    date_filter_sql = "c.data_ativo IS NOT NULL"
     if month_str:
         try:
             start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
@@ -24,17 +27,26 @@ def get_total_consumo_medio_by_month(month_str: Optional[str] = None) -> float:
             else: end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
             date_filter_sql = "(c.data_ativo >= %s AND c.data_ativo < %s)"; params.extend([start_date, end_date_exclusive])
         except ValueError: logger.warning(f"Formato de mês inválido para consumo: '{month_str}'."); date_filter_sql = "c.data_ativo IS NOT NULL"; params = []
-    final_query = base_query.format(date_filter=date_filter_sql)
-    try: result = execute_query(final_query, tuple(params), fetch_one=True); return float(result[0]) if result and result[0] is not None else 0.0
-    except Exception as e: logger.error(f"Erro get_total_consumo_medio_by_month ({month_str}): {e}", exc_info=True); return 0.0
 
-def count_clientes_ativos_by_month(month_str: Optional[str] = None) -> int:
-    """Conta clientes ativos no mês (data_ativo)."""
+    fornecedora_filter_sql = ""
+    if fornecedora_filter and fornecedora_filter.lower() != 'consolidado':
+        fornecedora_filter_sql = "AND c.fornecedora = %s"
+        params.append(fornecedora_filter) # Adiciona o parâmetro da fornecedora
+
+    final_query = base_query.format(date_filter=date_filter_sql, fornecedora_filter_sql=fornecedora_filter_sql)
+    try: result = execute_query(final_query, tuple(params), fetch_one=True); return float(result[0]) if result and result[0] is not None else 0.0
+    except Exception as e: logger.error(f"Erro get_total_consumo_medio_by_month ({month_str}, {fornecedora_filter}): {e}", exc_info=True); return 0.0
+
+def count_clientes_ativos_by_month(month_str: Optional[str] = None, fornecedora_filter: Optional[str] = None) -> int:
+    """Conta clientes ativos no mês (data_ativo), opcionalmente filtrado por fornecedora."""
     base_query = """
         SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
-        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) AND {date_filter};
+        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        AND {date_filter}
+        {fornecedora_filter_sql};
     """
-    params = []; date_filter_sql = "c.data_ativo IS NOT NULL"
+    params = []
+    date_filter_sql = "c.data_ativo IS NOT NULL"
     if month_str:
         try:
             start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
@@ -42,17 +54,26 @@ def count_clientes_ativos_by_month(month_str: Optional[str] = None) -> int:
             else: end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
             date_filter_sql = "(c.data_ativo >= %s AND c.data_ativo < %s)"; params.extend([start_date, end_date_exclusive])
         except ValueError: logger.warning(f"Formato de mês inválido para contagem ativos: '{month_str}'."); date_filter_sql = "c.data_ativo IS NOT NULL"; params = []
-    final_query = base_query.format(date_filter=date_filter_sql)
-    try: result = execute_query(final_query, tuple(params), fetch_one=True); return int(result[0]) if result and result[0] is not None else 0
-    except Exception as e: logger.error(f"Erro count_clientes_ativos_by_month ({month_str}): {e}", exc_info=True); return 0
 
-def count_clientes_registrados_by_month(month_str: Optional[str] = None) -> int:
-    """Conta clientes REGISTRADOS no mês (dtcad)."""
+    fornecedora_filter_sql = ""
+    if fornecedora_filter and fornecedora_filter.lower() != 'consolidado':
+        fornecedora_filter_sql = "AND c.fornecedora = %s"
+        params.append(fornecedora_filter)
+
+    final_query = base_query.format(date_filter=date_filter_sql, fornecedora_filter_sql=fornecedora_filter_sql)
+    try: result = execute_query(final_query, tuple(params), fetch_one=True); return int(result[0]) if result and result[0] is not None else 0
+    except Exception as e: logger.error(f"Erro count_clientes_ativos_by_month ({month_str}, {fornecedora_filter}): {e}", exc_info=True); return 0
+
+def count_clientes_registrados_by_month(month_str: Optional[str] = None, fornecedora_filter: Optional[str] = None) -> int:
+    """Conta clientes REGISTRADOS no mês (dtcad), opcionalmente filtrado por fornecedora."""
     base_query = """
         SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
-        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) AND {date_filter};
+        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        AND {date_filter}
+        {fornecedora_filter_sql};
     """
-    params = []; date_filter_sql = "c.dtcad IS NOT NULL" # Filtra por dtcad
+    params = []
+    date_filter_sql = "c.dtcad IS NOT NULL" # Filtra por dtcad
     if month_str:
         try:
             start_date = datetime.strptime(month_str + '-01', '%Y-%m-%d').date()
@@ -60,9 +81,15 @@ def count_clientes_registrados_by_month(month_str: Optional[str] = None) -> int:
             else: end_date_exclusive = start_date.replace(month=start_date.month + 1, day=1)
             date_filter_sql = "(c.dtcad >= %s AND c.dtcad < %s)"; params.extend([start_date, end_date_exclusive])
         except ValueError: logger.warning(f"Formato de mês inválido para contagem registrados: '{month_str}'."); date_filter_sql = "c.dtcad IS NOT NULL"; params = []
-    final_query = base_query.format(date_filter=date_filter_sql)
+
+    fornecedora_filter_sql = ""
+    if fornecedora_filter and fornecedora_filter.lower() != 'consolidado':
+        fornecedora_filter_sql = "AND c.fornecedora = %s"
+        params.append(fornecedora_filter)
+
+    final_query = base_query.format(date_filter=date_filter_sql, fornecedora_filter_sql=fornecedora_filter_sql)
     try: result = execute_query(final_query, tuple(params), fetch_one=True); return int(result[0]) if result and result[0] is not None else 0
-    except Exception as e: logger.error(f"Erro count_clientes_registrados_by_month ({month_str}): {e}", exc_info=True); return 0
+    except Exception as e: logger.error(f"Erro count_clientes_registrados_by_month ({month_str}, {fornecedora_filter}): {e}", exc_info=True); return 0
 
 def get_fornecedora_summary(month_str: Optional[str] = None) -> List[Tuple[str, int, float]] or None:
     """Busca resumo (qtd, consumo) por fornecedora para clientes ativos no mês (data_ativo)."""

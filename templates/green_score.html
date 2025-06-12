@@ -6,7 +6,7 @@
 {% block head_extra %}
 {{ super() }}
 <style>
-    /* Estilos para o grid de velocímetros */
+    /* Estilos existentes para o grid de velocímetros */
     .gauge-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 280px é o min-width do gauge */
@@ -55,6 +55,95 @@
         padding: 50px 20px;
         color: var(--cor-texto-secundario);
     }
+
+    /* Estilos para os novos cards de informação */
+    .info-cards-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); /* Dois cards por linha */
+        gap: 25px; /* Espaçamento entre os cards */
+        margin-top: 25px; /* Espaço acima dos cards de informação */
+        margin-bottom: 25px; /* Espaço abaixo dos cards de informação */
+    }
+
+    /* Reutiliza estilos de card existentes */
+    .info-card {
+        background-color: var(--cor-fundo-elemento);
+        border-radius: 12px;
+        box-shadow: var(--sombra-card);
+        border: 1px solid var(--cor-borda-suave);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .info-card .card-header {
+        padding: 12px 18px;
+        background: linear-gradient(135deg, var(--cor-fundo-header-card), #f3f3f3);
+        border-bottom: 1px solid var(--cor-borda-suave);
+        font-weight: 500;
+        color: var(--cor-texto-secundario);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-card .card-body {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .info-card .main-value {
+        font-size: 2.6em;
+        font-weight: 700;
+        color: var(--cor-primaria);
+        margin-bottom: 5px;
+        line-height: 1.1;
+    }
+
+    .info-card .sub-label {
+        display: block;
+        color: var(--cor-texto-secundario);
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+    
+    /* Para os "Clientes do Mês" com dois valores */
+    .info-card .qualification-numbers {
+        display: flex;
+        justify-content: center;
+        text-align: center;
+        gap: 35px;
+        align-items: flex-start;
+        width: 100%;
+    }
+    .info-card .qual-item .qual-number {
+        font-size: 2.2em;
+        font-weight: 700;
+        color: var(--cor-primaria);
+        display: block;
+        line-height: 1.1;
+    }
+    .info-card .qual-item .qual-label {
+        font-size: 0.85em;
+        color: var(--cor-texto-secundario);
+        line-height: 1.3;
+        margin-top: 3px;
+    }
+
+    /* Responsividade para info-cards-container */
+    @media (max-width: 768px) {
+        .info-cards-container {
+            grid-template-columns: 1fr; /* Uma coluna em telas menores */
+            gap: 15px;
+        }
+    }
+
 </style>
 {% endblock %}
 
@@ -69,11 +158,52 @@
             <label for="fornecedora-filter">Selecione a Fornecedora:</label>
             <select id="fornecedora-filter" class="form-control" style="width: 300px;">
                 <option value="">-- Selecione uma Fornecedora --</option>
-                <option value="Consolidado">Consolidado (Todas as Fornecedoras)</option> {# NOVA OPÇÃO #}
+                <option value="Consolidado">Consolidado (Todas as Fornecedoras)</option>
                 {% for forn in fornecedoras %}
                     <option value="{{ forn }}">{{ forn }}</option>
                 {% endfor %}
             </select>
+        </div>
+    </div>
+
+    {# Contêiner para os cards de informação adicionais #}
+    <div id="additional-info-container" class="info-cards-container" style="display: none;">
+        {# Card: Resultado do Mês #}
+        <div class="info-card kpi-card">
+            <div class="card-header">
+                Resultado do Mês
+                <i class="fas fa-info-circle tooltip-icon" title="Soma do consumo médio dos clientes ativos no mês para esta fornecedora."></i>
+            </div>
+            <div class="card-body">
+                <div class="main-value" id="info-kwh-vendidos">
+                    <i class="fas fa-spinner fa-spin fa-sm"></i>
+                </div>
+                <div class="sub-label">kWh vendidos</div>
+            </div>
+        </div>
+
+        {# Card: Clientes do Mês (Registrados / Ativados) #}
+        <div class="info-card qualification-card">
+            <div class="card-header">
+                Clientes do Mês
+                <i class="fas fa-info-circle tooltip-icon" title="Contagem de clientes registrados e ativados no mês para esta fornecedora."></i>
+            </div>
+            <div class="card-body">
+                <div class="qualification-numbers">
+                    <div class="qual-item">
+                        <span class="qual-number" id="info-clientes-registrados">
+                            <i class="fas fa-spinner fa-spin fa-sm"></i>
+                        </span>
+                        <span class="qual-label">Registrados<br>no mês</span>
+                    </div>
+                    <div class="qual-item">
+                        <span class="qual-number" id="info-clientes-ativados">
+                            <i class="fas fa-spinner fa-spin fa-sm"></i>
+                        </span>
+                        <span class="qual-label">Ativados<br>no mês</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -90,6 +220,15 @@
 
 {% block scripts_extra %}
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    
+    <script>
+        // Formatação de números para português do Brasil
+        function formatNumber(num, decimalPlaces = 0) {
+            if (typeof num !== 'number' || isNaN(num)) { return '0'; }
+            return num.toLocaleString('pt-BR', {
+                minimumFractionDigits: decimalPlaces,
+                maximumFractionDigits: decimalPlaces
+            });
+        }
+    </script>
     <script src="{{ url_for('static', filename='js/green_score.js') }}"></script>
 {% endblock %}
