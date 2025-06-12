@@ -2,12 +2,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const gaugeContainer = document.getElementById('gauge-container');
     const fornecedoraFilter = document.getElementById('fornecedora-filter');
     const placeholderMessage = document.getElementById('placeholder-message');
-    // Mude a referência de um container para uma coleção de itens individuais
-    const additionalInfoItems = document.querySelectorAll('.additional-info-item'); // Alterado para querySelectorAll
+    const additionalInfoItems = document.querySelectorAll('.info-card'); // Seleciona os cards de info
+    
+    // NOVO: Elementos do logo
+    const supplierLogoDisplay = document.getElementById('supplier-logo-display');
+    const supplierLogoImg = document.getElementById('supplier-logo-img');
 
     const infoKwhVendidos = document.getElementById('info-kwh-vendidos');
     const infoClientesRegistrados = document.getElementById('info-clientes-registrados');
     const infoClientesAtivados = document.getElementById('info-clientes-ativados');
+
+    // NOVO: Mapeamento de fornecedoras para caminhos de logo
+    // Adapte estes caminhos e nomes de arquivo conforme suas imagens reais!
+    const supplierLogos = {
+        'SOLATIO': '/static/img/fornecedoras/solatio.png',
+        'COMERC': '/static/img/fornecedoras/comerc.png',
+        'RZK': '/static/img/fornecedoras/rzk.png',
+        'BC ENERGIA': '/static/img/fornecedoras/bc_energia.png',
+        'BOM FUTURO': '/static/img/fornecedoras/bom_futuro.png',
+        'ULTRA': '/static/img/fornecedoras/ultra.png',
+        'FIT': '/static/img/fornecedoras/fit.png',
+        'COTESA': '/static/img/fornecedoras/cotesa.png',
+        'SINERGI': '/static/img/fornecedoras/sinergi.png',
+        'ATUA': '/static/img/fornecedoras/atua.png',
+        'MATRIX': '/static/img/fornecedoras/matrix.png',
+        'REENERGISA': '/static/img/fornecedoras/reenergisa.png',
+        'VANTAGE': '/static/img/fornecedoras/vantage.png',
+        'EDP': '/static/img/fornecedoras/edp.png',
+        'GV': '/static/img/fornecedoras/gv.png',
+        'FARO': '/static/img/fornecedoras/faro.png',
+        // Adicione mais fornecedoras aqui conforme necessário
+    };
 
     /**
      * Determina as cores do gradiente baseado no valor do score.
@@ -17,16 +42,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function getScoreColors(value) {
         // Cores para o gradiente baseado no Green Score
         if (value >= 80) {
-            // Excelente: Verde claro para Verde escuro
             return ['#86efac', '#16a34a']; // tailwind green-300 to green-700
         } else if (value >= 60) {
-            // Bom: Amarelo claro para Laranja
             return ['#fde047', '#f97316']; // tailwind yellow-300 to orange-500
         } else if (value >= 40) {
-            // Regular: Laranja claro para Vermelho
             return ['#fdba74', '#dc2626']; // tailwind orange-300 to red-600
         } else {
-            // Crítico: Vermelho claro para Vermelho escuro
             return ['#fca5a5', '#b91c1c']; // tailwind red-300 to red-800
         }
     }
@@ -156,7 +177,11 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>`;
         
         // Esconde informações adicionais individualmente
-        additionalInfoItems.forEach(item => item.style.display = 'none'); // Alterado
+        additionalInfoItems.forEach(item => item.style.display = 'none');
+
+        // NOVO: Esconde o logo por padrão
+        supplierLogoDisplay.style.display = 'none';
+        supplierLogoImg.src = '';
 
         try {
             let apiUrl = '';
@@ -180,15 +205,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Cria múltiplos velocímetros em um grid
                     data.forEach((scoreInfo, index) => {
                         const cardDiv = document.createElement('div');
-                        cardDiv.className = 'gauge-card'; // Adiciona classe para estilização individual
+                        cardDiv.className = 'gauge-card';
                         
                         const chartDiv = document.createElement('div');
-                        chartDiv.id = `gauge-chart-${index}`; // ID único para cada gráfico
-                        chartDiv.className = 'gauge-chart-container'; // Adiciona classe para o contêiner do gráfico
+                        chartDiv.id = `gauge-chart-${index}`;
+                        chartDiv.className = 'gauge-chart-container';
                         cardDiv.appendChild(chartDiv);
                         gaugeContainer.appendChild(cardDiv);
 
-                        // Cria o gráfico
                         createGauge(chartDiv.id, scoreInfo.fornecedora, scoreInfo.score);
                     });
                     // Esconde os cards de informação adicionais quando em modo Consolidado
@@ -197,30 +221,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Comportamento para fornecedora específica (um único gauge e informações adicionais)
                     const scoreInfo = data[0]; // Pega o primeiro (e único) score retornado
                     const cardDiv = document.createElement('div');
-                    cardDiv.className = 'gauge-card'; // Não precisa mais de message-center, o grid faz o alinhamento
+                    cardDiv.className = 'gauge-card';
                     
                     const chartDiv = document.createElement('div');
-                    chartDiv.id = 'gauge-chart-single'; // ID fixo para o único
+                    chartDiv.id = 'gauge-chart-single';
                     chartDiv.className = 'gauge-chart-container';
                     cardDiv.appendChild(chartDiv);
                     gaugeContainer.appendChild(cardDiv);
 
                     createGauge('gauge-chart-single', scoreInfo.fornecedora, scoreInfo.score);
 
-                    // ***** NOVO: ATUALIZA OS CARDS DE INFORMAÇÃO ADICIONAIS *****
-                    additionalInfoItems.forEach(item => item.style.display = 'flex'); // Mostra os cards
-                    await updateAdditionalInfoCards(fornecedora); // Chama a função para buscar e atualizar os dados
-                    // ************************************************************
+                    // NOVO: Exibe o logo da fornecedora selecionada
+                    const logoPath = supplierLogos[fornecedora.toUpperCase()]; // Busca o caminho do logo
+                    if (logoPath) {
+                        supplierLogoImg.src = logoPath;
+                        supplierLogoDisplay.style.display = 'block'; // Mostra o container do logo
+                    } else {
+                        supplierLogoDisplay.style.display = 'none'; // Esconde se não houver logo
+                    }
+
+                    // Exibe os cards de informação adicionais
+                    additionalInfoItems.forEach(item => item.style.display = 'flex');
+                    await updateAdditionalInfoCards(fornecedora);
                 }
             } else {
                 gaugeContainer.innerHTML = `<div class="message-center alert alert-warning">Nenhum score encontrado para ${fornecedora}.</div>`;
-                additionalInfoItems.forEach(item => item.style.display = 'none'); // Esconde se não houver scores
+                additionalInfoItems.forEach(item => item.style.display = 'none');
+                supplierLogoDisplay.style.display = 'none'; // Esconde o logo também
             }
 
         } catch (error) {
             console.error("Erro ao carregar score:", error);
             gaugeContainer.innerHTML = `<div class="message-center alert alert-danger">Falha ao carregar os dados. Tente novamente mais tarde.<br><small>${error.message}</small></div>`;
-            additionalInfoItems.forEach(item => item.style.display = 'none'); // Esconde em caso de erro
+            additionalInfoItems.forEach(item => item.style.display = 'none');
+            supplierLogoDisplay.style.display = 'none'; // Esconde o logo em caso de erro
         }
     }
 
@@ -265,14 +299,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedSupplier = this.value;
 
         if (selectedSupplier) {
-            // Se uma fornecedora (ou Consolidado) for selecionada, busca os dados
             loadScoreFor(selectedSupplier);
         } else {
-            // Se a opção "-- Selecione..." for escolhida, volta ao estado inicial
             gaugeContainer.innerHTML = '';
             gaugeContainer.appendChild(placeholderMessage);
             placeholderMessage.style.display = 'block';
-            additionalInfoItems.forEach(item => item.style.display = 'none'); // Esconde os cards de informação
+            additionalInfoItems.forEach(item => item.style.display = 'none');
+            supplierLogoDisplay.style.display = 'none'; // Esconde o logo
         }
     });
 
@@ -282,5 +315,6 @@ document.addEventListener('DOMContentLoaded', function() {
         gaugeContainer.appendChild(placeholderMessage);
         placeholderMessage.style.display = 'block';
         additionalInfoItems.forEach(item => item.style.display = 'none');
+        supplierLogoDisplay.style.display = 'none'; // Esconde o logo no início
     }
 });

@@ -5,6 +5,8 @@
 
 {% block head_extra %}
 {{ super() }}
+{# INÍCIO: Bloco de comentário Jinja2 para a tag <style> #}
+{% raw %}
 <style>
     /* Estilos existentes para o grid de velocímetros */
     .gauge-grid {
@@ -144,7 +146,22 @@
         }
     }
 
+    /* Novo estilo para o contêiner do logo */
+    .supplier-logo-container {
+        text-align: center;
+        margin-bottom: 20px; /* Espaço entre o logo e os velocímetros/informações */
+        min-height: 50px; /* Garante um espaço mínimo */
+    }
+
+    .supplier-logo-container img {
+        max-height: 80px; /* Altura máxima para o logo */
+        max-width: 200px; /* Largura máxima para o logo */
+        object-fit: contain; /* Garante que a imagem se ajuste sem distorcer */
+        transition: opacity 0.3s ease-in-out; /* Transição para o aparecimento do logo */
+    }
 </style>
+{% endraw %}
+{# FIM: Bloco de comentário Jinja2 para a tag <style> #}
 {% endblock %}
 
 {% block content %}
@@ -164,6 +181,11 @@
                 {% endfor %}
             </select>
         </div>
+    </div>
+
+    {# NOVO: Contêiner para o logo da fornecedora #}
+    <div id="supplier-logo-display" class="supplier-logo-container" style="display: none;">
+        <img id="supplier-logo-img" src="" alt="Logo da Fornecedora">
     </div>
 
     {# Contêiner para os cards de informação adicionais #}
