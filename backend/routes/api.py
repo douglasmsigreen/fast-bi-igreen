@@ -97,57 +97,48 @@ def api_concessionaria_summary():
 @api_bp.route('/kpi/total-kwh')
 @login_required
 def api_kpi_total_kwh():
-    """Retorna o KPI de consumo total de kWh para o mês, opcionalmente filtrado por fornecedora."""
+    """Retorna o KPI de consumo total de kWh para o mês."""
     month_str = request.args.get('month')
-    fornecedora_filter = request.args.get('fornecedora', None) # <--- NOVO: Obtém o filtro de fornecedora
-
     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
         return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
     try:
-        # Passa o filtro de fornecedora para a função do DB
-        total_kwh = db.get_total_consumo_medio_by_month(month_str=month_str, fornecedora_filter=fornecedora_filter)
-        logger.debug(f"API KPI Total kWh: Mês={month_str}, Fornecedora={fornecedora_filter}, Resultado={total_kwh}")
+        total_kwh = db.get_total_consumo_medio_by_month(month_str=month_str)
+        logger.debug(f"API KPI Total kWh: Mês={month_str}, Resultado={total_kwh}")
         return jsonify({"total_kwh": total_kwh})
     except Exception as e:
-        logger.error(f"API KPI Total kWh: Erro para o mês {month_str} e fornecedora {fornecedora_filter}: {e}", exc_info=True)
+        logger.error(f"API KPI Total kWh: Erro para o mês {month_str}: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado ao buscar KPI Total kWh."}), 500
 
 # --- Rota API para KPI Clientes Ativos (data_ativo) ---
 @api_bp.route('/kpi/clientes-ativos')
 @login_required
 def api_kpi_clientes_ativos():
-    """Retorna o KPI de contagem de clientes ativos no mês (por data_ativo), opcionalmente filtrado por fornecedora."""
+    """Retorna o KPI de contagem de clientes ativos no mês (por data_ativo)."""
     month_str = request.args.get('month')
-    fornecedora_filter = request.args.get('fornecedora', None) # <--- NOVO: Obtém o filtro de fornecedora
-
     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
         return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
     try:
-        # Passa o filtro de fornecedora para a função do DB
-        count = db.count_clientes_ativos_by_month(month_str=month_str, fornecedora_filter=fornecedora_filter)
-        logger.debug(f"API KPI Clientes Ativos: Mês={month_str}, Fornecedora={fornecedora_filter}, Resultado={count}")
+        count = db.count_clientes_ativos_by_month(month_str=month_str)
+        logger.debug(f"API KPI Clientes Ativos: Mês={month_str}, Resultado={count}")
         return jsonify({"clientes_ativos_count": count})
     except Exception as e:
-        logger.error(f"API KPI Clientes Ativos: Erro para o mês {month_str} e fornecedora {fornecedora_filter}: {e}", exc_info=True)
+        logger.error(f"API KPI Clientes Ativos: Erro para o mês {month_str}: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado ao buscar KPI Clientes Ativos."}), 500
 
 # --- Rota API para KPI Clientes REGISTRADOS (dtcad) ---
 @api_bp.route('/kpi/clientes-registrados')
 @login_required
 def api_kpi_clientes_registrados():
-    """Retorna o KPI de contagem de clientes registrados no mês (por dtcad), opcionalmente filtrado por fornecedora."""
+    """Retorna o KPI de contagem de clientes registrados no mês (por dtcad)."""
     month_str = request.args.get('month')
-    fornecedora_filter = request.args.get('fornecedora', None) # <--- NOVO: Obtém o filtro de fornecedora
-
     if not month_str or not re.match(r'^\d{4}-\d{2}$', month_str):
         return jsonify({"error": "Formato de mês inválido. Use YYYY-MM."}), 400
     try:
-        # Passa o filtro de fornecedora para a função do DB
-        count = db.count_clientes_registrados_by_month(month_str=month_str, fornecedora_filter=fornecedora_filter)
-        logger.debug(f"API KPI Clientes Registrados: Mês={month_str}, Fornecedora={fornecedora_filter}, Resultado={count}")
+        count = db.count_clientes_registrados_by_month(month_str=month_str)
+        logger.debug(f"API KPI Clientes Registrados: Mês={month_str}, Resultado={count}")
         return jsonify({"clientes_registrados_count": count})
     except Exception as e:
-        logger.error(f"API KPI Clientes Registrados: Erro para o mês {month_str} e fornecedora {fornecedora_filter}: {e}", exc_info=True)
+        logger.error(f"API KPI Clientes Registrados: Erro para o mês {month_str}: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado ao buscar KPI Clientes Registrados."}), 500
 
 # --- Rota API para Dados do Gráfico Mensal (Evolução Ativações) ---
