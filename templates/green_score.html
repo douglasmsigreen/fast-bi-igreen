@@ -5,7 +5,6 @@
 
 {% block head_extra %}
 {{ super() }}
-{# INÍCIO: Bloco de comentário Jinja2 para a tag <style> #}
 {% raw %}
 <style>
     /* Estilos existentes para o grid de velocímetros */
@@ -159,6 +158,57 @@
         object-fit: contain; /* Garante que a imagem se ajuste sem distorcer */
         transition: opacity 0.3s ease-in-out; /* Transição para o aparecimento do logo */
     }
+
+    /* Novo estilo para o card de gráfico mensal */
+    .chart-card {
+        background-color: var(--cor-fundo-elemento);
+        border-radius: 12px;
+        box-shadow: var(--sombra-card);
+        border: 1px solid var(--cor-borda-suave);
+        margin: 0 0 25px 0;
+    }
+
+    .chart-card .card-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 18px;
+        background: linear-gradient(135deg, var(--cor-fundo-header-card), #f3f3f3);
+        border-bottom: 1px solid var(--cor-borda-suave);
+    }
+
+    .chart-card .card-header select {
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--cor-borda-suave);
+        background-color: white;
+        font-size: 0.9rem;
+    }
+
+    .chart-card .card-body {
+        padding: 20px;
+        height: 400px;
+        position: relative;
+    }
+
+    /* Estilo para o loading do gráfico */
+    .chart-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+    }
+
+    .chart-loading-content {
+        text-align: center;
+        color: var(--cor-texto-secundario);
+    }
 </style>
 {% endraw %}
 {# FIM: Bloco de comentário Jinja2 para a tag <style> #}
@@ -229,6 +279,29 @@
         </div>
     </div>
 
+    {# Adicionar antes do gauge-container #}
+    <div id="monthly-activations-card" class="chart-card" style="display: none;">
+        <div class="card-header">
+            <select id="chart-year-select">
+                <option value="{{ now().year }}">{{ now().year }}</option>
+                <option value="{{ now().year - 1 }}">{{ now().year - 1 }}</option>
+                <option value="{{ now().year - 2 }}">{{ now().year - 2 }}</option>
+            </select>
+            <span>Evolução Mensal de Ativações</span>
+            <i class="fas fa-info-circle tooltip-icon" 
+               title="Acompanhamento mensal do número de clientes ativados"></i>
+        </div>
+        <div class="card-body">
+            <canvas id="monthlyChart"></canvas>
+            <div class="chart-loading" style="display: none;">
+                <div class="chart-loading-content">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                    <p>Carregando dados...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {# O gauge-container será o nosso grid de velocímetros #}
     <div id="gauge-container" class="gauge-grid" style="min-height: 300px;">
         {# Mensagem de placeholder inicial, que será removida/substituída por JS #}
@@ -241,16 +314,54 @@
 {% endblock %}
 
 {% block scripts_extra %}
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script>
-        // Formatação de números para português do Brasil
-        function formatNumber(num, decimalPlaces = 0) {
-            if (typeof num !== 'number' || isNaN(num)) { return '0'; }
-            return num.toLocaleString('pt-BR', {
-                minimumFractionDigits: decimalPlaces,
-                maximumFractionDigits: decimalPlaces
-            });
-        }
-    </script>
-    <script src="{{ url_for('static', filename='js/green_score.js') }}"></script>
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    // Formatação de números para português do Brasil
+    function formatNumber(num, decimalPlaces = 0) {
+        if (typeof num !== 'number' || isNaN(num)) { return '0'; }
+        return num.toLocaleString('pt-BR', {
+            minimumFractionDigits: decimalPlaces,
+            maximumFractionDigits: decimalPlaces
+        });
+    }
+
+    // Configuração do gráfico mensal
+    let monthlyChart = null;
+
+    function initializeMonthlyChart() {
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        monthlyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Clientes Ativados',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+<script src="{{ url_for('static', filename='js/green_score.js') }}"></script>
 {% endblock %}
