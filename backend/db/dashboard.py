@@ -153,18 +153,27 @@ def get_concessionaria_summary(month_str: Optional[str] = None) -> List[Tuple[st
         else: return []
     except Exception as e: logger.error(f"Erro get_concessionaria_summary ({month_str}): {e}", exc_info=True); return None
 
-def get_monthly_active_clients_by_year(year: int) -> List[int]:
+def get_monthly_active_clients_by_year(year: int, fornecedora: Optional[str] = None) -> List[int]:
     """Busca contagem mensal de clientes ativados por ano (data_ativo) para gráfico."""
     query = """
         SELECT EXTRACT(MONTH FROM c.data_ativo)::INTEGER AS mes, COUNT(c.idcliente) AS contagem
         FROM public."CLIENTES" c
         WHERE EXTRACT(YEAR FROM c.data_ativo) = %s
             AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+            {fornecedora_filter}
         GROUP BY mes ORDER BY mes;
     """
-    params = (year,); monthly_counts = [0] * 12
+    params = [year]
+    fornecedora_filter_sql = ""
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        fornecedora_filter_sql = "AND c.fornecedora = %s"
+        params.append(fornecedora)
+
+    final_query = query.format(fornecedora_filter=fornecedora_filter_sql)
+    
+    monthly_counts = [0] * 12
     try:
-        results = execute_query(query, params)
+        results = execute_query(final_query, tuple(params))
         if results:
             for row in results:
                 month_index = row[0] - 1
