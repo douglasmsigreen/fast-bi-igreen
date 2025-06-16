@@ -5,25 +5,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const tableBody = dataTable ? dataTable.querySelector('tbody') : null;
   
     if (searchInput && tableBody) {
-    searchInput.addEventListener('input', function() {
-     const searchTerm = searchInput.value.toLowerCase();
-     const rows = tableBody.querySelectorAll('tr');
-  
-     rows.forEach(row => {
-      const cells = row.querySelectorAll('td');
-      let match = false;
-      cells.forEach(cell => {
-       if (cell.textContent.toLowerCase().includes(searchTerm)) {
-        match = true;
-       }
-      });
-      // Mostra ou oculta a linha
-      row.style.display = match ? '' : 'none';
-     });
-    });
+        searchInput.addEventListener('input', function() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const rows = tableBody.querySelectorAll('tr');
+        
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                let match = false;
+                cells.forEach(cell => {
+                    if (cell.textContent.toLowerCase().includes(searchTerm)) {
+                        match = true;
+                    }
+                });
+                // Mostra ou oculta a linha
+                row.style.display = match ? '' : 'none';
+            });
+        });
     } else {
-     if (!searchInput) console.error("Elemento #tableSearch não encontrado.");
-     if (!tableBody) console.error("Elemento tbody da tabela #dataTable não encontrado.");
+        // Logs removidos pois a busca não é funcionalidade global e não é crítico se não existir
     }
   
     // Adiciona event listeners aos botões de fechar das mensagens flash

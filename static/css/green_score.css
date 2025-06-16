@@ -123,10 +123,20 @@
     color: var(--cor-texto-secundario);
 }
 
+/* **NOVO ESTILO PARA O CARD DO GRÁFICO DE LINHA NA PÁGINA GREEN SCORE** */
+.gauge-and-kpis-row .chart-card {
+    flex-basis: 100%; /* Ocupa a largura total da linha, forçando a quebra */
+    /* Remove as margens fixas que o impediam de se ajustar ao layout flex */
+    margin-top: 0; 
+    margin-left: 0;
+    margin-right: 0;
+    max-width: none; /* Remove a largura máxima do chart-card base do dashboard */
+}
+
 /* Responsividade */
 @media (max-width: 992px) {
     .gauge-and-kpis-row {
-        flex-direction: column; /* Em telas menores, empilha gauge e kpis */
+        flex-direction: column; /* Em telas menores, empilha gauge, kpis e o gráfico de linha */
         align-items: center;
     }
     .gauge-single-container {
@@ -141,6 +151,12 @@
     }
     .gauge-grid-consolidated {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+    /* Ajuste para o gráfico de linha em telas menores */
+    .gauge-and-kpis-row .chart-card {
+        flex-basis: auto; /* Deixa o flexbox decidir */
+        width: 100%;
+        min-width: 0;
     }
 }
 
