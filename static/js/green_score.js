@@ -36,12 +36,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const kpiClientesRegistrados = document.getElementById('kpi-clientes-registrados-green-score');
     const kpiClientesAtivos = document.getElementById('kpi-clientes-ativos-green-score');
 
+    // NOVOS Elementos dos KPIs CONSOLIDADOS
+    const consolidatedKpisRow = document.getElementById('consolidated-kpis-row');
+    const kpiTotalKwhConsolidado = document.getElementById('kpi-total-kwh-consolidado');
+    const kpiClientesRegistradosConsolidado = document.getElementById('kpi-clientes-registrados-consolidado');
+    const kpiClientesAtivosConsolidado = document.getElementById('kpi-clientes-ativos-consolidado');
+
     // Elementos para o gráfico de linha anual
     const greenScoreChartYearSelect = document.getElementById('green-score-chart-year');
     const greenScoreMonthlyChartCanvas = document.getElementById('green-score-monthly-chart-canvas');
     const greenScoreMonthlyChartStatus = document.getElementById('green-score-monthly-chart-status');
     let greenScoreMonthlyLineChartInstance = null; // Instância do Chart.js
-    const greenScoreMonthlyChartCard = document.querySelector('[data-id="green-score-monthly-chart"]'); // Referência ao card
+    const greenScoreMonthlyChartCard = document.getElementById('green-score-monthly-chart'); // Referência ao card (agora por ID)
 
     const supplierLogos = {
         'SOLATIO': '/static/img/fornecedoras/solatio.png',
@@ -228,6 +234,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // NOVA FUNÇÃO: Atualiza os KPIs CONSOLIDADOS (sem filtro de mês, com filtro de fornecedora)
+    async function updateConsolidatedKPIs(fornecedora) {
+        
+        // Exibir spinners nos KPIs consolidados
+        if (kpiTotalKwhConsolidado) kpiTotalKwhConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+
+        try {
+            // Se a fornecedora for 'Consolidado', não passamos o parâmetro 'fornecedora' na URL.
+            // Caso contrário, passamos a fornecedora selecionada.
+            const fornecedoraParam = (fornecedora && fornecedora.toLowerCase() !== 'consolidado') ? `&fornecedora=${encodeURIComponent(fornecedora)}` : '';
+
+            // Busca kWh Total Consolidado
+            const kwhResponse = await fetchData(`/api/kpi/total-kwh-consolidated?${fornecedoraParam}`, "KPI Total kWh (Consolidado)");
+            if (kwhResponse && kwhResponse.total_kwh !== undefined) {
+                if (kpiTotalKwhConsolidado) kpiTotalKwhConsolidado.textContent = formatNumber(kwhResponse.total_kwh, 0);
+            } else {
+                if (kpiTotalKwhConsolidado) kpiTotalKwhConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                console.error('Erro ao buscar kWh consolidado:', kwhResponse?.error || 'Resposta inválida');
+            }
+
+            // Busca Clientes Registrados Consolidado
+            const registradosResponse = await fetchData(`/api/kpi/clientes-registrados-consolidated?${fornecedoraParam}`, "KPI Clientes Registrados (Consolidado)");
+            if (registradosResponse && registradosResponse.clientes_registrados_count !== undefined) {
+                if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.textContent = formatNumber(registradosResponse.clientes_registrados_count, 0);
+            } else {
+                if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                console.error('Erro ao buscar clientes registrados consolidados:', registradosResponse?.error || 'Resposta inválida');
+            }
+
+            // Busca Clientes Ativos Consolidado
+            const ativosResponse = await fetchData(`/api/kpi/clientes-ativos-consolidated?${fornecedoraParam}`, "KPI Clientes Ativos (Consolidado)");
+            if (ativosResponse && ativosResponse.clientes_ativos_count !== undefined) {
+                if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.textContent = formatNumber(ativosResponse.clientes_ativos_count, 0);
+            } else {
+                if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                console.error('Erro ao buscar clientes ativados consolidados:', ativosResponse?.error || 'Resposta inválida');
+            }
+            console.log("KPIs consolidados atualizados com sucesso.");
+
+        } catch (error) {
+            console.error("Erro geral ao buscar KPIs consolidados da Green Score:", error);
+            if (kpiTotalKwhConsolidado) kpiTotalKwhConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            // Se houver um contêiner para os KPIs consolidados, pode-se esconder em caso de erro
+            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none'; 
+        }
+    }
+
     async function updateGreenScoreMonthlyChart(fornecedora, year) {
         if (!greenScoreMonthlyChartCanvas) {
             console.error("Canvas do gráfico de linha Green Score não encontrado.");
@@ -326,143 +383,120 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     async function loadScoreFor(fornecedora) {
-        // Garante que o placeholderMessage não seja nulo e o esconde
+        // 1. Esconder tudo e exibir placeholder se a opção for vazia
+        if (fornecedora === '' || fornecedora === null) {
+            if (mainContentWrapper) mainContentWrapper.style.display = 'none';
+            if (placeholderMessage) placeholderMessage.style.display = 'block';
+            // Esconder todos os cards específicos e consolidados
+            if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
+            if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none';
+            if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
+            if (gaugeContainer) gaugeContainer.style.display = 'none';
+            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none';
+            return;
+        }
+
+        // Se uma opção (Consolidado ou Fornecedora Específica) foi selecionada, esconder placeholder
         if (placeholderMessage) placeholderMessage.style.display = 'none';
-        
-        // Garante que o mainContentWrapper não seja nulo e o mostra
         if (mainContentWrapper) mainContentWrapper.style.display = 'flex';
 
-        // Oculta o logo e os KPIs no início do carregamento
-        if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
-        if (supplierLogoImg) supplierLogoImg.src = '';
-        if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none';
-        
-        // Exibe spinner no contêiner do gauge
+        // Exibir spinners no gaugeContainer enquanto carrega
         if (gaugeContainer) {
             gaugeContainer.innerHTML = `<div class="message-center"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-2 text-muted">Carregando score${fornecedora === 'Consolidado' ? 's' : ''} para **${fornecedora}**...</p></div>`;
-            // Remove classes de layout antigas do gaugeContainer
             gaugeContainer.classList.remove('gauge-single-container', 'gauge-grid-consolidated');
-        } else {
-            console.error("Elemento 'gauge-container' não encontrado.");
-            return; // Aborta a função se o contêiner principal não for encontrado
+            gaugeContainer.style.display = 'flex';
         }
 
-        // Lógica para o gráfico de linha de evolução
-        if (greenScoreMonthlyChartCard) {
-            if (fornecedora === 'Consolidado') {
-                greenScoreMonthlyChartCard.style.display = 'none'; // Esconde o gráfico de linha para Consolidado
-            } else {
-                greenScoreMonthlyChartCard.style.display = 'block'; // Mostra para fornecedora específica
-                const selectedYear = greenScoreChartYearSelect ? greenScoreChartYearSelect.value : new Date().getFullYear();
-                updateGreenScoreMonthlyChart(fornecedora, selectedYear); // Atualiza o gráfico de linha
+        if (fornecedora === 'Consolidado') {
+            if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
+            if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none';
+            if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
+            if (gaugeContainer) {
+                gaugeContainer.classList.add('gauge-grid-consolidated');
+                gaugeContainer.style.display = 'grid';
             }
-        } else {
-            console.error("Elemento 'green-score-monthly-chart' não encontrado.");
-        }
-
-
-        try {
-            let apiUrl = '';
-            if (fornecedora === 'Consolidado') {
-                apiUrl = `/api/scores/green-score?fornecedora=Consolidado`;
-                if (gaugeContainer) {
-                    // Para consolidado, o gaugeContainer se torna um grid de múltiplos gauges
-                    gaugeContainer.classList.add('gauge-grid-consolidated');
-                    gaugeContainer.style.display = 'grid'; // Garante display grid
+            if (gaugeAndKpisRow) gaugeAndKpisRow.style.display = 'block';
+            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none'; // <-- ESCONDE OS KPIS CONSOLIDADOS NO CONSOLIDADO
+            try {
+                const apiUrl = `/api/scores/green-score?fornecedora=Consolidado`;
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Erro HTTP ${response.status}`);
                 }
-                if (gaugeAndKpisRow) gaugeAndKpisRow.style.display = 'block';
-
-            } else {
-                apiUrl = `/api/scores/green-score?fornecedora=${encodeURIComponent(fornecedora)}`;
-                if (gaugeContainer) {
-                    // Para fornecedora específica, o gaugeContainer é um único gauge
-                    gaugeContainer.classList.add('gauge-single-container');
-                    gaugeContainer.style.display = 'flex'; // Garante display flex para centralizar
-                }
-                if (gaugeAndKpisRow) gaugeAndKpisRow.style.display = 'flex';
-                updateKPIs(fornecedora); // Chama para carregar KPIs
-            }
-            
-            const response = await fetch(apiUrl);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || `Erro HTTP ${response.status}`);
-            }
-            const data = await response.json();
-
-            if (gaugeContainer) gaugeContainer.innerHTML = ''; // Limpa o spinner de carregamento
-
-            if (data.length > 0) {
-                if (fornecedora === 'Consolidado') {
-                    // Exibe logo e KPIs apenas para fornecedora específica
-                    if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
-                    if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none';
-
+                const data = await response.json();
+                if (gaugeContainer) gaugeContainer.innerHTML = '';
+                if (data.length > 0) {
                     data.forEach((scoreInfo, index) => {
                         const cardDiv = document.createElement('div');
                         cardDiv.className = 'gauge-card';
-                        
                         const chartDiv = document.createElement('div');
                         chartDiv.id = `gauge-chart-${index}`;
                         chartDiv.className = 'gauge-chart-container';
                         cardDiv.appendChild(chartDiv);
                         if (gaugeContainer) gaugeContainer.appendChild(cardDiv);
-
                         createGauge(chartDiv.id, scoreInfo.fornecedora, scoreInfo.score);
                     });
                 } else {
-                    // Exibe logo e KPIs para fornecedora específica
-                    const logoPath = supplierLogos[fornecedora.toUpperCase()];
-                    if (logoPath) {
-                        if (supplierLogoImg) supplierLogoImg.src = logoPath;
-                        if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'block';
-                    } else {
-                        if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
-                    }
-                    if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'grid'; // Exibe KPIs
-
+                    if (gaugeContainer) gaugeContainer.innerHTML = `<div class="message-center alert alert-warning">Nenhum score encontrado para as fornecedoras.</div>`;
+                }
+            } catch (error) {
+                console.error("Erro ao carregar scores consolidados:", error);
+                if (gaugeContainer) gaugeContainer.innerHTML = `<div class="message-center alert alert-danger">Falha ao carregar scores. Tente novamente mais tarde.<br><small>${error.message}</small></div>`;
+            }
+        } else {
+            if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'block';
+            if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'grid';
+            if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'block';
+            if (gaugeContainer) {
+                gaugeContainer.classList.add('gauge-single-container');
+                gaugeContainer.style.display = 'flex';
+            }
+            if (gaugeAndKpisRow) gaugeAndKpisRow.style.display = 'flex';
+            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'grid'; // <-- MOSTRA OS KPIS CONSOLIDADOS PARA FORNECEDORA ESPECÍFICA
+            const logoPath = supplierLogos[fornecedora.toUpperCase()];
+            if (logoPath) {
+                if (supplierLogoImg) supplierLogoImg.src = logoPath;
+                if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'block';
+            } else {
+                if (supplierLogoImg) supplierLogoImg.src = '';
+                if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
+            }
+            updateKPIs(fornecedora);
+            const selectedYear = greenScoreChartYearSelect ? greenScoreChartYearSelect.value : new Date().getFullYear();
+            updateGreenScoreMonthlyChart(fornecedora, selectedYear);
+            try {
+                const apiUrl = `/api/scores/green-score?fornecedora=${encodeURIComponent(fornecedora)}`;
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Erro HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                if (gaugeContainer) gaugeContainer.innerHTML = '';
+                if (data.length > 0) {
                     const scoreInfo = data[0];
-                    const chartDiv = document.createElement('div'); // Cria o div do chart
+                    const chartDiv = document.createElement('div');
                     chartDiv.id = 'gauge-chart-single';
                     chartDiv.className = 'gauge-chart-container';
-                    if (gaugeContainer) gaugeContainer.appendChild(chartDiv); // Adiciona ao gaugeContainer
+                    if (gaugeContainer) gaugeContainer.appendChild(chartDiv);
                     createGauge('gauge-chart-single', scoreInfo.fornecedora, scoreInfo.score);
+                } else {
+                    if (gaugeContainer) gaugeContainer.innerHTML = `<div class="message-center alert alert-warning">Nenhum score encontrado para ${fornecedora}.</div>`;
                 }
-            } else {
-                if (gaugeContainer) gaugeContainer.innerHTML = `<div class="message-center alert alert-warning">Nenhum score encontrado para ${fornecedora}.</div>`;
-                if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
-                if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none'; // Esconde KPIs
+            } catch (error) {
+                console.error("Erro ao carregar score:", error);
+                if (gaugeContainer) gaugeContainer.innerHTML = `<div class="message-center alert alert-danger">Falha ao carregar o score. Tente novamente mais tarde.<br><small>${error.message}</small></div>`;
             }
-
-        } catch (error) {
-            console.error("Erro ao carregar score:", error);
-            if (gaugeContainer) gaugeContainer.innerHTML = `<div class="message-center alert alert-danger">Falha ao carregar os dados. Tente novamente mais tarde.<br><small>${error.message}</small></div>`;
-            if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
-            if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none'; // Esconde KPIs
+            updateConsolidatedKPIs(fornecedora);
         }
     }
 
     fornecedoraFilter.addEventListener('change', function() {
         const selectedSupplier = this.value;
-
-        if (selectedSupplier) {
-            loadScoreFor(selectedSupplier);
-        } else {
-            // Se o valor for vazio, exibe o placeholder e esconde os outros elementos
-            if (mainContentWrapper) mainContentWrapper.style.display = 'none';
-            if (placeholderMessage) placeholderMessage.style.display = 'block';
-            
-            // Garante que os KPIs também sejam escondidos explicitamente
-            if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none';
-            // E o logo
-            if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
-
-            // Esconde o card do gráfico de linha também
-            if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
-        }
+        loadScoreFor(selectedSupplier);
     });
 
-    // Adiciona listener para a mudança do ano no novo gráfico
     if (greenScoreChartYearSelect) {
         greenScoreChartYearSelect.addEventListener('change', function() {
             const selectedSupplier = fornecedoraFilter.value;
@@ -474,17 +508,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Estado inicial (ao carregar a página)
-    // Inicialmente esconde o wrapper principal e mostra o placeholder
     if (mainContentWrapper) mainContentWrapper.style.display = 'none';
     if (placeholderMessage) placeholderMessage.style.display = 'block';
-    
-    // Esconde os outros elementos por segurança, caso a lógica do CSS inicial não seja suficiente
     if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none';
     if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
     if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
+    if (gaugeContainer) gaugeContainer.style.display = 'none';
+    if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none';
 
-    // Se houver uma fornecedora já selecionada (ex: recarregou a página com parâmetro na URL)
-    if (fornecedoraFilter.value) {
-        loadScoreFor(fornecedoraFilter.value);
-    }
+    loadScoreFor(fornecedoraFilter.value);
 });

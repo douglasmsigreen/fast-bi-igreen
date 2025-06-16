@@ -606,3 +606,85 @@ def get_overdue_clients_by_state_for_map() -> List[Tuple[str, int]]:
     except Exception as e:
         logger.error(f"Erro ao buscar clientes com atraso por estado para o mapa: {e}", exc_info=True)
         return []
+# --- FIM DA FUNÇÃO ---
+
+# --- NOVA FUNÇÃO: get_total_consumo_medio_consolidado ---
+def get_total_consumo_medio_consolidado(fornecedora: Optional[str] = None) -> float:
+    """
+    Calcula a soma total de 'consumomedio' para clientes ativos,
+    opcionalmente filtrado por fornecedora, SEM filtro de mês.
+    """
+    base_query = """
+        SELECT SUM(COALESCE(c.consumomedio, 0)) FROM public."CLIENTES" c
+        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        AND c.data_ativo IS NOT NULL
+        {fornecedora_filter};
+    """
+    params = []
+    fornecedora_filter_sql = ""
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        fornecedora_filter_sql = "AND c.fornecedora = %s"
+        params.append(fornecedora)
+
+    final_query = base_query.format(fornecedora_filter=fornecedora_filter_sql)
+    logger.info(f"Buscando consumo médio consolidado (Forn: {fornecedora or 'Todos'}): {final_query}")
+    try:
+        result = execute_query(final_query, tuple(params), fetch_one=True)
+        return float(result[0]) if result and result[0] is not None else 0.0
+    except Exception as e:
+        logger.error(f"Erro get_total_consumo_medio_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
+        return 0.0
+
+# --- NOVA FUNÇÃO: count_clientes_ativos_consolidado ---
+def count_clientes_ativos_consolidado(fornecedora: Optional[str] = None) -> int:
+    """
+    Conta o total de clientes ativos (data_ativo)
+    opcionalmente filtrado por fornecedora, SEM filtro de mês.
+    """
+    base_query = """
+        SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
+        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        AND c.data_ativo IS NOT NULL
+        {fornecedora_filter};
+    """
+    params = []
+    fornecedora_filter_sql = ""
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        fornecedora_filter_sql = "AND c.fornecedora = %s"
+        params.append(fornecedora)
+
+    final_query = base_query.format(fornecedora_filter=fornecedora_filter_sql)
+    logger.info(f"Contando clientes ativos consolidados (Forn: {fornecedora or 'Todos'}): {final_query}")
+    try:
+        result = execute_query(final_query, tuple(params), fetch_one=True)
+        return int(result[0]) if result and result[0] is not None else 0
+    except Exception as e:
+        logger.error(f"Erro count_clientes_ativos_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
+        return 0
+
+# --- NOVA FUNÇÃO: count_clientes_registrados_consolidado ---
+def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) -> int:
+    """
+    Conta o total de clientes registrados (dtcad)
+    opcionalmente filtrado por fornecedora, SEM filtro de mês.
+    """
+    base_query = """
+        SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
+        WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
+        AND c.dtcad IS NOT NULL
+        {fornecedora_filter};
+    """
+    params = []
+    fornecedora_filter_sql = ""
+    if fornecedora and fornecedora.lower() != 'consolidado':
+        fornecedora_filter_sql = "AND c.fornecedora = %s"
+        params.append(fornecedora)
+
+    final_query = base_query.format(fornecedora_filter=fornecedora_filter_sql)
+    logger.info(f"Contando clientes registrados consolidados (Forn: {fornecedora or 'Todos'}): {final_query}")
+    try:
+        result = execute_query(final_query, tuple(params), fetch_one=True)
+        return int(result[0]) if result and result[0] is not None else 0
+    except Exception as e:
+        logger.error(f"Erro count_clientes_registrados_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
+        return 0

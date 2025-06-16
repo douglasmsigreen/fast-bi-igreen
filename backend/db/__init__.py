@@ -51,7 +51,12 @@ from .dashboard import (
     get_fornecedora_summary_no_rcb,
     get_overdue_payments_by_fornecedora,
     get_green_score_by_fornecedora,
-    get_overdue_clients_by_state_for_map
+    get_overdue_clients_by_state_for_map,
+    # --- NOVAS IMPORTAÇÕES ADICIONADAS AQUI ---
+    get_total_consumo_medio_consolidado,
+    count_clientes_ativos_consolidado,
+    count_clientes_registrados_consolidado
+    # --- FIM DAS NOVAS IMPORTAÇÕES ---
 )
 
 # Importações do utils.py

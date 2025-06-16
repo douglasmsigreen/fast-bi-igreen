@@ -394,3 +394,57 @@ def api_overdue_clients_by_state():
         logger.error(f"API Mapa (Atraso - /api/map-data/overdue-clients-by-state) Erro inesperado: {e}", exc_info=True)
         return jsonify({"error": "Erro interno inesperado ao processar dados de clientes com atraso para o mapa."}), 500
 # --- FIM DA ROTA API ---
+
+# --- NOVA ROTA API: KPI Total kWh CONSOLIDADO (sem mês, com fornecedora opcional) ---
+@api_bp.route('/kpi/total-kwh-consolidated')
+@login_required
+def api_kpi_total_kwh_consolidated():
+    """
+    Retorna o KPI de consumo total de kWh consolidado (sem filtro de mês),
+    opcionalmente filtrado por fornecedora.
+    """
+    fornecedora = request.args.get('fornecedora', None)
+    logger.info(f"API KPI Total kWh Consolidado: Requisição recebida (Forn: {fornecedora or 'Todos'})")
+    try:
+        total_kwh = db.get_total_consumo_medio_consolidado(fornecedora=fornecedora)
+        logger.debug(f"API KPI Total kWh Consolidado: Fornecedora={fornecedora}, Resultado={total_kwh}")
+        return jsonify({"total_kwh": total_kwh})
+    except Exception as e:
+        logger.error(f"API KPI Total kWh Consolidado: Erro para fornecedora {fornecedora}: {e}", exc_info=True)
+        return jsonify({"error": "Erro inesperado ao buscar KPI Total kWh Consolidado."}), 500
+
+# --- NOVA ROTA API: KPI Clientes Ativos CONSOLIDADO (sem mês, com fornecedora opcional) ---
+@api_bp.route('/kpi/clientes-ativos-consolidated')
+@login_required
+def api_kpi_clientes_ativos_consolidated():
+    """
+    Retorna o KPI de contagem de clientes ativos consolidados (sem filtro de mês),
+    opcionalmente filtrado por fornecedora.
+    """
+    fornecedora = request.args.get('fornecedora', None)
+    logger.info(f"API KPI Clientes Ativos Consolidado: Requisição recebida (Forn: {fornecedora or 'Todos'})")
+    try:
+        count = db.count_clientes_ativos_consolidado(fornecedora=fornecedora)
+        logger.debug(f"API KPI Clientes Ativos Consolidado: Fornecedora={fornecedora}, Resultado={count}")
+        return jsonify({"clientes_ativos_count": count})
+    except Exception as e:
+        logger.error(f"API KPI Clientes Ativos Consolidado: Erro para fornecedora {fornecedora}: {e}", exc_info=True)
+        return jsonify({"error": "Erro inesperado ao buscar KPI Clientes Ativos Consolidado."}), 500
+
+# --- NOVA ROTA API: KPI Clientes Registrados CONSOLIDADO (sem mês, com fornecedora opcional) ---
+@api_bp.route('/kpi/clientes-registrados-consolidated')
+@login_required
+def api_kpi_clientes_registrados_consolidated():
+    """
+    Retorna o KPI de contagem de clientes registrados consolidados (sem filtro de mês),
+    opcionalmente filtrado por fornecedora.
+    """
+    fornecedora = request.args.get('fornecedora', None)
+    logger.info(f"API KPI Clientes Registrados Consolidado: Requisição recebida (Forn: {fornecedora or 'Todos'})")
+    try:
+        count = db.count_clientes_registrados_consolidado(fornecedora=fornecedora)
+        logger.debug(f"API KPI Clientes Registrados Consolidado: Fornecedora={fornecedora}, Resultado={count}")
+        return jsonify({"clientes_registrados_count": count})
+    except Exception as e:
+        logger.error(f"API KPI Clientes Registrados Consolidado: Erro para fornecedora {fornecedora}: {e}", exc_info=True)
+        return jsonify({"error": "Erro inesperado ao buscar KPI Clientes Registrados Consolidado."}), 500
