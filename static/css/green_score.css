@@ -1,0 +1,159 @@
+/* static/css/green_score.css */
+
+/* Contêiner principal que envolve o logo, KPIs e velocímetros */
+.green-score-content-wrapper {
+    /* Usar flexbox para empilhar o logo e a linha de gauges/kpis */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza horizontalmente */
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* Estilos para o contêiner do logo */
+.supplier-logo-container {
+    text-align: center;
+    margin-bottom: 25px; /* Espaço entre o logo e a seção abaixo */
+    min-height: 50px; /* Garante um espaço mínimo */
+}
+
+.supplier-logo-container img {
+    max-height: 80px; /* Altura máxima para o logo */
+    max-width: 250px; /* Largura máxima para o logo */
+    object-fit: contain; /* Garante que a imagem se ajuste sem distorcer */
+    transition: opacity 0.3s ease-in-out; /* Transição para o aparecimento do logo */
+}
+
+/* NOVO: Contêiner para o velocímetro e os KPIs (lado a lado) */
+.gauge-and-kpis-row {
+    display: flex;
+    flex-wrap: wrap; /* Permite quebra de linha em telas menores */
+    gap: 30px; /* Espaçamento entre o gauge e os KPIs */
+    justify-content: center; /* Centraliza os itens horizontalmente */
+    align-items: flex-start; /* Alinha os itens no topo */
+    width: 100%;
+    max-width: 900px; /* Limita a largura para melhor visualização em telas grandes */
+    margin-left: auto;
+    margin-right: auto;
+    padding: 20px; /* Adiciona padding ao redor do conteúdo */
+    background-color: var(--cor-fundo-elemento); /* Fundo branco para a seção */
+    border-radius: 12px;
+    box-shadow: var(--sombra-card);
+    border: 1px solid var(--cor-borda-suave);
+}
+
+/* Estilo para o contêiner do velocímetro individual (quando não é consolidado) */
+.gauge-single-container {
+    flex: 0 0 350px; /* Largura fixa para o velocímetro */
+    max-width: 100%;
+    min-height: 300px; /* Altura mínima para o gráfico */
+    display: flex; /* Para centralizar o gráfico internamente */
+    justify-content: center;
+    align-items: center;
+    /* Remover bordas e sombras individuais, pois o .gauge-and-kpis-row já as tem */
+    /* background-color: var(--cor-fundo-elemento); */
+    /* border-radius: 10px; */
+    /* box-shadow: 0 2px 5px rgba(0,0,0,0.05); */
+    padding: 10px;
+}
+
+/* NOVO: Estilo para o contêiner dos KPIs (quando são apresentados ao lado do gauge) */
+.kpi-summary-green-score {
+    flex: 1; /* Ocupa o espaço restante */
+    min-width: 300px; /* Largura mínima para os KPIs */
+    display: grid; /* Usa grid para organizar os cards de KPI */
+    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    gap: 20px; /* Espaçamento entre os cards KPI */
+    padding: 10px; /* Padding interno */
+    background-color: var(--cor-fundo-elemento); /* Fundo igual ao contêiner principal */
+    border-radius: 10px; /* Borda arredondada igual aos cards */
+}
+
+/* Grids de velocímetros para a opção "Consolidado" */
+.gauge-grid-consolidated {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Auto-ajuste para múltiplos gauges */
+    gap: 30px;
+    justify-content: center;
+    align-items: start;
+    padding: 20px;
+    background-color: var(--cor-fundo-elemento);
+    border-radius: 12px;
+    box-shadow: var(--sombra-card);
+    border: 1px solid var(--cor-borda-suave);
+    width: 100%; /* Ocupa a largura do wrapper */
+    max-width: 1200px; /* Ajuste para consolidado */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Estilo para cada card de velocímetro individual (Consolidado) */
+.gauge-card {
+    background-color: var(--cor-fundo-elemento); /* Fundo branco para cada velocímetro */
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra mais leve */
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.gauge-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Estilo para o contêiner do ApexCharts dentro do card */
+.gauge-chart-container {
+    width: 100%; /* Ocupa a largura total do card */
+    min-height: 250px; /* Altura mínima para o gráfico */
+    display: flex; /* Para centralizar o gráfico internamente */
+    justify-content: center;
+    align-items: center;
+}
+
+/* Mensagem de carregamento/placeholder centralizada */
+.message-center {
+    width: 100%;
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--cor-texto-secundario);
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+    .gauge-and-kpis-row {
+        flex-direction: column; /* Em telas menores, empilha gauge e kpis */
+        align-items: center;
+    }
+    .gauge-single-container {
+        flex: none; /* Remove flex-grow/shrink */
+        width: 100%; /* Ocupa largura total */
+        max-width: 350px; /* Limita o tamanho mesmo em 100% */
+    }
+    .kpi-summary-green-score {
+        flex: none;
+        width: 100%; /* Ocupa largura total */
+        max-width: 400px; /* Limita o tamanho dos KPIs */
+    }
+    .gauge-grid-consolidated {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .gauge-and-kpis-row, .gauge-grid-consolidated {
+        padding: 15px;
+        gap: 15px;
+    }
+    .supplier-logo-container {
+        margin-bottom: 15px;
+    }
+    .supplier-logo-container img {
+        max-height: 60px;
+        max-width: 180px;
+    }
+}

@@ -5,74 +5,7 @@
 
 {% block head_extra %}
 {{ super() }}
-{% raw %}
-<style>
-    /* Estilos existentes para o grid de velocímetros */
-    .gauge-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 280px é o min-width do gauge */
-        gap: 30px; /* Espaçamento entre os velocímetros */
-        justify-content: center; /* Centraliza o grid horizontalmente */
-        align-items: start; /* Alinha os itens no topo do grid */
-        padding: 20px;
-        background-color: var(--cor-fundo-elemento);
-        border-radius: 12px;
-        box-shadow: var(--sombra-card);
-        border: 1px solid var(--cor-borda-suave);
-    }
-
-    /* Estilo para cada card de velocímetro individual, se necessário */
-    .gauge-card {
-        background-color: var(--cor-fundo-elemento); /* Fundo branco para cada velocímetro */
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra mais leve */
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        transition: transform 0.2s ease;
-    }
-
-    .gauge-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    /* Estilo para o contêiner do ApexCharts dentro do card */
-    .gauge-chart-container {
-        width: 100%; /* Ocupa a largura total do card */
-        min-height: 250px; /* Altura mínima para o gráfico */
-        display: flex; /* Para centralizar o gráfico internamente */
-        justify-content: center;
-        align-items: center;
-    }
-
-    /* Mensagem de carregamento/placeholder centralizada no grid */
-    .gauge-grid .message-center {
-        grid-column: 1 / -1; /* Ocupa todas as colunas */
-        text-align: center;
-        padding: 50px 20px;
-        color: var(--cor-texto-secundario);
-    }
-
-    /* Estilos para o contêiner do logo */
-    .supplier-logo-container {
-        text-align: center;
-        margin-bottom: 20px; /* Espaço entre o logo e os velocímetros/informações */
-        min-height: 50px; /* Garante um espaço mínimo */
-    }
-
-    .supplier-logo-container img {
-        max-height: 80px; /* Altura máxima para o logo */
-        max-width: 200px; /* Largura máxima para o logo */
-        object-fit: contain; /* Garante que a imagem se ajuste sem distorcer */
-        transition: opacity 0.3s ease-in-out; /* Transição para o aparecimento do logo */
-    }
-</style>
-{% endraw %}
-{# FIM: Bloco de comentário Jinja2 para a tag <style> #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/green_score.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -94,14 +27,48 @@
         </div>
     </div>
 
-    {# Contêiner para o logo da fornecedora (removido o "NOVO:" do comentário) #}
-    <div id="supplier-logo-display" class="supplier-logo-container" style="display: none;">
-        <img id="supplier-logo-img" src="" alt="Logo da Fornecedora">
-    </div>
-
-    {# O gauge-container será o nosso grid de velocímetros #}
-    <div id="gauge-container" class="gauge-grid" style="min-height: 300px;">
-        {# Mensagem de placeholder inicial, que será removida/substituída por JS #}
+    <div id="green-score-content-wrapper" class="green-score-content-wrapper" style="display: none;">
+        <div id="supplier-logo-display" class="supplier-logo-container" style="display: none;">
+            <img id="supplier-logo-img" src="" alt="Logo da Fornecedora">
+        </div>
+        <div id="gauge-and-kpis-row" class="gauge-and-kpis-row">
+            <div id="gauge-container" class="gauge-single-container" style="min-height: 300px;">
+                {# Conteúdo será preenchido via JS #}
+            </div>
+            <div id="kpi-summary-container" class="kpi-summary-green-score" style="display: none;">
+                <div class="card kpi-card" data-id="kpi-resultado-mes-green-score">
+                    <div class="card-header">
+                        Resultado do Mês
+                        <i class="fas fa-info-circle tooltip-icon" title="Soma do consumo médio dos clientes com data_ativo da fornecedora selecionada no mês atual."></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="kpi-main-value" id="kpi-total-kwh-green-score">
+                            <i class="fas fa-spinner fa-spin fa-sm"></i>
+                        </div>
+                        <div class="kpi-sub-label">kWh vendidos</div>
+                    </div>
+                </div>
+                <div class="card qualification-card" data-id="kpi-clientes-mes-green-score">
+                    <div class="card-header">Clientes do Mês</div>
+                    <div class="card-body">
+                        <div class="qualification-numbers" style="display: flex; justify-content: space-around; align-items: flex-start; gap: 15px;">
+                            <div class="qual-item" style="text-align: center;">
+                                <span class="qual-number" id="kpi-clientes-registrados-green-score" style="font-size: 2.2em;">
+                                    <i class="fas fa-spinner fa-spin fa-sm"></i>
+                                </span>
+                                <span class="qual-label" style="font-size: 0.85em;">Registrados<br>no mês</span>
+                            </div>
+                            <div class="qual-item" style="text-align: center;">
+                                <span class="qual-number" id="kpi-clientes-ativos-green-score" style="font-size: 2.2em;">
+                                    <i class="fas fa-spinner fa-spin fa-sm"></i>
+                                </span>
+                                <span class="qual-label" style="font-size: 0.85em;">Ativados<br>no mês</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div id="placeholder-message" class="message-center">
             <i class="fas fa-hand-pointer fa-2x mb-2"></i>
             <p>Aguardando a seleção de uma fornecedora ou consolidado...</p>
@@ -113,9 +80,5 @@
 {% block scripts_extra %}
     {{ super() }}
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    {# Chart.js não é mais estritamente necessário para esta versão simplificada,
-       mas pode ser mantido se outras partes da aplicação o usarem ou se você planeja reintroduzir gráficos.
-       Se for removido, certifique-se de que nenhum outro script o utilize. #}
-    {# <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> #}
     <script src="{{ url_for('static', filename='js/green_score.js') }}"></script>
 {% endblock %}
