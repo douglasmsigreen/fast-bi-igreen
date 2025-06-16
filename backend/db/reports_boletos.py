@@ -8,6 +8,21 @@ from .executor import execute_query
 
 logger = logging.getLogger(__name__)
 
+# --- NOVO: Variável final_columns_order movida para o nível do módulo ---
+final_columns_order = [
+     "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
+     "ufconsumo", "concessionaria", "fornecedora",
+     "consumomedio",
+     "data_ativo", "dias_desde_ativacao",
+     "injecao",
+     "atraso_na_injecao", # <-- Esta é a 14ª coluna (índice 13)
+     "dias_em_atraso",
+     "validado_sucesso", "devolutiva", "retorno_fornecedora",
+     "id_licenciado", "licenciado", "status_pro",
+     "data_graduacao_pro", "quantidade_boletos"
+]
+# --- FIM da movimentação ---
+
 CTE_BASE = """
 WITH LatestDevolutiva AS (
     -- 1. Seleciona a devolução mais recente para cada cliente, incluindo a flag 'corrigida'
@@ -145,13 +160,22 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
 
     # 3. Converte os resultados do SQL para um DataFrame
     # <-- ALTERAÇÃO NA LISTA DE COLUNAS -->
-    sql_columns = [
+    # Usa a variável global final_columns_order
+    sql_columns = final_columns_order[:-2] # Exclui as 2 últimas colunas, pois 'injecao' e 'atraso_na_injecao' são calculadas
+    # Na verdade, o CTE já retorna "injecao", "atraso_na_injecao" e "dias_em_atraso" calculados.
+    # O ideal é que as colunas da CTE sejam listadas aqui para um mapeamento mais robusto.
+    # No entanto, se o CTE já retorna tudo na ordem do final_columns_order, podemos usar o próprio.
+    # Vamos usar os nomes do CTE e depois reordenar com reindex.
+    # Isso é para garantir que a leitura inicial do DataFrame do SQL esteja correta.
+    # O CTE_BASE retorna as seguintes colunas, que serão os 'columns' do DataFrame:
+    cte_columns_from_base_query = [
         "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
         "ufconsumo", "concessionaria", "fornecedora", "consumomedio", "data_ativo", "dias_desde_ativacao",
         "validado_sucesso", "devolutiva", "id_licenciado", "licenciado", "status_pro",
         "data_graduacao_pro", "quantidade_boletos"
     ]
-    df_sql = pd.DataFrame(results_sql, columns=sql_columns)
+
+    df_sql = pd.DataFrame(results_sql, columns=cte_columns_from_base_query)
     for col in ['ufconsumo', 'concessionaria', 'fornecedora']:
         if col in df_sql.columns:
             df_sql[col] = df_sql[col].astype(str).str.strip().str.upper()
@@ -196,21 +220,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
     # Se export_mode for True, a coluna permanece como numérica (float64 com np.nan),
     # que o openpyxl interpretará corretamente como número ou célula vazia.
 
-    # 8. Define a ordem final das colunas
-    # <-- ALTERAÇÃO NA ORDEM FINAL DAS COLUNAS -->
-    final_columns_order = [
-         "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
-         "ufconsumo", "concessionaria", "fornecedora", 
-         "consumomedio", # <-- COLUNA ADICIONADA AQUI
-         "data_ativo", "dias_desde_ativacao",
-         "injecao",
-         "atraso_na_injecao",
-         "dias_em_atraso",
-         "validado_sucesso", "devolutiva",
-         "retorno_fornecedora",
-         "id_licenciado", "licenciado", "status_pro",
-         "data_graduacao_pro", "quantidade_boletos"
-    ]
+    # 8. Define a ordem final das colunas (AGORA USANDO A VARIÁVEL GLOBAL)
     df_final = df_merged.reindex(columns=final_columns_order, fill_value='')
     
     # ***** FIM DA NOVA LÓGICA DE CÁLCULO *****

@@ -365,3 +365,32 @@ def api_green_score():
         logger.error(f"API Green Score: Erro inesperado: {e}", exc_info=True)
         return jsonify({"error": "Erro interno inesperado."}), 500
 # --- FIM DA ROTA API ---
+
+# --- NOVA ROTA API para Clientes com Atraso por Estado no Mapa ---
+@api_bp.route('/map-data/overdue-clients-by-state')
+@login_required
+def api_overdue_clients_by_state():
+    """
+    Retorna a contagem de clientes com 'Atraso na Injeção' = 'SIM',
+    agrupados por estado (UF), para visualização no mapa.
+    """
+    logger.info("Requisição recebida em /api/map-data/overdue-clients-by-state")
+    try:
+        data_from_db = db.get_overdue_clients_by_state_for_map() # Chama a nova função do DB
+
+        if data_from_db is None:
+            logger.error("API Mapa (Atraso): db.get_overdue_clients_by_state_for_map() retornou None.")
+            return jsonify({"error": "Erro interno ao buscar dados de clientes com atraso para o mapa."}), 500
+        
+        # Transforma a lista de tuplas (UF, count) em lista de dicionários
+        structured_data = [
+            {'uf': row[0], 'overdue_count': row[1]}
+            for row in data_from_db
+        ]
+        logger.info(f"API Mapa (Atraso): Enviando {len(structured_data)} registros de estados com atraso.")
+        return jsonify(structured_data)
+
+    except Exception as e:
+        logger.error(f"API Mapa (Atraso - /api/map-data/overdue-clients-by-state) Erro inesperado: {e}", exc_info=True)
+        return jsonify({"error": "Erro interno inesperado ao processar dados de clientes com atraso para o mapa."}), 500
+# --- FIM DA ROTA API ---

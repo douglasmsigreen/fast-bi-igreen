@@ -6,6 +6,7 @@ from .executor import execute_query
 from collections import defaultdict
 from . import reports_boletos
 import pandas as pd
+from .reports_boletos import final_columns_order as reports_boletos_columns_order
 
 logger = logging.getLogger(__name__)
 
@@ -554,3 +555,54 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
         logger.error(f"Erro inesperado ao calcular o Green Score (Atraso Injeção): {e}", exc_info=True)
         return None
 # --- FIM DA NOVA FUNÇÃO ---
+
+
+def get_overdue_clients_by_state_for_map() -> List[Tuple[str, int]]:
+    """
+    Busca a contagem de clientes com 'Atraso na Injeção' = 'SIM',
+    agrupados por estado (UF).
+    """
+    logger.info("Buscando clientes com atraso na injeção por estado para o mapa...")
+
+    try:
+        all_clients_data = reports_boletos.get_boletos_por_cliente_data(
+            limit=None,
+            export_mode=True,
+            fornecedora=None
+        )
+
+        if not all_clients_data:
+            logger.warning("Nenhum dado retornado do relatório de boletos para calcular atraso por estado.")
+            return []
+
+        try:
+            uf_idx = reports_boletos_columns_order.index('ufconsumo')
+            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
+        except ValueError as e:
+            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada do relatório de boletos. Não é possível calcular o atraso por estado.")
+            return []
+
+        overdue_counts_by_uf = defaultdict(int)
+
+        for row in all_clients_data:
+            if uf_idx < len(row) and atraso_idx < len(row):
+                uf = row[uf_idx]
+                atraso_status = row[atraso_idx]
+
+                if uf and isinstance(uf, str) and uf.strip() != '':
+                    uf_cleaned = uf.strip().upper()
+                    if atraso_status == 'SIM':
+                        overdue_counts_by_uf[uf_cleaned] += 1
+                else:
+                    logger.debug(f"UF inválida ou vazia encontrada no registro: {uf}")
+            else:
+                logger.warning(f"Linha do relatório de boletos incompleta ou com menos colunas que o esperado. Linha: {row}")
+
+        formatted_results = sorted(overdue_counts_by_uf.items(), key=lambda item: item[0])
+
+        logger.info(f"Dados de clientes com atraso por estado para o mapa encontrados: {len(formatted_results)} estados.")
+        return formatted_results
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes com atraso por estado para o mapa: {e}", exc_info=True)
+        return []

@@ -50,7 +50,8 @@ from .dashboard import (
     get_state_map_data,
     get_fornecedora_summary_no_rcb,
     get_overdue_payments_by_fornecedora,
-    get_green_score_by_fornecedora
+    get_green_score_by_fornecedora,
+    get_overdue_clients_by_state_for_map
 )
 
 # Importações do utils.py

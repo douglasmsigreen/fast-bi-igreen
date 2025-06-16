@@ -6,8 +6,13 @@
 {% block content %}
 <div class="container">
     <h1>Mapa de Clientes por Estado</h1>
-    {# Descrição atualizada para refletir a cor #}
-    <p style="text-align: center; margin-bottom: 20px;">Visualização da quantidade de clientes ativos e consumo médio total de kwh por estado</p>
+    <p style="text-align: center; margin-bottom: 20px;">Visualização da quantidade de clientes ativos (cor verde) e, em uma segunda camada, a quantidade de clientes com atraso na injeção (cor vermelha) por estado.</p>
+
+    {# --- Seletor de Visão para o Mapa --- #}
+    <div class="map-view-selector btn-group mb-4" role="group" aria-label="Seleção da Visão do Mapa">
+        <button type="button" class="btn btn-primary active" data-view="active-clients">Clientes Ativos</button>
+        <button type="button" class="btn btn-outline-danger" data-view="overdue-clients">Clientes com Atraso</button>
+    </div>
 
     <div id="brazil-map-div" style="width: 100%; max-width: 1000px; height: 650px; margin: 20px auto; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: #f9f9f9;">
         <p style="text-align: center; padding-top: 50px; color: #666;">Carregando mapa...</p>
@@ -16,117 +21,218 @@
 {% endblock %}
 
 {% block scripts_extra %}
-    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+    <script src='https://cdn.plot.ly/plotly-2.32.0.min.js'></script> 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mapDiv = document.getElementById('brazil-map-div');
+            const viewButtons = document.querySelectorAll('.map-view-selector .btn');
 
-            // Usa a API que retorna UF, count e sum_consumo
-            fetch("{{ url_for('api_bp.api_state_summary_for_map') }}")
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => { throw new Error(err.error || `Erro HTTP: ${response.status}`) });
+            let plotData = null; 
+            let currentView = 'active-clients'; 
+
+            // Define os valores fixos de zmin e zmax para cada visão
+            const scaleSettings = {
+                'active-clients': {
+                    zmin: 0,
+                    zmax: 10000 // Exemplo: até 10.000 clientes ativos
+                },
+                'overdue-clients': {
+                    zmin: 0,
+                    zmax: 3000 // Exemplo: até 2.000 clientes com atraso
+                }
+            };
+
+            // Função para buscar dados de ambas as APIs e renderizar o mapa
+            async function loadMapData() {
+                mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #666;"><i class="fas fa-spinner fa-spin"></i> Carregando mapa...</p>';
+
+                let activeClientsData = [];
+                let overdueClientsData = [];
+
+                try {
+                    const activeResponse = await fetch("{{ url_for('api_bp.api_state_summary_for_map') }}");
+                    if (!activeResponse.ok) {
+                        const err = await activeResponse.json();
+                        throw new Error(err.error || `Erro HTTP ${activeResponse.status} ao buscar dados de clientes ativos.`);
                     }
-                    return response.json(); // Espera [{'uf': 'SP', 'count': 100, 'sum_consumo': 50000.0}, ...]
-                })
-                .then(apiData => {
-                    if (!Array.isArray(apiData)) {
-                         let errorDetail = ""; try { errorDetail = apiData.error || JSON.stringify(apiData); } catch(e) { errorDetail = "Resposta inesperada"; }
-                         throw new Error(`Formato de dados inválido recebido da API: ${errorDetail}`);
+                    activeClientsData = await activeResponse.json();
+                    if (!Array.isArray(activeClientsData)) {
+                        throw new Error(`Formato de dados de clientes ativos inválido.`);
                     }
-                    if (apiData.length === 0) {
-                        mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de estado disponível para exibir no mapa.</p>';
-                        console.warn("Nenhum dado recebido da API do mapa.");
+                    console.log(`Dados de clientes ativos carregados: ${activeClientsData.length} registros.`);
+
+                    const overdueResponse = await fetch("{{ url_for('api_bp.api_overdue_clients_by_state') }}");
+                    if (!overdueResponse.ok) {
+                        const err = await overdueResponse.json();
+                        throw new Error(err.error || `Erro HTTP ${overdueResponse.status} ao buscar dados de clientes com atraso.`);
+                    }
+                    overdueClientsData = await overdueResponse.json();
+                    if (!Array.isArray(overdueClientsData)) {
+                        throw new Error(`Formato de dados de clientes com atraso inválido.`);
+                    }
+                    console.log(`Dados de clientes com atraso carregados: ${overdueClientsData.length} registros.`);
+
+                    if (activeClientsData.length === 0 && overdueClientsData.length === 0) {
+                        mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de mapa disponível para exibir.</p>';
                         return;
                     }
 
-                    // --- Processa os dados da API - COR PELA CONTAGEM ---
-                    const locations = []; // Array para as UFs
-                    const zValues = [];   // Array para o valor que define a COR (CONTAGEM)
-                    const customData = [];// Array para os dados extras no hover (SOMA DO CONSUMO)
+                    // --- Processa dados de Clientes Ativos (Camada 1 - Verde) ---
+                    const activeLocations = [];
+                    const activeZValues = [];   
+                    const activeCustomData = [];
 
-                    apiData.forEach(stateData => {
-                         if (stateData && typeof stateData.uf === 'string' && typeof stateData.count === 'number' && typeof stateData.sum_consumo === 'number') {
-                            locations.push(stateData.uf);
-                            zValues.push(stateData.count);        // <<< COR baseada na CONTAGEM >>>
-                            customData.push(stateData.sum_consumo); // <<< SOMA vai para customdata >>>
-                        } else {
-                            console.warn("Registro de estado inválido ou incompleto recebido da API:", stateData);
+                    activeClientsData.forEach(stateData => {
+                        if (stateData && typeof stateData.uf === 'string' && typeof stateData.count === 'number' && typeof stateData.sum_consumo === 'number') {
+                            activeLocations.push(stateData.uf);
+                            activeZValues.push(stateData.count);
+                            activeCustomData.push(stateData.sum_consumo);
                         }
                     });
 
-                    if (locations.length === 0) {
-                         mapDiv.innerHTML = '<p style="text-align: center; padding-top: 50px; color: #888;">Nenhum dado de estado válido encontrado após processamento.</p>';
-                         console.warn("Nenhum dado válido para plotar no mapa após filtrar a resposta da API.");
-                         return;
-                    }
-                    // --------------------------------------------------------------
-
-                    // ----- CÁLCULO DO zmax (PARA A CONTAGEM DE CLIENTES) -----
-                    let zmax_cap = Math.max(...zValues); // zValues agora contém contagens
-                    if (zValues.length > 1) {
-                        const sortedZ = [...zValues].sort((a, b) => a - b);
-                        const percentileIndex = Math.ceil(sortedZ.length * 0.95) - 1; // 95º Percentil
-                        zmax_cap = sortedZ[Math.max(0, percentileIndex)];
-                        if (zmax_cap <= 0) { // Fallback
-                            zmax_cap = Math.max(...zValues);
-                             console.warn("95º Percentil (contagem clientes) resultou em valor <= 0. Usando máximo absoluto para zmax.");
-                        } else {
-                             console.log(`Valor máximo original (contagem clientes): ${Math.max(...zValues)}`);
-                             console.log(`Definindo zmax (contagem clientes - 95º Percentil) como: ${zmax_cap.toFixed(0)}`);
-                        }
-                    }
-                    // Exemplo de valor fixo para contagem:
-                    zmax_cap = 10000; // Ajuste se necessário
-
-                    // --- Configuração do Trace Plotly ---
-                    const mapTrace = [{
+                    // Usa os valores de escala definidos em scaleSettings
+                    const activeTrace = {
                         type: 'choropleth',
                         locationmode: 'geojson-id',
                         geojson: "{{ url_for('static', filename='geojson/brasil-estados.geojson') }}",
-                        featureidkey: 'properties.sigla', // VERIFIQUE a chave no seu GeoJSON
-                        locations: locations,             // UFs
-                        z: zValues,                       // <<< CONTAGEM de clientes (para cor) >>>
-                        customdata: customData,           // <<< SOMA do consumo (para hover) >>>
-                        zmin: 0,
-                        zmax: zmax_cap,                   // Limite superior da escala de cor (baseado na contagem)
+                        featureidkey: 'properties.sigla',
+                        locations: activeLocations,
+                        z: activeZValues,
+                        customdata: activeCustomData,
+                        zmin: scaleSettings['active-clients'].zmin, // Valor do objeto de settings
+                        zmax: scaleSettings['active-clients'].zmax, // Valor do objeto de settings
                         colorscale: 'Greens',
-                        reversescale: true,              // <<< FALSE para verde escuro = mais clientes >>>
-                        colorbar: {
-                            title: 'Qtd. Clientes Ativos', // <<< TÍTULO DA LEGENDA ATUALIZADO >>>
-                            thickness: 15
-                        },
-                        hoverinfo: 'location+z+text',     // Necessário para hovertemplate funcionar corretamente com 'z' e 'customdata'
-                        // <<< HOVER TEMPLATE ATUALIZADO >>>
-                        // %{z} agora pega a CONTAGEM
-                        // %{customdata} agora pega a SOMA
+                        reversescale: true, // Verde escuro = MÍNIMO, Verde claro = MÁXIMO
+                        colorbar: { title: 'Qtd. Clientes Ativos', thickness: 15, x: 1.05 },
                         hovertemplate: '<b>%{location}</b><br>' +
-                                       'Clientes Ativos: %{z:,.0f}<br>' +          // Mostra a contagem (de z)
-                                       'Consumo Total: %{customdata:,.0f} kWh' + // Mostra a soma (de customdata)
-                                       '<extra></extra>', // Oculta info extra do Plotly
-                        marker: { line:{ color: 'rgb(180,180,180)', width: 0.5 } }
-                    }];
+                                       'Clientes Ativos: %{z:,.0f}<br>' +
+                                       'Consumo Total: %{customdata:,.0f} kWh' +
+                                       '<extra></extra>',
+                        marker: { line:{ color: 'rgb(180,180,180)', width: 0.5 } },
+                        name: 'Clientes Ativos',
+                        visible: true 
+                    };
 
-                    // --- Configuração do Layout Plotly (sem alterações) ---
+                    // --- Processa dados de Clientes com Atraso (Camada 2 - Vermelho) ---
+                    const overdueLocations = [];
+                    const overdueZValues = []; 
+
+                    overdueClientsData.forEach(stateData => {
+                        if (stateData && typeof stateData.uf === 'string' && typeof stateData.overdue_count === 'number') {
+                            overdueLocations.push(stateData.uf);
+                            overdueZValues.push(stateData.overdue_count);
+                        }
+                    });
+
+                    // Usa os valores de escala definidos em scaleSettings
+                    const overdueTrace = {
+                        type: 'choropleth',
+                        locationmode: 'geojson-id',
+                        geojson: "{{ url_for('static', filename='geojson/brasil-estados.geojson') }}",
+                        featureidkey: 'properties.sigla',
+                        locations: overdueLocations,
+                        z: overdueZValues,
+                        zmin: scaleSettings['overdue-clients'].zmin, // Valor do objeto de settings
+                        zmax: scaleSettings['overdue-clients'].zmax, // Valor do objeto de settings
+                        colorscale: 'Reds',
+                        reversescale: false, // Vermelho claro = MÍNIMO, Vermelho escuro = MÁXIMO
+                        colorbar: { title: 'Qtd. Clientes com Atraso', thickness: 15, x: 1.15 },
+                        hovertemplate: '<b>%{location}</b><br>' +
+                                       'Clientes com Atraso: %{z:,.0f}' +
+                                       '<extra></extra>',
+                        marker: { line:{ color: 'rgb(180,180,180)', width: 0.5 } },
+                        name: 'Clientes com Atraso',
+                        visible: false 
+                    };
+                    
+                    plotData = [activeTrace, overdueTrace]; // Armazena os dados do Plotly
+
+                    // --- Configuração do Layout Plotly ---
                     const mapLayout = {
-                        geo:{ scope: 'south america', center: { lon: -54, lat: -15 }, projection: { type: 'mercator' }, lataxis: { range: [-35, 6] }, lonaxis: { range: [-75, -32] }, showland: true, landcolor: 'rgb(230, 230, 230)', subunitcolor: 'rgb(255, 255, 255)' },
+                        geo:{ 
+                            scope: 'south america', 
+                            center: { lon: -54, lat: -15 }, 
+                            projection: { type: 'mercator' }, 
+                            lataxis: { range: [-35, 6] }, 
+                            lonaxis: { range: [-75, -32] }, 
+                            showland: true, 
+                            landcolor: 'rgb(230, 230, 230)', 
+                            subunitcolor: 'rgb(255, 255, 255)' 
+                        },
                         margin: { t: 10, b: 10, l: 10, r: 10 },
                         paper_bgcolor: 'rgba(0,0,0,0)',
-                        plot_bgcolor: 'rgba(0,0,0,0)'
+                        plot_bgcolor: 'rgba(0,0,0,0)',
+                        hovermode: 'closest',
+                        showlegend: false 
                     };
 
                     // --- Renderiza o Gráfico ---
-                    Plotly.newPlot(mapDiv, mapTrace, mapLayout, {
+                    Plotly.newPlot(mapDiv, plotData, mapLayout, {
                         responsive: true,
-                        displaylogo: false
-                    });
-                    console.log(`Mapa do Brasil (Plotly) renderizado. Cor por Qtd Clientes, Hover com Qtd e Soma Consumo.`);
+                        displaylogo: false,
+                        modeBarButtonsToRemove: ['hoverCompareCartesian', 'hoverClosestCartesian', 'toggleSpikelines', 'sendDataToCloud'],
+                        displayModeBar: true
+                    }).then(() => {
+                        viewButtons.forEach(button => {
+                            button.addEventListener('click', function() {
+                                const viewType = this.dataset.view;
+                                toggleMapView(viewType);
+                            });
+                        });
 
-                })
-                .catch(error => {
+                        // Configura a visibilidade inicial após a plotagem
+                        toggleMapView('active-clients'); 
+                        
+                        console.log(`Mapa do Brasil (Plotly) renderizado. Listeners dos botões configurados.`);
+                    });
+
+                } catch (error) {
                     console.error('Erro ao carregar ou renderizar o mapa:', error);
-                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa: ${error.message}<br>Verifique a URL da API ('${"{{ url_for('api_bp.api_state_summary_for_map') }}"}'), o caminho do GeoJSON e o console (F12).</p>`;
+                    mapDiv.innerHTML = `<p style="color: red; padding: 20px; text-align: center;">Erro ao carregar o mapa: ${error.message}<br>Verifique a URL da API, o caminho do GeoJSON e o console (F12).</p>`;
+                }
+            }
+
+            // Função para alternar a visibilidade das camadas
+            function toggleMapView(viewType) {
+                if (!mapDiv || !mapDiv._fullData || mapDiv._fullData.length === 0) {
+                    console.warn("Dados do Plotly ainda não carregados ou mapa inválido para alternar visão.");
+                    return;
+                }
+                currentView = viewType; 
+
+                let activeIndex, inactiveIndex;
+                if (viewType === 'active-clients') {
+                    activeIndex = 0; 
+                    inactiveIndex = 1; 
+                } else if (viewType === 'overdue-clients') {
+                    activeIndex = 1; 
+                    inactiveIndex = 0; 
+                } else {
+                    console.error("Tipo de visão inválido:", viewType);
+                    return;
+                }
+
+                // Alterna a visibilidade das camadas e suas colorbars
+                Plotly.restyle(mapDiv, {'visible': true, 'colorbar.visible': true}, [activeIndex]);
+                Plotly.restyle(mapDiv, {'visible': false, 'colorbar.visible': false}, [inactiveIndex]);
+                
+                // Remove a chamada a applyCustomScale aqui, pois a escala é definida no loadMapData
+                // e não é mais customizável via inputs.
+                
+                // Atualiza o estado dos botões
+                viewButtons.forEach(button => {
+                    if (button.dataset.view === viewType) {
+                        button.classList.add('active', 'btn-primary');
+                        button.classList.remove('btn-outline-danger');
+                    } else {
+                        button.classList.remove('active', 'btn-primary');
+                        button.classList.add('btn-outline-danger');
+                    }
                 });
+            }
+
+            // Chamada inicial para carregar e renderizar o mapa
+            loadMapData();
         });
     </script>
 {% endblock %}
