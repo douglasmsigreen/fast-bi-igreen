@@ -28,11 +28,11 @@
 .gauge-and-kpis-row {
     display: flex;
     flex-wrap: wrap; /* Permite quebra de linha em telas menores */
-    gap: 30px; /* Espaçamento entre o gauge e os KPIs */
+    gap: 30px; /* Espaçamento entre os cards */
     justify-content: center; /* Centraliza os itens horizontalmente */
     align-items: flex-start; /* Alinha os itens no topo */
     width: 100%;
-    max-width: 900px; /* Limita a largura para melhor visualização em telas grandes */
+    max-width: 1200px; /* Aumenta a largura máxima para acomodar mais cards */
     margin-left: auto;
     margin-right: auto;
     padding: 20px; /* Adiciona padding ao redor do conteúdo */
@@ -67,6 +67,18 @@
     padding: 10px; /* Padding interno */
     background-color: var(--cor-fundo-elemento); /* Fundo igual ao contêiner principal */
     border-radius: 10px; /* Borda arredondada igual aos cards */
+}
+
+/* NOVO: Estilo para o contêiner dos KPIs CONSOLIDADOS */
+.consolidated-kpis-wrapper {
+    flex: 1; /* Permite que o wrapper dos KPIs consolidados ocupe espaço */
+    min-width: 300px; /* Garante que não encolha demais */
+    display: grid; /* Usa grid para organizar os cards de KPI */
+    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    gap: 20px; /* Espaçamento entre os cards KPI */
+    padding: 10px; /* Padding interno, como os outros KPIs */
+    background-color: var(--cor-fundo-elemento);
+    border-radius: 10px;
 }
 
 /* Grids de velocímetros para a opção "Consolidado" */
@@ -136,25 +148,24 @@
 /* Responsividade */
 @media (max-width: 992px) {
     .gauge-and-kpis-row {
-        flex-direction: column; /* Em telas menores, empilha gauge, kpis e o gráfico de linha */
+        flex-direction: column; /* Em telas menores, empilha tudo em coluna */
         align-items: center;
     }
-    .gauge-single-container {
+    .gauge-single-container, 
+    .kpi-summary-green-score,
+    .consolidated-kpis-wrapper { /* Aplica a mesma regra de empilhamento */
         flex: none; /* Remove flex-grow/shrink */
         width: 100%; /* Ocupa largura total */
-        max-width: 350px; /* Limita o tamanho mesmo em 100% */
+        max-width: 400px; /* Limita o tamanho em telas menores */
     }
-    .kpi-summary-green-score {
-        flex: none;
-        width: 100%; /* Ocupa largura total */
-        max-width: 400px; /* Limita o tamanho dos KPIs */
+    .gauge-single-container {
+        max-width: 350px; /* Mantém o tamanho do velocímetro */
     }
     .gauge-grid-consolidated {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     }
-    /* Ajuste para o gráfico de linha em telas menores */
     .gauge-and-kpis-row .chart-card {
-        flex-basis: auto; /* Deixa o flexbox decidir */
+        flex-basis: auto; 
         width: 100%;
         min-width: 0;
     }

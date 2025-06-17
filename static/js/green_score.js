@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const kpiClientesAtivos = document.getElementById('kpi-clientes-ativos-green-score');
 
     // NOVOS Elementos dos KPIs CONSOLIDADOS
-    const consolidatedKpisRow = document.getElementById('consolidated-kpis-row');
+    const consolidatedKpisWrapper = document.getElementById('consolidated-kpis-wrapper');
     const kpiTotalKwhConsolidado = document.getElementById('kpi-total-kwh-consolidado');
     const kpiClientesRegistradosConsolidado = document.getElementById('kpi-clientes-registrados-consolidado');
     const kpiClientesAtivosConsolidado = document.getElementById('kpi-clientes-ativos-consolidado');
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             // Se houver um contêiner para os KPIs consolidados, pode-se esconder em caso de erro
-            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none'; 
+            if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none'; 
         }
     }
 
@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none';
             if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
             if (gaugeContainer) gaugeContainer.style.display = 'none';
-            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none';
+            if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none'; // Esconder inicialmente
             return;
         }
 
@@ -416,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 gaugeContainer.style.display = 'grid';
             }
             if (gaugeAndKpisRow) gaugeAndKpisRow.style.display = 'block';
-            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none'; // <-- ESCONDE OS KPIS CONSOLIDADOS NO CONSOLIDADO
+            if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none'; // <-- ESCONDE OS KPIS CONSOLIDADOS NO CONSOLIDADO
             try {
                 const apiUrl = `/api/scores/green-score?fornecedora=Consolidado`;
                 const response = await fetch(apiUrl);
@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 gaugeContainer.style.display = 'flex';
             }
             if (gaugeAndKpisRow) gaugeAndKpisRow.style.display = 'flex';
-            if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'grid'; // <-- MOSTRA OS KPIS CONSOLIDADOS PARA FORNECEDORA ESPECÍFICA
+            if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'grid'; // <-- MOSTRA OS KPIS CONSOLIDADOS PARA FORNECEDORA ESPECÍFICA
             const logoPath = supplierLogos[fornecedora.toUpperCase()];
             if (logoPath) {
                 if (supplierLogoImg) supplierLogoImg.src = logoPath;
@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (supplierLogoDisplay) supplierLogoDisplay.style.display = 'none';
     if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
     if (gaugeContainer) gaugeContainer.style.display = 'none';
-    if (consolidatedKpisRow) consolidatedKpisRow.style.display = 'none';
+    if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none';
 
     loadScoreFor(fornecedoraFilter.value);
 });
