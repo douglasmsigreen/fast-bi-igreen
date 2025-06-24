@@ -88,6 +88,7 @@ BaseQuery AS (
         public."CLIENTES" c
     LEFT JOIN 
         public."RCB_CLIENTES" rcb ON c.numinstalacao = rcb.numinstalacao
+        AND rcb.dtvencimento >= c.data_ativo
     LEFT JOIN public."CONSULTOR" cons ON c.idconsultor = cons.idconsultor
     LEFT JOIN (
         SELECT idconsultor, MAX(dtgraduacao) AS dtgraduacao
@@ -111,9 +112,56 @@ BaseQuery AS (
 )
 """
 
+def load_csv_prazos(project_root: str) -> pd.DataFrame:
+    """Carrega o CSV de prazos, padronizando colunas de string."""
+    csv_path_prazos = os.path.join(project_root, 'data', 'prazos.csv')
+    try:
+        df = pd.read_csv(csv_path_prazos, delimiter=';')
+        for col in ['ufconsumo', 'concessionaria', 'fornecedora']:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.strip().str.upper()
+        return df
+    except FileNotFoundError:
+        logger.error(f"Arquivo 'prazos.csv' não encontrado: {csv_path_prazos}")
+        return pd.DataFrame()
+
+def load_csv_devolutivas(project_root: str) -> pd.DataFrame:
+    """Carrega o CSV de devolutivas, renomeando colunas conforme necessário."""
+    csv_path_devolutivas = os.path.join(project_root, 'data', 'devolutivas.csv')
+    try:
+        df = pd.read_csv(csv_path_devolutivas, delimiter=';', dtype={'idcliente': 'Int64'})
+        df.rename(columns={'idcliente': 'codigo', 'retorno_fornecedora': 'retorno_fornecedora'}, inplace=True)
+        return df
+    except FileNotFoundError:
+        logger.error(f"Arquivo 'devolutivas.csv' não encontrado: {csv_path_devolutivas}")
+        return pd.DataFrame()
+
+def calcular_colunas_atraso(df: pd.DataFrame) -> pd.DataFrame:
+    """Calcula as colunas 'atraso_na_injecao' e 'dias_em_atraso' no DataFrame."""
+    df['prazo_numerico'] = pd.to_numeric(df['injecao'].astype(str).str.extract(r'(\d+)', expand=False), errors='coerce')
+    cond_qtd_boletos = (df['quantidade_boletos'] == 0)
+    cond_data_ativo = df['data_ativo'].notna() & (df['data_ativo'] != '')
+    cond_prazo_estourado = (df['dias_desde_ativacao'] - df['prazo_numerico']) > 0
+    cond_devolutiva_vazia = (df['devolutiva'].isnull()) | (df['devolutiva'] == '')
+    cond_retorno_fornecedora_nao_vazia = ~(df['retorno_fornecedora'].fillna('').astype(str).str.strip().eq(''))
+    df['atraso_na_injecao'] = np.where(
+        cond_retorno_fornecedora_nao_vazia,
+        'NÃO',
+        np.where(
+            cond_qtd_boletos & cond_data_ativo & cond_prazo_estourado & cond_devolutiva_vazia,
+            'SIM',
+            'NÃO'
+        )
+    )
+    dias_em_atraso_calculado = df['dias_desde_ativacao'] - df['prazo_numerico']
+    df['dias_em_atraso'] = np.where(df['atraso_na_injecao'] == 'SIM', dias_em_atraso_calculado, np.nan)
+    return df
+
 def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, fornecedora: Optional[str] = None, export_mode: bool = False) -> List[tuple]:
-    """Busca dados, junta com CSVs e calcula as colunas 'Atraso na Injeção' e 'Dias em Atraso'."""
-    
+    """
+    Busca dados, junta com CSVs e calcula as colunas 'Atraso na Injeção' e 'Dias em Atraso'.
+    Modularizado para facilitar manutenção e testes.
+    """
     # 1. Busca os dados do banco de dados (SQL)
     query_final_sql = "SELECT * FROM BaseQuery"
     params_sql = ['CANCELADO%']
@@ -128,7 +176,7 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
         query_final_sql += " OFFSET %s"
         params_sql.append(offset)
     full_query_sql = CTE_BASE + query_final_sql + ";"
-    
+
     try:
         results_sql = execute_query(full_query_sql, tuple(params_sql)) or []
         if not results_sql:
@@ -137,44 +185,18 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
         logger.error(f"Erro ao buscar dados de boletos (SQL): {e}", exc_info=True)
         return []
 
-    # 2. Carrega os arquivos CSV
+    # 2. Carrega os arquivos CSV usando funções auxiliares
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    
-    try:
-        csv_path_prazos = os.path.join(project_root, 'data', 'prazos.csv')
-        df_prazos = pd.read_csv(csv_path_prazos, delimiter=';')
-        for col in ['ufconsumo', 'concessionaria', 'fornecedora']:
-            if col in df_prazos.columns:
-                df_prazos[col] = df_prazos[col].astype(str).str.strip().str.upper()
-    except FileNotFoundError:
-        logger.error(f"Arquivo 'prazos.csv' não encontrado: {csv_path_prazos}")
-        df_prazos = pd.DataFrame()
-
-    try:
-        csv_path_devolutivas = os.path.join(project_root, 'data', 'devolutivas.csv')
-        df_devolutivas = pd.read_csv(csv_path_devolutivas, delimiter=';', dtype={'idcliente': 'Int64'})
-        df_devolutivas.rename(columns={'idcliente': 'codigo', 'retorno_fornecedora': 'retorno_fornecedora'}, inplace=True)
-    except FileNotFoundError:
-        logger.error(f"Arquivo 'devolutivas.csv' não encontrado: {csv_path_devolutivas}")
-        df_devolutivas = pd.DataFrame()
+    df_prazos = load_csv_prazos(project_root)
+    df_devolutivas = load_csv_devolutivas(project_root)
 
     # 3. Converte os resultados do SQL para um DataFrame
-    # <-- ALTERAÇÃO NA LISTA DE COLUNAS -->
-    # Usa a variável global final_columns_order
-    sql_columns = final_columns_order[:-2] # Exclui as 2 últimas colunas, pois 'injecao' e 'atraso_na_injecao' são calculadas
-    # Na verdade, o CTE já retorna "injecao", "atraso_na_injecao" e "dias_em_atraso" calculados.
-    # O ideal é que as colunas da CTE sejam listadas aqui para um mapeamento mais robusto.
-    # No entanto, se o CTE já retorna tudo na ordem do final_columns_order, podemos usar o próprio.
-    # Vamos usar os nomes do CTE e depois reordenar com reindex.
-    # Isso é para garantir que a leitura inicial do DataFrame do SQL esteja correta.
-    # O CTE_BASE retorna as seguintes colunas, que serão os 'columns' do DataFrame:
     cte_columns_from_base_query = [
         "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
         "ufconsumo", "concessionaria", "fornecedora", "consumomedio", "data_ativo", "dias_desde_ativacao",
         "validado_sucesso", "devolutiva", "id_licenciado", "licenciado", "status_pro",
         "data_graduacao_pro", "quantidade_boletos"
     ]
-
     df_sql = pd.DataFrame(results_sql, columns=cte_columns_from_base_query)
     for col in ['ufconsumo', 'concessionaria', 'fornecedora']:
         if col in df_sql.columns:
@@ -182,48 +204,27 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
 
     # 4. Faz o merge dos DataFrames
     df_merged = pd.merge(df_sql, df_prazos, on=['ufconsumo', 'concessionaria', 'fornecedora'], how='left')
-    
     if not df_devolutivas.empty:
         df_merged = pd.merge(df_merged, df_devolutivas, on='codigo', how='left')
     else:
         df_merged['retorno_fornecedora'] = ''
-    
     df_merged['retorno_fornecedora'] = df_merged['retorno_fornecedora'].fillna('')
     df_merged['injecao'] = df_merged['injecao'].fillna('')
 
-    # ***** INÍCIO DA LÓGICA DE CÁLCULO ATUALIZADA *****
-    
-    # 5. Extrai o valor numérico do prazo de injeção
-    df_merged['prazo_numerico'] = pd.to_numeric(df_merged['injecao'].astype(str).str.extract(r'(\d+)', expand=False), errors='coerce')
+    # 5. Calcula as colunas de atraso usando função utilitária
+    df_merged = calcular_colunas_atraso(df_merged)
 
-    # 6. Calcula a coluna "Atraso na Injeção"
-    # Condições para o atraso
-    cond_qtd_boletos = df_merged['quantidade_boletos'] == 0
-    cond_data_ativo = df_merged['data_ativo'].notna() & (df_merged['data_ativo'] != '')
-    cond_prazo_estourado = (df_merged['dias_desde_ativacao'] - df_merged['prazo_numerico']) > 0
-    # <-- NOVA CONDIÇÃO ADICIONADA AQUI -->
-    cond_devolutiva_vazia = (df_merged['devolutiva'].isnull()) | (df_merged['devolutiva'] == '')
-
-    # Combina TODAS as condições
-    # <-- MÁSCARA ATUALIZADA PARA INCLUIR A NOVA CONDIÇÃO -->
-    atraso_mask = cond_qtd_boletos & cond_data_ativo & cond_prazo_estourado & cond_devolutiva_vazia
-    df_merged['atraso_na_injecao'] = np.where(atraso_mask, 'SIM', 'NÃO')
-
-    # 7. Calcula a coluna "Dias em Atraso"
-    dias_em_atraso_calculado = df_merged['dias_desde_ativacao'] - df_merged['prazo_numerico']
-    df_merged['dias_em_atraso'] = np.where(df_merged['atraso_na_injecao'] == 'SIM', dias_em_atraso_calculado, np.nan)
-    
-    # <-- 2. ADICIONAR LÓGICA CONDICIONAL PARA FORMATAÇÃO -->
-    if not export_mode:
-        # Para a visualização na tela, converte para string e remove <NA>
-        df_merged['dias_em_atraso'] = df_merged['dias_em_atraso'].astype('Int64').astype(str).replace('<NA>', '')
-    # Se export_mode for True, a coluna permanece como numérica (float64 com np.nan),
-    # que o openpyxl interpretará corretamente como número ou célula vazia.
-
-    # 8. Define a ordem final das colunas (AGORA USANDO A VARIÁVEL GLOBAL)
+    # 6. Define a ordem final das colunas
     df_final = df_merged.reindex(columns=final_columns_order, fill_value='')
-    
-    # ***** FIM DA NOVA LÓGICA DE CÁLCULO *****
+    for col in ['injecao', 'atraso_na_injecao', 'dias_em_atraso', 'retorno_fornecedora']:
+        if col in df_final.columns:
+            df_final[col] = df_final[col].fillna('')
+    if not export_mode:
+        for col in ['consumomedio']:
+            if col in df_final.columns:
+                df_final[col] = df_final[col].apply(lambda x: f"{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if pd.notna(x) else '')
+    if not export_mode and 'dias_desde_ativacao' in df_final.columns:
+        df_final['dias_desde_ativacao'] = df_final['dias_desde_ativacao'].astype('Int64').astype(str).replace('<NA>', '')
     return [tuple(x) for x in df_final.to_numpy()]
 
 
