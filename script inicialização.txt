@@ -1,5 +1,5 @@
-cd "OneDrive\Documentos\Douglas\Nova Aplicação Web BI\exportador_web"
-python -m venv venv
+cd "/home/bi-igreen/Documentos/Nova Aplicação Web BI/exportador_web"
+python3 -m venv venv
 source venv/bin/activate  # No Windows: venv\Scripts\activate
 
 python run.py

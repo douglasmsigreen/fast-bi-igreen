@@ -448,3 +448,21 @@ def api_kpi_clientes_registrados_consolidated():
     except Exception as e:
         logger.error(f"API KPI Clientes Registrados Consolidado: Erro para fornecedora {fornecedora}: {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado ao buscar KPI Clientes Registrados Consolidado."}), 500
+
+# --- NOVA ROTA API para KPI de Clientes com Atraso na Injeção ---
+@api_bp.route('/kpi/overdue-injection-clients')
+@login_required
+def api_kpi_overdue_injection_clients():
+    """
+    Retorna o KPI de contagem de clientes com 'Atraso na Injeção' = 'SIM',
+    opcionalmente filtrado por fornecedora.
+    """
+    fornecedora = request.args.get('fornecedora', None)
+    logger.info(f"API KPI Clientes com Atraso na Injeção: Requisição recebida (Forn: {fornecedora or 'Todos'})")
+    try:
+        count = db.count_overdue_injection_clients(fornecedora=fornecedora)
+        logger.debug(f"API KPI Clientes com Atraso na Injeção: Fornecedora={fornecedora}, Resultado={count}")
+        return jsonify({"overdue_injection_clients_count": count})
+    except Exception as e:
+        logger.error(f"Erro api_kpi_overdue_injection_clients (Forn: {fornecedora}): {e}", exc_info=True)
+        return jsonify({"error": "Erro inesperado ao buscar KPI Clientes com Atraso na Injeção."}), 500

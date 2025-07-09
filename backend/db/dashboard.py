@@ -688,3 +688,48 @@ def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) ->
     except Exception as e:
         logger.error(f"Erro count_clientes_registrados_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
         return 0
+
+def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> int:
+    """
+    Conta o número total de clientes que possuem "Atraso na Injeção" = 'SIM',
+    opcionalmente filtrado por fornecedora.
+    """
+    log_msg = "Contando clientes com Atraso na Injeção"
+    if fornecedora:
+        log_msg += f" para a fornecedora: {fornecedora}"
+    else:
+        log_msg += " para TODAS as fornecedoras (Consolidado)"
+    logger.info(log_msg)
+
+    try:
+        # Reutiliza a função get_boletos_por_cliente_data para obter os dados já processados.
+        # Passa export_mode=True para garantir que todos os dados sejam retornados para processamento.
+        all_clients_data = reports_boletos.get_boletos_por_cliente_data(
+            limit=None,
+            export_mode=True,
+            fornecedora=fornecedora
+        )
+
+        if not all_clients_data:
+            logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção.")
+            return 0
+
+        # Encontra o índice da coluna 'atraso_na_injecao' na ordem final esperada.
+        # Isso é crucial para acessar o valor correto na tupla de dados.
+        try:
+            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
+        except ValueError:
+            logger.error("Erro: Coluna 'atraso_na_injecao' não encontrada na ordem das colunas do relatório de boletos.")
+            return 0
+
+        overdue_count = 0
+        for row in all_clients_data:
+            if row[atraso_idx] == 'SIM':
+                overdue_count += 1
+        
+        logger.info(f"Total de clientes com Atraso na Injeção encontrados: {overdue_count}")
+        return overdue_count
+
+    except Exception as e:
+        logger.error(f"Erro inesperado ao contar clientes com atraso na injeção: {e}", exc_info=True)
+        return 0

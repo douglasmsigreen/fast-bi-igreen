@@ -145,6 +145,11 @@
     max-width: none; /* Remove a largura máxima do chart-card base do dashboard */
 }
 
+/* Estilo para o número de Clientes com Atraso na Injeção */
+#kpi-clientes-atraso-injecao {
+    color: #dc3545; /* Vermelho padrão do Bootstrap (danger) */
+}
+
 /* Responsividade */
 @media (max-width: 992px) {
     .gauge-and-kpis-row {
