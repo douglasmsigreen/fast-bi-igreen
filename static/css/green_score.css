@@ -45,6 +45,7 @@
 /* Estilo para o contêiner do velocímetro individual (quando não é consolidado) */
 .gauge-single-container {
     flex: 0 0 350px; /* Largura fixa para o velocímetro */
+    max-width: 100%;
     min-height: 300px; /* Altura mínima para o gráfico */
     display: flex; /* Para centralizar o gráfico internamente */
     justify-content: center;
@@ -60,167 +61,93 @@
 .kpi-summary-green-score {
     flex: 1; /* Ocupa o espaço restante */
     min-width: 300px; /* Largura mínima para os KPIs */
+    display: grid; /* Usa grid para organizar os cards de KPI */
+    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    gap: 20px; /* Espaçamento entre os cards KPI */
+    padding: 10px; /* Padding interno */
+    background-color: var(--cor-fundo-elemento); /* Fundo igual ao contêiner principal */
+    border-radius: 10px; /* Borda arredondada igual aos cards */
 }
 
-/* Estilos específicos para a página Green Score */
-.green-score-dashboard {
+/* NOVO: Estilo para o contêiner dos KPIs CONSOLIDADOS */
+.consolidated-kpis-wrapper {
+    flex: 1; /* Permite que o wrapper dos KPIs consolidados ocupe espaço */
+    min-width: 300px; /* Garante que não encolha demais */
+    display: grid; /* Usa grid para organizar os cards de KPI */
+    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    gap: 20px; /* Espaçamento entre os cards KPI */
+    padding: 10px; /* Padding interno, como os outros KPIs */
+    background-color: var(--cor-fundo-elemento);
+    border-radius: 10px;
+}
+
+/* Grids de velocímetros para a opção "Consolidado" */
+.gauge-grid-consolidated {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Auto-ajuste para múltiplos gauges */
+    gap: 30px;
+    justify-content: center;
+    align-items: start;
     padding: 20px;
-}
-
-.kpi-card-enhanced {
-    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
-    border: 1px solid #e2e8f0;
+    background-color: var(--cor-fundo-elemento);
     border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+    box-shadow: var(--sombra-card);
+    border: 1px solid var(--cor-borda-suave);
+    width: 100%; /* Ocupa a largura do wrapper */
+    max-width: 1200px; /* Ajuste para consolidado */
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.kpi-card-enhanced::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(to bottom, #00c93b, #16a34a);
-}
-
-.kpi-card-enhanced:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.15);
-}
-
-.kpi-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.kpi-icon {
-    color: #00c93b;
-    font-size: 1.2em;
-    margin-right: 8px;
-    padding: 8px;
-    background: rgba(0, 201, 59, 0.1);
-    border-radius: 8px;
-}
-
-.kpi-value-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.kpi-value {
-    font-size: 2.5em;
-    font-weight: 700;
-    color: #1a202c;
-    font-family: 'Inter', sans-serif;
-    line-height: 1;
-}
-
-.kpi-trend {
+/* Estilo para cada card de velocímetro individual (Consolidado) */
+.gauge-card {
+    background-color: var(--cor-fundo-elemento); /* Fundo branco para cada velocímetro */
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Sombra mais leve */
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-}
-
-.trend-indicator {
-    display: flex;
     align-items: center;
-    font-size: 0.9em;
-    font-weight: 600;
+    justify-content: center;
+    text-align: center;
+    transition: transform 0.2s ease;
 }
 
-.trend-up {
-    color: #10b981;
+.gauge-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-.trend-down {
-    color: #ef4444;
-}
-
-.trend-neutral {
-    color: #6b7280;
-}
-
-.kpi-subtitle {
-    font-size: 0.85em;
-    color: #64748b;
-    margin-top: 5px;
-}
-
-.gauge-container-enhanced {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
-    padding: 25px;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-}
-
+/* Estilo para o contêiner do ApexCharts dentro do card */
 .gauge-chart-container {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-}
-
-.gauge-chart-container:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.chart-card-enhanced {
-    background: white;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
-}
-
-.chart-header {
-    display: flex;
-    justify-content: space-between;
+    width: 100%; /* Ocupa a largura total do card */
+    min-height: 250px; /* Altura mínima para o gráfico */
+    display: flex; /* Para centralizar o gráfico internamente */
+    justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e2e8f0;
 }
 
-.chart-title {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: #1a202c;
+/* Mensagem de carregamento/placeholder centralizada */
+.message-center {
+    width: 100%;
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--cor-texto-secundario);
 }
 
-.chart-controls {
-    display: flex;
-    gap: 10px;
+/* **NOVO ESTILO PARA O CARD DO GRÁFICO DE LINHA NA PÁGINA GREEN SCORE** */
+.gauge-and-kpis-row .chart-card {
+    flex-basis: 100%; /* Ocupa a largura total da linha, forçando a quebra */
+    /* Remove as margens fixas que o impediam de se ajustar ao layout flex */
+    margin-top: 0; 
+    margin-left: 0;
+    margin-right: 0;
+    max-width: none; /* Remove a largura máxima do chart-card base do dashboard */
 }
 
-.chart-select {
-    padding: 8px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    background: white;
-    font-size: 0.9em;
-    color: #374151;
-}
-
-.chart-select:focus {
-    outline: none;
-    border-color: #00c93b;
-    box-shadow: 0 0 0 3px rgba(0, 201, 59, 0.1);
+/* Estilo para o número de Clientes com Atraso na Injeção */
+#kpi-clientes-atraso-injecao {
+    color: #dc3545; /* Vermelho padrão do Bootstrap (danger) */
 }
 
 /* Responsividade */
@@ -250,81 +177,15 @@
 }
 
 @media (max-width: 768px) {
-    .green-score-dashboard {
-        grid-template-columns: 1fr;
-        padding: 10px;
-        gap: 15px;
-    }
-    
-    .gauge-container-enhanced {
-        grid-template-columns: 1fr;
+    .gauge-and-kpis-row, .gauge-grid-consolidated {
         padding: 15px;
         gap: 15px;
     }
-    
-    .kpi-card-enhanced {
-        padding: 15px;
+    .supplier-logo-container {
+        margin-bottom: 15px;
     }
-    
-    .chart-card-enhanced {
-        padding: 15px;
-    }
-    
-    .kpi-value {
-        font-size: 2em;
-    }
-    
-    .chart-header {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-    }
-}
-
-@media (max-width: 480px) {
-    .kpi-value-container {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-    
-    .kpi-trend {
-        align-items: flex-start;
-    }
-}
-
-/* Animações */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.kpi-card-enhanced {
-    animation: fadeInUp 0.6s ease forwards;
-}
-
-.gauge-chart-container {
-    animation: fadeInUp 0.8s ease forwards;
-}
-
-/* Estados de loading */
-.loading-shimmer {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-    100% {
-        background-position: 200% 0;
+    .supplier-logo-container img {
+        max-height: 60px;
+        max-width: 180px;
     }
 }

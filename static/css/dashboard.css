@@ -49,7 +49,10 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     will-change: transform, box-shadow; /* Otimização de animação */
 }
-
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--sombra-card-elevated);
+}
 /* Variações de Sombra */
 .card.elevated { box-shadow: var(--sombra-card-elevated); }
 .card.elevated:hover { box-shadow: var(--sombra-card-elevated); } /* Manter sombra no hover */
@@ -276,287 +279,21 @@
 /* .dashboard-grid .card .card-body, .dashboard-grid .card canvas { pointer-events: none; } */
 
 
-/* --- ESTILOS SIMPLIFICADOS PARA GREEN SCORE --- */
-
-/* Variáveis CSS para Green Score */
-:root {
-    --green-score-primary: #00c93b;
-    --green-score-secondary: #16a34a;
-    --green-score-success: #10b981;
-    --green-score-warning: #f59e0b;
-    --green-score-danger: #ef4444;
-    --green-score-neutral: #6b7280;
-    --green-score-bg-light: #f8fafc;
-    --green-score-border-light: #e2e8f0;
-    --green-score-text-muted: #64748b;
-}
-
-/* Container específico para Green Score */
-.green-score-container {
-    padding: 20px;
-    max-width: 100%;
-}
-
-/* Grid específico para Green Score */
-.green-score-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-    margin-bottom: 25px;
-}
-
-/* KPIs simplificados para Green Score - SEM HOVER */
-.kpi-card-enhanced {
-    position: relative;
-    overflow: hidden;
-    background: white;
-    padding: 20px;
-}
-
-/* Header do KPI simplificado */
-.kpi-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-}
-
-.kpi-header .kpi-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: rgba(0, 201, 59, 0.1);
-    color: #00c93b;
-    font-size: 1rem;
-    margin-right: 12px;
-}
-
-.kpi-header .kpi-title {
-    font-weight: 600;
-    color: var(--cor-texto-principal);
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Container de valor simplificado */
-.kpi-value-container {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-/* Valores KPI diretos */
-.kpi-value-enhanced {
-    font-size: 2.8rem;
-    font-weight: 700;
-    color: var(--cor-texto-principal);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    line-height: 0.9;
-    letter-spacing: -0.02em;
-}
-
-/* Indicador de tendência simplificado */
-.kpi-trend {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    min-width: 70px;
-}
-
-.trend-indicator {
-    display: flex;
-    align-items: center;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-
-.trend-indicator.trend-up {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--green-score-success);
-}
-
-.trend-indicator.trend-down {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--green-score-danger);
-}
-
-.trend-indicator.trend-neutral {
-    background: rgba(107, 114, 128, 0.1);
-    color: var(--green-score-neutral);
-}
-
-.trend-indicator i {
-    font-size: 0.7rem;
-    margin-right: 4px;
-}
-
-/* Subtítulo do KPI */
-.kpi-subtitle-enhanced {
-    font-size: 0.8rem;
-    color: var(--green-score-text-muted);
-    margin-top: 5px;
-    font-weight: 500;
-}
-
-/* Container de gauges simplificado */
-.gauge-container-enhanced {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
-    padding: 25px;
-    background: transparent;
-}
-
-/* Gauges individuais simplificados */
-.gauge-chart-enhanced {
-    background: white;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Gráficos de linha simplificados */
-.chart-card-enhanced {
-    background: white;
-    padding: 0;
-    overflow: hidden;
-}
-
-.chart-header-enhanced {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 25px 15px;
-    background: white;
-}
-
-.chart-title-enhanced {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--cor-texto-principal);
-    margin: 0;
-}
-
-.chart-controls-enhanced {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.chart-select-enhanced {
-    padding: 6px 12px;
-    border: 1px solid var(--green-score-border-light);
-    border-radius: 6px;
-    background: white;
-    font-size: 0.85rem;
-    color: var(--cor-texto-principal);
-    cursor: pointer;
-}
-
-.chart-body-enhanced {
-    padding: 25px;
-    min-height: 350px;
-    position: relative;
-}
-
-/* Estados de loading simplificados */
-.loading-state-enhanced {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    color: var(--green-score-text-muted);
-}
-
-.loading-state-enhanced .spinner {
-    font-size: 1.5rem;
-    color: var(--green-score-primary);
-    margin-bottom: 15px;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.loading-state-enhanced .loading-text {
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-/* Responsividade mantida */
+/* --- Responsividade do Dashboard --- */
 @media (max-width: 1200px) {
-    .green-score-grid { 
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-        gap: 15px;
-    }
-    .gauge-container-enhanced { 
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-        padding: 20px;
-        gap: 20px;
-    }
+    .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Garante que span 2 ainda funcione corretamente */
+    .grid-span-2 { grid-column: span 2; }
 }
-
 @media (max-width: 768px) {
-    .green-score-container { padding: 15px; }
-    .green-score-grid { 
-        grid-template-columns: 1fr; 
-        gap: 15px; 
-    }
-    .gauge-container-enhanced { 
-        grid-template-columns: 1fr; 
-        padding: 15px; 
-        gap: 15px; 
-    }
-    .kpi-card-enhanced { 
-        padding: 15px; 
-    }
-    .kpi-value-enhanced { 
-        font-size: 2.2rem; 
-    }
-    .chart-header-enhanced { 
-        flex-direction: column; 
-        gap: 10px; 
-        align-items: flex-start; 
-        padding: 15px 20px; 
-    }
-    .chart-body-enhanced { 
-        padding: 20px; 
-        min-height: 300px; 
-    }
-    .kpi-value-container { 
-        flex-direction: column; 
-        align-items: flex-start; 
-        gap: 10px; 
-    }
-    .kpi-trend { 
-        align-items: flex-start; 
-    }
-}
-
-@media (max-width: 480px) {
-    .kpi-value-enhanced { 
-        font-size: 2rem; 
-    }
-    .gauge-container-enhanced { 
-        padding: 10px; 
-    }
-    .chart-body-enhanced { 
-        padding: 15px; 
-    }
-    .kpi-header .kpi-icon {
-        width: 32px;
-        height: 32px;
-        font-size: 0.9rem;
-    }
+    .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
+    /* Em layout de coluna única, span 2 não faz sentido */
+    .grid-span-2 { grid-column: span 1; }
+    .card { border-radius: 10px; }
+    .kpi-card .kpi-main-value { font-size: 2rem; }
+    .qualification-card .qual-item .qual-number { font-size: 1.8rem; }
+    .qualification-card .qualification-numbers { gap: 20px; }
+    .chart-card .card-body { min-height: 250px; } /* Reduzir altura mínima */
+    .filter-row { flex-direction: column; align-items: stretch; }
+    .filter-group select { width: 100%; }
 }
