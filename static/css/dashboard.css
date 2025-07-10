@@ -49,10 +49,7 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     will-change: transform, box-shadow; /* Otimização de animação */
 }
-.card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--sombra-card-elevated);
-}
+
 /* Variações de Sombra */
 .card.elevated { box-shadow: var(--sombra-card-elevated); }
 .card.elevated:hover { box-shadow: var(--sombra-card-elevated); } /* Manter sombra no hover */
@@ -279,9 +276,9 @@
 /* .dashboard-grid .card .card-body, .dashboard-grid .card canvas { pointer-events: none; } */
 
 
-/* --- NOVOS ESTILOS PARA GREEN SCORE --- */
+/* --- ESTILOS SIMPLIFICADOS PARA GREEN SCORE --- */
 
-/* Variáveis CSS para Green Score (adicionar ao início do arquivo ou após variáveis existentes) */
+/* Variáveis CSS para Green Score */
 :root {
     --green-score-primary: #00c93b;
     --green-score-secondary: #16a34a;
@@ -308,43 +305,20 @@
     margin-bottom: 25px;
 }
 
-/* Melhorias nos KPIs para Green Score */
+/* KPIs simplificados para Green Score - SEM HOVER */
 .kpi-card-enhanced {
     position: relative;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-left: 4px solid var(--green-score-primary);
+    background: white;
+    padding: 20px;
 }
 
-.kpi-card-enhanced::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, var(--green-score-primary), var(--green-score-secondary));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.kpi-card-enhanced:hover::before {
-    opacity: 1;
-}
-
-.kpi-card-enhanced:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 30px rgba(0, 201, 59, 0.15);
-    border-left-color: var(--green-score-secondary);
-}
-
-/* Header do KPI com ícone */
+/* Header do KPI simplificado */
 .kpi-header {
     display: flex;
     align-items: center;
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid var(--green-score-border-light);
 }
 
 .kpi-header .kpi-icon {
@@ -354,8 +328,8 @@
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    background: linear-gradient(135deg, var(--green-score-primary), var(--green-score-secondary));
-    color: white;
+    background: rgba(0, 201, 59, 0.1);
+    color: #00c93b;
     font-size: 1rem;
     margin-right: 12px;
 }
@@ -368,7 +342,7 @@
     letter-spacing: 0.5px;
 }
 
-/* Container de valor com tendência */
+/* Container de valor simplificado */
 .kpi-value-container {
     display: flex;
     align-items: flex-end;
@@ -376,7 +350,7 @@
     margin-bottom: 10px;
 }
 
-/* Valores KPI melhorados */
+/* Valores KPI diretos */
 .kpi-value-enhanced {
     font-size: 2.8rem;
     font-weight: 700;
@@ -386,7 +360,7 @@
     letter-spacing: -0.02em;
 }
 
-/* Indicador de tendência */
+/* Indicador de tendência simplificado */
 .kpi-trend {
     display: flex;
     flex-direction: column;
@@ -432,57 +406,27 @@
     font-weight: 500;
 }
 
-/* Container de gauges aprimorado */
+/* Container de gauges simplificado */
 .gauge-container-enhanced {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 25px;
     padding: 25px;
-    background: linear-gradient(135deg, #ffffff 0%, var(--green-score-bg-light) 100%);
-    border-radius: 12px;
-    border: 1px solid var(--green-score-border-light);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: transparent;
 }
 
-/* Gauges individuais */
+/* Gauges individuais simplificados */
 .gauge-chart-enhanced {
     background: white;
-    border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
 }
 
-.gauge-chart-enhanced::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--green-score-primary), var(--green-score-secondary));
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
-}
-
-.gauge-chart-enhanced:hover::before {
-    transform: scaleX(1);
-}
-
-.gauge-chart-enhanced:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 201, 59, 0.12);
-}
-
-/* Gráficos de linha aprimorados */
+/* Gráficos de linha simplificados */
 .chart-card-enhanced {
     background: white;
-    border-radius: 12px;
     padding: 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--green-score-border-light);
     overflow: hidden;
 }
 
@@ -491,8 +435,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 25px 15px;
-    background: linear-gradient(135deg, #ffffff 0%, var(--green-score-bg-light) 100%);
-    border-bottom: 1px solid var(--green-score-border-light);
+    background: white;
 }
 
 .chart-title-enhanced {
@@ -516,13 +459,6 @@
     font-size: 0.85rem;
     color: var(--cor-texto-principal);
     cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.chart-select-enhanced:focus {
-    outline: none;
-    border-color: var(--green-score-primary);
-    box-shadow: 0 0 0 3px rgba(0, 201, 59, 0.1);
 }
 
 .chart-body-enhanced {
@@ -531,7 +467,7 @@
     position: relative;
 }
 
-/* Estados de loading melhorados */
+/* Estados de loading simplificados */
 .loading-state-enhanced {
     display: flex;
     flex-direction: column;
@@ -558,33 +494,8 @@
     font-weight: 500;
 }
 
-/* Animações de entrada */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-in {
-    animation: fadeInUp 0.6s ease forwards;
-}
-
-.animate-in:nth-child(2) { animation-delay: 0.1s; }
-.animate-in:nth-child(3) { animation-delay: 0.2s; }
-.animate-in:nth-child(4) { animation-delay: 0.3s; }
-
-/* --- Responsividade do Dashboard --- */
+/* Responsividade mantida */
 @media (max-width: 1200px) {
-    .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
-    /* Garante que span 2 ainda funcione corretamente */
-    .grid-span-2 { grid-column: span 2; }
-    
-    /* Green Score responsivo */
     .green-score-grid { 
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
         gap: 15px;
@@ -597,18 +508,6 @@
 }
 
 @media (max-width: 768px) {
-    .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
-    /* Em layout de coluna única, span 2 não faz sentido */
-    .grid-span-2 { grid-column: span 1; }
-    .card { border-radius: 10px; }
-    .kpi-card .kpi-main-value { font-size: 2rem; }
-    .qualification-card .qual-item .qual-number { font-size: 1.8rem; }
-    .qualification-card .qualification-numbers { gap: 20px; }
-    .chart-card .card-body { min-height: 250px; } /* Reduzir altura mínima */
-    .filter-row { flex-direction: column; align-items: stretch; }
-    .filter-group select { width: 100%; }
-    
-    /* Green Score mobile */
     .green-score-container { padding: 15px; }
     .green-score-grid { 
         grid-template-columns: 1fr; 

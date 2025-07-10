@@ -45,7 +45,6 @@
 /* Estilo para o contêiner do velocímetro individual (quando não é consolidado) */
 .gauge-single-container {
     flex: 0 0 350px; /* Largura fixa para o velocímetro */
-    max-width: 100%;
     min-height: 300px; /* Altura mínima para o gráfico */
     display: flex; /* Para centralizar o gráfico internamente */
     justify-content: center;
