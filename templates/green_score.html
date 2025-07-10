@@ -17,7 +17,7 @@
     <div class="filter-row justify-content-center mb-4">
         <div class="filter-group">
             <label for="fornecedora-filter">Selecione a Fornecedora:</label>
-            <select id="fornecedora-filter" class="form-control" style="width: 300px;">
+            <select id="fornecedora-filter" class="form-control">
                 <option value="">-- Selecione uma Fornecedora --</option>
                 <option value="Consolidado">Consolidado (Todas as Fornecedoras)</option>
                 {% for forn in fornecedoras %}
@@ -39,7 +39,7 @@
         
         {# Onde o velocímetro, KPIs do mês e agora os KPIs consolidados e gráfico de linha ficarão #}
         <div id="gauge-and-kpis-row" class="gauge-and-kpis-row">
-            <div id="gauge-container" class="gauge-single-container" style="min-height: 300px;">
+            <div id="gauge-container" class="gauge-single-container">
                 {# Conteúdo será preenchido via JS #}
             </div>
 
@@ -60,18 +60,18 @@
                 <div class="card qualification-card" data-id="kpi-clientes-mes-green-score">
                     <div class="card-header">Clientes do Mês</div>
                     <div class="card-body">
-                        <div class="qualification-numbers" style="display: flex; justify-content: space-around; align-items: flex-start; gap: 15px;">
-                            <div class="qual-item" style="text-align: center;">
-                                <span class="qual-number" id="kpi-clientes-registrados-green-score" style="font-size: 2.2em;">
+                        <div class="qualification-numbers">
+                            <div class="qual-item">
+                                <span class="qual-number" id="kpi-clientes-registrados-green-score">
                                     <i class="fas fa-spinner fa-spin fa-sm"></i>
                                 </span>
-                                <span class="qual-label" style="font-size: 0.85em;">Registrados<br>no mês</span>
+                                <span class="qual-label">Registrados<br>no mês</span>
                             </div>
-                            <div class="qual-item" style="text-align: center;">
-                                <span class="qual-number" id="kpi-clientes-ativos-green-score" style="font-size: 2.2em;">
+                            <div class="qual-item">
+                                <span class="qual-number" id="kpi-clientes-ativos-green-score">
                                     <i class="fas fa-spinner fa-spin fa-sm"></i>
                                 </span>
-                                <span class="qual-label" style="font-size: 0.85em;">Ativados<br>no mês</span>
+                                <span class="qual-label">Ativados<br>no mês</span>
                             </div>
                         </div>
                     </div>
@@ -97,14 +97,14 @@
                 <div class="card qualification-card">
                     <div class="card-header">Clientes Totais (Ativos)</div>
                     <div class="card-body">
-                        <div class="qualification-numbers" style="display: flex; justify-content: space-around; align-items: flex-start; gap: 15px;">
-                            <div class="qual-item" style="text-align: center;">
+                        <div class="qualification-numbers">
+                            <div class="qual-item">
                                 <span class="qual-number" id="kpi-clientes-registrados-consolidado" style="font-size: 2.2em;">
                                     <i class="fas fa-spinner fa-spin fa-xs"></i>
                                 </span>
                                 <span class="qual-label" style="font-size: 0.85em;">Total<br>Registrados</span>
                             </div>
-                            <div class="qual-item" style="text-align: center;">
+                            <div class="qual-item">
                                 <span class="qual-number" id="kpi-clientes-ativos-consolidado" style="font-size: 2.2em;">
                                     <i class="fas fa-spinner fa-spin fa-xs"></i>
                                 </span>
@@ -131,9 +131,9 @@
             </div>
             {# FIM NOVO: Contêiner para os KPIs CONSOLIDADOS #}
 
-            <div class="card chart-card flex-grow-1" style="min-width: 400px;" data-id="green-score-monthly-chart" id="green-score-monthly-chart">
+            <div class="card chart-card flex-grow-1" data-id="green-score-monthly-chart" id="green-score-monthly-chart">
                 <div class="card-header">
-                    <select id="green-score-chart-year" name="year" style="font-size: 0.9em; border: none; background: transparent; font-weight: bold; margin-right: 10px;">
+                    <select id="green-score-chart-year" name="year">
                         <option value="2025" {% if now().year == 2025 %}selected{% endif %}>2025</option>
                         <option value="2024" {% if now().year == 2024 %}selected{% endif %}>2024</option>
                         <option value="2023" {% if now().year == 2023 %}selected{% endif %}>2023</option>
@@ -142,7 +142,7 @@
                     <span>Evolução de Ativações Anuais</span>
                     <i class="fas fa-info-circle tooltip-icon" title="Evolução da quantidade de clientes ativados mensalmente para a fornecedora selecionada no ano."></i>
                 </div>
-                <div class="card-body" style="position: relative; min-height: 300px;">
+                <div class="card-body" style="position: relative;">
                     <div id="green-score-monthly-chart-status" class="chart-status">
                         <i class="fas fa-spinner fa-spin fa-lg"></i><br>Carregando...
                     </div>

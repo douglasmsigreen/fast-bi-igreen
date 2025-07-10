@@ -279,12 +279,323 @@
 /* .dashboard-grid .card .card-body, .dashboard-grid .card canvas { pointer-events: none; } */
 
 
+/* --- NOVOS ESTILOS PARA GREEN SCORE --- */
+
+/* Variáveis CSS para Green Score (adicionar ao início do arquivo ou após variáveis existentes) */
+:root {
+    --green-score-primary: #00c93b;
+    --green-score-secondary: #16a34a;
+    --green-score-success: #10b981;
+    --green-score-warning: #f59e0b;
+    --green-score-danger: #ef4444;
+    --green-score-neutral: #6b7280;
+    --green-score-bg-light: #f8fafc;
+    --green-score-border-light: #e2e8f0;
+    --green-score-text-muted: #64748b;
+}
+
+/* Container específico para Green Score */
+.green-score-container {
+    padding: 20px;
+    max-width: 100%;
+}
+
+/* Grid específico para Green Score */
+.green-score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+/* Melhorias nos KPIs para Green Score */
+.kpi-card-enhanced {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 4px solid var(--green-score-primary);
+}
+
+.kpi-card-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--green-score-primary), var(--green-score-secondary));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.kpi-card-enhanced:hover::before {
+    opacity: 1;
+}
+
+.kpi-card-enhanced:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0, 201, 59, 0.15);
+    border-left-color: var(--green-score-secondary);
+}
+
+/* Header do KPI com ícone */
+.kpi-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--green-score-border-light);
+}
+
+.kpi-header .kpi-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--green-score-primary), var(--green-score-secondary));
+    color: white;
+    font-size: 1rem;
+    margin-right: 12px;
+}
+
+.kpi-header .kpi-title {
+    font-weight: 600;
+    color: var(--cor-texto-principal);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Container de valor com tendência */
+.kpi-value-container {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+/* Valores KPI melhorados */
+.kpi-value-enhanced {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--cor-texto-principal);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+}
+
+/* Indicador de tendência */
+.kpi-trend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 70px;
+}
+
+.trend-indicator {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.trend-indicator.trend-up {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--green-score-success);
+}
+
+.trend-indicator.trend-down {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--green-score-danger);
+}
+
+.trend-indicator.trend-neutral {
+    background: rgba(107, 114, 128, 0.1);
+    color: var(--green-score-neutral);
+}
+
+.trend-indicator i {
+    font-size: 0.7rem;
+    margin-right: 4px;
+}
+
+/* Subtítulo do KPI */
+.kpi-subtitle-enhanced {
+    font-size: 0.8rem;
+    color: var(--green-score-text-muted);
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+/* Container de gauges aprimorado */
+.gauge-container-enhanced {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    padding: 25px;
+    background: linear-gradient(135deg, #ffffff 0%, var(--green-score-bg-light) 100%);
+    border-radius: 12px;
+    border: 1px solid var(--green-score-border-light);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Gauges individuais */
+.gauge-chart-enhanced {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.gauge-chart-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--green-score-primary), var(--green-score-secondary));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.gauge-chart-enhanced:hover::before {
+    transform: scaleX(1);
+}
+
+.gauge-chart-enhanced:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 201, 59, 0.12);
+}
+
+/* Gráficos de linha aprimorados */
+.chart-card-enhanced {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--green-score-border-light);
+    overflow: hidden;
+}
+
+.chart-header-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px 15px;
+    background: linear-gradient(135deg, #ffffff 0%, var(--green-score-bg-light) 100%);
+    border-bottom: 1px solid var(--green-score-border-light);
+}
+
+.chart-title-enhanced {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--cor-texto-principal);
+    margin: 0;
+}
+
+.chart-controls-enhanced {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.chart-select-enhanced {
+    padding: 6px 12px;
+    border: 1px solid var(--green-score-border-light);
+    border-radius: 6px;
+    background: white;
+    font-size: 0.85rem;
+    color: var(--cor-texto-principal);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chart-select-enhanced:focus {
+    outline: none;
+    border-color: var(--green-score-primary);
+    box-shadow: 0 0 0 3px rgba(0, 201, 59, 0.1);
+}
+
+.chart-body-enhanced {
+    padding: 25px;
+    min-height: 350px;
+    position: relative;
+}
+
+/* Estados de loading melhorados */
+.loading-state-enhanced {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--green-score-text-muted);
+}
+
+.loading-state-enhanced .spinner {
+    font-size: 1.5rem;
+    color: var(--green-score-primary);
+    margin-bottom: 15px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.loading-state-enhanced .loading-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Animações de entrada */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.animate-in:nth-child(2) { animation-delay: 0.1s; }
+.animate-in:nth-child(3) { animation-delay: 0.2s; }
+.animate-in:nth-child(4) { animation-delay: 0.3s; }
+
 /* --- Responsividade do Dashboard --- */
 @media (max-width: 1200px) {
     .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
     /* Garante que span 2 ainda funcione corretamente */
     .grid-span-2 { grid-column: span 2; }
+    
+    /* Green Score responsivo */
+    .green-score-grid { 
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+        gap: 15px;
+    }
+    .gauge-container-enhanced { 
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+        padding: 20px;
+        gap: 20px;
+    }
 }
+
 @media (max-width: 768px) {
     .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
     /* Em layout de coluna única, span 2 não faz sentido */
@@ -296,4 +607,57 @@
     .chart-card .card-body { min-height: 250px; } /* Reduzir altura mínima */
     .filter-row { flex-direction: column; align-items: stretch; }
     .filter-group select { width: 100%; }
+    
+    /* Green Score mobile */
+    .green-score-container { padding: 15px; }
+    .green-score-grid { 
+        grid-template-columns: 1fr; 
+        gap: 15px; 
+    }
+    .gauge-container-enhanced { 
+        grid-template-columns: 1fr; 
+        padding: 15px; 
+        gap: 15px; 
+    }
+    .kpi-card-enhanced { 
+        padding: 15px; 
+    }
+    .kpi-value-enhanced { 
+        font-size: 2.2rem; 
+    }
+    .chart-header-enhanced { 
+        flex-direction: column; 
+        gap: 10px; 
+        align-items: flex-start; 
+        padding: 15px 20px; 
+    }
+    .chart-body-enhanced { 
+        padding: 20px; 
+        min-height: 300px; 
+    }
+    .kpi-value-container { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 10px; 
+    }
+    .kpi-trend { 
+        align-items: flex-start; 
+    }
+}
+
+@media (max-width: 480px) {
+    .kpi-value-enhanced { 
+        font-size: 2rem; 
+    }
+    .gauge-container-enhanced { 
+        padding: 10px; 
+    }
+    .chart-body-enhanced { 
+        padding: 15px; 
+    }
+    .kpi-header .kpi-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
 }
