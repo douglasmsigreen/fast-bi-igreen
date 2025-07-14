@@ -1,6 +1,6 @@
 # backend/db/dashboard.py
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from datetime import datetime
 from .executor import execute_query
 from collections import defaultdict
@@ -41,12 +41,12 @@ def get_total_consumo_medio_by_month(month_str: Optional[str] = None, fornecedor
     except Exception as e: logger.error(f"Erro get_total_consumo_medio_by_month ({month_str}, {fornecedora}): {e}", exc_info=True); return 0.0
 
 def count_clientes_ativos_by_month(month_str: Optional[str] = None, fornecedora: Optional[str] = None) -> int:
-    """Conta clientes ativos no mês (data_ativo), opcionalmente filtrado por fornecedora."""
+    """Conta clientes ativos no mês (data_ativo)."""
     base_query = """
-        SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
+        SELECT COUNT(DISTINCT c.idcliente)
+        FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-        AND {date_filter}
-        {fornecedora_filter};
+        AND {date_filter} {fornecedora_filter};
     """
     params = []
     date_filter_sql = "c.data_ativo IS NOT NULL"
@@ -70,12 +70,12 @@ def count_clientes_ativos_by_month(month_str: Optional[str] = None, fornecedora:
     except Exception as e: logger.error(f"Erro count_clientes_ativos_by_month ({month_str}, {fornecedora}): {e}", exc_info=True); return 0
 
 def count_clientes_registrados_by_month(month_str: Optional[str] = None, fornecedora: Optional[str] = None) -> int:
-    """Conta clientes REGISTRADOS no mês (dtcad), opcionalmente filtrado por fornecedora."""
+    """Conta clientes registrados no mês (dtcad)."""
     base_query = """
-        SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
+        SELECT COUNT(DISTINCT c.idcliente)
+        FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
-        AND {date_filter}
-        {fornecedora_filter};
+        AND {date_filter} {fornecedora_filter};
     """
     params = []
     date_filter_sql = "c.dtcad IS NOT NULL"
@@ -98,12 +98,12 @@ def count_clientes_registrados_by_month(month_str: Optional[str] = None, fornece
         return int(result[0]) if result and result[0] is not None else 0
     except Exception as e: logger.error(f"Erro count_clientes_registrados_by_month ({month_str}, {fornecedora}): {e}", exc_info=True); return 0
 
-def get_fornecedora_summary(month_str: Optional[str] = None) -> List[Tuple[str, int, float]] or None:
+def get_fornecedora_summary(month_str: Optional[str] = None) -> Union[List[Tuple[str, int, float]], None]:
     """Busca resumo (qtd, consumo) por fornecedora para clientes ativos no mês (data_ativo)."""
     base_query = """
         SELECT
             COALESCE(NULLIF(TRIM(c.fornecedora), ''), 'NÃO ESPECIFICADA') AS fornecedora_tratada,
-            COUNT(c.idcliente) AS qtd_clientes,
+            COUNT(DISTINCT c.idcliente) AS qtd_clientes,
             SUM(COALESCE(c.consumomedio, 0)) AS soma_consumo_medio_por_fornecedora
         FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) AND {date_filter}
@@ -124,7 +124,7 @@ def get_fornecedora_summary(month_str: Optional[str] = None) -> List[Tuple[str, 
         else: return []
     except Exception as e: logger.error(f"Erro get_fornecedora_summary ({month_str}): {e}", exc_info=True); return None
 
-def get_concessionaria_summary(month_str: Optional[str] = None) -> List[Tuple[str, int, float]] or None:
+def get_concessionaria_summary(month_str: Optional[str] = None) -> Union[List[Tuple[str, int, float]], None]:
     """Busca resumo (qtd, consumo) por CONCESSIONÁRIA para clientes ativos no mês (data_ativo)."""
     base_query = """
         SELECT
@@ -133,7 +133,7 @@ def get_concessionaria_summary(month_str: Optional[str] = None) -> List[Tuple[st
                 WHEN c.ufconsumo IS NULL OR TRIM(c.ufconsumo) = '' THEN UPPER(TRIM(c.concessionaria))
                 ELSE (UPPER(TRIM(c.ufconsumo)) || '-' || UPPER(TRIM(c.concessionaria)))
             END AS regiao_concessionaria,
-            COUNT(c.idcliente) AS qtd_clientes,
+            COUNT(DISTINCT c.idcliente) AS qtd_clientes,
             SUM(COALESCE(c.consumomedio, 0)) AS soma_consumo_medio
         FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP')) AND {date_filter}
@@ -157,7 +157,7 @@ def get_concessionaria_summary(month_str: Optional[str] = None) -> List[Tuple[st
 def get_monthly_active_clients_by_year(year: int, fornecedora: Optional[str] = None) -> List[int]:
     """Busca contagem mensal de clientes ativados por ano (data_ativo) para gráfico."""
     query = """
-        SELECT EXTRACT(MONTH FROM c.data_ativo)::INTEGER AS mes, COUNT(c.idcliente) AS contagem
+        SELECT EXTRACT(MONTH FROM c.data_ativo)::INTEGER AS mes, COUNT(DISTINCT c.idcliente) AS contagem
         FROM public."CLIENTES" c
         WHERE EXTRACT(YEAR FROM c.data_ativo) = %s
             AND (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
@@ -183,7 +183,7 @@ def get_monthly_active_clients_by_year(year: int, fornecedora: Optional[str] = N
     except Exception as e: logger.error(f"Erro get_monthly_active_clients_by_year ({year}): {e}", exc_info=True); return [0] * 12
 
 # --- FUNÇÕES PARA GRÁFICOS PIZZA/BARRAS DO DASHBOARD ---
-def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = None) -> List[Tuple[str, int]] or None:
+def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = None) -> Union[List[Tuple[str, int]], None]:
     """
     Busca a contagem de clientes ativos (por data_ativo) agrupados por fornecedora
     para um mês específico. Usado no gráfico de pizza do dashboard.
@@ -191,7 +191,7 @@ def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = Non
     base_query = """
         SELECT
             COALESCE(NULLIF(TRIM(c.fornecedora), ''), 'NÃO ESPECIFICADA') AS fornecedora_tratada,
-            COUNT(c.idcliente) AS qtd_clientes
+            COUNT(DISTINCT c.idcliente) AS qtd_clientes
         FROM public."CLIENTES" c
         WHERE
             (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
@@ -233,7 +233,7 @@ def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = Non
         logger.error(f"[PIE CHART] Erro ao buscar dados para gráfico pizza fornecedora (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
         return None
 
-def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = None) -> List[Tuple[str, int]] or None:
+def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = None) -> Union[List[Tuple[str, int]], None]:
     """
     Busca a CONTAGEM de clientes ativos agrupados por Região/Concessionária,
     filtrando por clientes cuja data_ativo cai dentro do mês especificado.
@@ -245,7 +245,7 @@ def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = 
                 WHEN c.ufconsumo IS NULL OR TRIM(c.ufconsumo) = '' THEN UPPER(TRIM(c.concessionaria))
                 ELSE (UPPER(TRIM(c.ufconsumo)) || '-' || UPPER(TRIM(c.concessionaria)))
             END AS regiao_concessionaria,
-            COUNT(c.idcliente) AS qtd_clientes
+            COUNT(DISTINCT c.idcliente) AS qtd_clientes
         FROM public."CLIENTES" c
         WHERE
             (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
@@ -294,7 +294,7 @@ def get_state_map_data() -> List[Tuple[str, int, float]]: # Retorna UF, CONTAGEM
     query = """
         SELECT
             UPPER(c.ufconsumo) as estado_uf,
-            COUNT(c.idcliente) as total_clientes,
+            COUNT(DISTINCT c.idcliente) as total_clientes,
             SUM(COALESCE(c.consumomedio, 0)) as total_consumo_medio
         FROM public."CLIENTES" c
         WHERE
@@ -576,6 +576,7 @@ def get_overdue_clients_by_state_for_map() -> List[Tuple[str, int]]:
             return []
 
         try:
+            codigo_idx = reports_boletos_columns_order.index('codigo')
             uf_idx = reports_boletos_columns_order.index('ufconsumo')
             atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
         except ValueError as e:
@@ -583,20 +584,20 @@ def get_overdue_clients_by_state_for_map() -> List[Tuple[str, int]]:
             return []
 
         overdue_counts_by_uf = defaultdict(int)
+        seen_codigos = set()
 
         for row in all_clients_data:
-            if uf_idx < len(row) and atraso_idx < len(row):
-                uf = row[uf_idx]
-                atraso_status = row[atraso_idx]
-
-                if uf and isinstance(uf, str) and uf.strip() != '':
-                    uf_cleaned = uf.strip().upper()
-                    if atraso_status == 'SIM':
+            codigo_cliente = row[codigo_idx]
+            if codigo_cliente not in seen_codigos:
+                seen_codigos.add(codigo_cliente)
+                
+                if row[atraso_idx] == 'SIM':
+                    uf = row[uf_idx]
+                    if uf and isinstance(uf, str) and uf.strip() != '':
+                        uf_cleaned = uf.strip().upper()
                         overdue_counts_by_uf[uf_cleaned] += 1
-                else:
-                    logger.debug(f"UF inválida ou vazia encontrada no registro: {uf}")
-            else:
-                logger.warning(f"Linha do relatório de boletos incompleta ou com menos colunas que o esperado. Linha: {row}")
+                    else:
+                        logger.debug(f"UF inválida ou vazia encontrada no registro: {uf}")
 
         formatted_results = sorted(overdue_counts_by_uf.items(), key=lambda item: item[0])
 
@@ -642,7 +643,7 @@ def count_clientes_ativos_consolidado(fornecedora: Optional[str] = None) -> int:
     opcionalmente filtrado por fornecedora, SEM filtro de mês.
     """
     base_query = """
-        SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
+        SELECT COUNT(DISTINCT c.idcliente) FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND c.data_ativo IS NOT NULL
         {fornecedora_filter};
@@ -669,7 +670,7 @@ def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) ->
     opcionalmente filtrado por fornecedora, SEM filtro de mês.
     """
     base_query = """
-        SELECT COUNT(c.idcliente) FROM public."CLIENTES" c
+        SELECT COUNT(DISTINCT c.idcliente) FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND c.dtcad IS NOT NULL
         {fornecedora_filter};
@@ -689,18 +690,12 @@ def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) ->
         logger.error(f"Erro count_clientes_registrados_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
         return 0
 
-def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> Tuple[int, float, float]:
+def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> int:
     """
-    Calcula as métricas para clientes com "Atraso na Injeção" = 'SIM'.
-    - Conta o número total de clientes únicos.
-    - Calcula a média de "consumomedio".
-    - Calcula a média de "dias_em_atraso".
-    Opcionalmente filtrado por fornecedora.
-
-    Returns:
-        Uma tupla contendo (contagem, media_consumo, media_dias_atraso).
+    Conta o número total de clientes que possuem "Atraso na Injeção" = 'SIM',
+    opcionalmente filtrado por fornecedora.
     """
-    log_msg = "Calculando métricas de clientes com Atraso na Injeção"
+    log_msg = "Contando clientes com Atraso na Injeção"
     if fornecedora:
         log_msg += f" para a fornecedora: {fornecedora}"
     else:
@@ -708,6 +703,7 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> Tuple[
     logger.info(log_msg)
 
     try:
+        # Reutiliza a função get_boletos_por_cliente_data para obter os dados já processados.
         all_clients_data = reports_boletos.get_boletos_por_cliente_data(
             limit=None,
             export_mode=True,
@@ -715,43 +711,30 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> Tuple[
         )
 
         if not all_clients_data:
-            logger.warning("Nenhum dado retornado para calcular métricas de atraso na injeção.")
-            return 0, 0.0, 0.0
+            logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção.")
+            return 0
 
+        # --- INÍCIO DA CORREÇÃO: REMOÇÃO DE DUPLICATAS ---
         try:
             codigo_idx = reports_boletos_columns_order.index('codigo')
             atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
-            consumo_idx = reports_boletos_columns_order.index('consumomedio')
-            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso')
         except ValueError as e:
-            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível calcular métricas de atraso.")
-            return 0, 0.0, 0.0
+            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível contar clientes com atraso.")
+            return 0
 
         seen_codigos = set()
-        overdue_clients_metrics = []
+        unique_overdue_count = 0
         for row in all_clients_data:
             codigo_cliente = row[codigo_idx]
             if codigo_cliente not in seen_codigos:
                 seen_codigos.add(codigo_cliente)
                 if row[atraso_idx] == 'SIM':
-                    consumo = float(row[consumo_idx]) if row[consumo_idx] is not None else 0.0
-                    dias_atraso = int(row[dias_atraso_idx]) if row[dias_atraso_idx] is not None else 0
-                    overdue_clients_metrics.append({'consumo': consumo, 'dias_atraso': dias_atraso})
+                    unique_overdue_count += 1
         
-        count = len(overdue_clients_metrics)
-        if count == 0:
-            logger.info("Nenhum cliente único com Atraso na Injeção encontrado.")
-            return 0, 0.0, 0.0
-
-        total_consumo = sum(item['consumo'] for item in overdue_clients_metrics)
-        total_dias_atraso = sum(item['dias_atraso'] for item in overdue_clients_metrics)
-
-        avg_consumo = total_consumo / count
-        avg_dias_atraso = total_dias_atraso / count
-
-        logger.info(f"Métricas de Atraso na Injeção: {count} clientes, Média Consumo: {avg_consumo:.2f}, Média Dias Atraso: {avg_dias_atraso:.2f}")
-        return count, round(avg_consumo, 2), round(avg_dias_atraso, 2)
+        logger.info(f"Total de clientes únicos com Atraso na Injeção encontrados: {unique_overdue_count}")
+        return unique_overdue_count
+        # --- FIM DA CORREÇÃO ---
 
     except Exception as e:
-        logger.error(f"Erro inesperado ao calcular métricas de atraso na injeção: {e}", exc_info=True)
-        return 0, 0.0, 0.0
+        logger.error(f"Erro inesperado ao contar clientes com atraso na injeção: {e}", exc_info=True)
+        return 0
