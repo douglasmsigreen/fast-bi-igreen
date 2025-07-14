@@ -102,6 +102,37 @@ def relatorios():
              dados = []
              total_items = 0
 
+        # --- REMOÇÃO DE DUPLICATAS PELA COLUNA 'idcliente' ANTES DE EXIBIR NA PÁGINA ---
+        if dados and headers:
+            try:
+                lower_headers = [h.lower() for h in headers]
+                id_column_name = None
+                if 'idcliente' in lower_headers:
+                    id_column_name = 'idcliente'
+                elif 'código' in lower_headers:
+                    id_column_name = 'código'
+                
+                if id_column_name:
+                    id_column_index = lower_headers.index(id_column_name)
+                    seen_ids = set()
+                    dados_unicos = []
+                    for linha in dados:
+                        client_id = linha[id_column_index]
+                        if client_id not in seen_ids:
+                            seen_ids.add(client_id)
+                            dados_unicos.append(linha)
+                    
+                    if len(dados_unicos) < len(dados):
+                        logger.info(f"Removidas {len(dados) - len(dados_unicos)} linhas duplicadas por '{id_column_name}' para a exibição do relatório '{selected_report_type}'.")
+                        dados = dados_unicos
+                        # ATENÇÃO: A contagem total de itens (total_items) pode não refletir a remoção de duplicados na página atual.
+                        # Isso é um comportamento esperado para manter a paginação consistente com o banco de dados.
+                else:
+                    raise ValueError("Coluna de ID não encontrada")
+
+            except ValueError:
+                logger.warning(f"Nenhuma coluna de ID ('idcliente' ou 'código') foi encontrada nos cabeçalhos do relatório '{selected_report_type}'. A remoção de duplicatas na exibição foi ignorada.")
+
         # Calcular paginação
         if not error_message and total_items > 0 and items_per_page > 0:
             total_pages = math.ceil(total_items / items_per_page)
