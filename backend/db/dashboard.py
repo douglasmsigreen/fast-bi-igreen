@@ -689,12 +689,18 @@ def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) ->
         logger.error(f"Erro count_clientes_registrados_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
         return 0
 
-def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> int:
+def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> Tuple[int, float, float]:
     """
-    Conta o número total de clientes que possuem "Atraso na Injeção" = 'SIM',
-    opcionalmente filtrado por fornecedora.
+    Calcula as métricas para clientes com "Atraso na Injeção" = 'SIM'.
+    - Conta o número total de clientes únicos.
+    - Calcula a média de "consumomedio".
+    - Calcula a média de "dias_em_atraso".
+    Opcionalmente filtrado por fornecedora.
+
+    Returns:
+        Uma tupla contendo (contagem, media_consumo, media_dias_atraso).
     """
-    log_msg = "Contando clientes com Atraso na Injeção"
+    log_msg = "Calculando métricas de clientes com Atraso na Injeção"
     if fornecedora:
         log_msg += f" para a fornecedora: {fornecedora}"
     else:
@@ -702,8 +708,6 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> int:
     logger.info(log_msg)
 
     try:
-        # Reutiliza a função get_boletos_por_cliente_data para obter os dados já processados.
-        # Passa export_mode=True para garantir que todos os dados sejam retornados para processamento.
         all_clients_data = reports_boletos.get_boletos_por_cliente_data(
             limit=None,
             export_mode=True,
@@ -711,25 +715,43 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> int:
         )
 
         if not all_clients_data:
-            logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção.")
-            return 0
+            logger.warning("Nenhum dado retornado para calcular métricas de atraso na injeção.")
+            return 0, 0.0, 0.0
 
-        # Encontra o índice da coluna 'atraso_na_injecao' na ordem final esperada.
-        # Isso é crucial para acessar o valor correto na tupla de dados.
         try:
+            codigo_idx = reports_boletos_columns_order.index('codigo')
             atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
-        except ValueError:
-            logger.error("Erro: Coluna 'atraso_na_injecao' não encontrada na ordem das colunas do relatório de boletos.")
-            return 0
+            consumo_idx = reports_boletos_columns_order.index('consumomedio')
+            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso')
+        except ValueError as e:
+            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível calcular métricas de atraso.")
+            return 0, 0.0, 0.0
 
-        overdue_count = 0
+        seen_codigos = set()
+        overdue_clients_metrics = []
         for row in all_clients_data:
-            if row[atraso_idx] == 'SIM':
-                overdue_count += 1
+            codigo_cliente = row[codigo_idx]
+            if codigo_cliente not in seen_codigos:
+                seen_codigos.add(codigo_cliente)
+                if row[atraso_idx] == 'SIM':
+                    consumo = float(row[consumo_idx]) if row[consumo_idx] is not None else 0.0
+                    dias_atraso = int(row[dias_atraso_idx]) if row[dias_atraso_idx] is not None else 0
+                    overdue_clients_metrics.append({'consumo': consumo, 'dias_atraso': dias_atraso})
         
-        logger.info(f"Total de clientes com Atraso na Injeção encontrados: {overdue_count}")
-        return overdue_count
+        count = len(overdue_clients_metrics)
+        if count == 0:
+            logger.info("Nenhum cliente único com Atraso na Injeção encontrado.")
+            return 0, 0.0, 0.0
+
+        total_consumo = sum(item['consumo'] for item in overdue_clients_metrics)
+        total_dias_atraso = sum(item['dias_atraso'] for item in overdue_clients_metrics)
+
+        avg_consumo = total_consumo / count
+        avg_dias_atraso = total_dias_atraso / count
+
+        logger.info(f"Métricas de Atraso na Injeção: {count} clientes, Média Consumo: {avg_consumo:.2f}, Média Dias Atraso: {avg_dias_atraso:.2f}")
+        return count, round(avg_consumo, 2), round(avg_dias_atraso, 2)
 
     except Exception as e:
-        logger.error(f"Erro inesperado ao contar clientes com atraso na injeção: {e}", exc_info=True)
-        return 0
+        logger.error(f"Erro inesperado ao calcular métricas de atraso na injeção: {e}", exc_info=True)
+        return 0, 0.0, 0.0
