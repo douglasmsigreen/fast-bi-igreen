@@ -239,6 +239,38 @@ def exportar_excel_route():
                 dados_completos = db.get_recebiveis_clientes_data(limit=None, fornecedora=selected_fornecedora) # limit=None
                 sheet_title = f"Recebíveis ({forn_fn})"
 
+            # --- REMOÇÃO DE DUPLICATAS PELA COLUNA 'idcliente' ANTES DE EXPORTAR ---
+            if dados_completos and headers:
+                try:
+                    # Encontra o índice da coluna de ID ('idcliente' ou 'código')
+                    lower_headers = [h.lower() for h in headers]
+                    id_column_name = None
+                    if 'idcliente' in lower_headers:
+                        id_column_name = 'idcliente'
+                    elif 'código' in lower_headers:
+                        id_column_name = 'código'
+                    
+                    if id_column_name:
+                        id_column_index = lower_headers.index(id_column_name)
+                        seen_ids = set()
+                        dados_unicos = []
+                        for linha in dados_completos:
+                            client_id = linha[id_column_index]
+                            if client_id not in seen_ids:
+                                seen_ids.add(client_id)
+                                dados_unicos.append(linha)
+                        
+                        if len(dados_unicos) < len(dados_completos):
+                            logger.info(f"Removidas {len(dados_completos) - len(dados_unicos)} linhas duplicadas por '{id_column_name}' para a exportação do relatório '{selected_report_type}'.")
+                            dados_completos = dados_unicos
+                    else:
+                        raise ValueError("Coluna de ID não encontrada")
+
+                except ValueError:
+                    # Se a coluna de ID não for encontrada, loga um aviso mas continua sem a remoção de duplicatas.
+                    logger.warning(f"Nenhuma coluna de ID ('idcliente' ou 'código') foi encontrada nos cabeçalhos do relatório '{selected_report_type}'. A remoção de duplicatas na exportação foi ignorada.")
+
+
             # Garante que o nome da aba não exceda 31 caracteres
             if len(sheet_title) > 31: sheet_title = sheet_title[:31]
 
