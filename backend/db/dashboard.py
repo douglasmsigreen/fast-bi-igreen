@@ -690,10 +690,18 @@ def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) ->
         logger.error(f"Erro count_clientes_registrados_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
         return 0
 
-def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> int:
+def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> dict:
     """
     Conta o número total de clientes que possuem "Atraso na Injeção" = 'SIM',
+    calcula a média de dias de atraso e soma o consumo médio (kWh pendentes),
     opcionalmente filtrado por fornecedora.
+    
+    Returns:
+        dict: {
+            'count': int,
+            'average_delay_days': int,
+            'pending_kwh': float
+        }
     """
     log_msg = "Contando clientes com Atraso na Injeção"
     if fornecedora:
@@ -712,29 +720,62 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> int:
 
         if not all_clients_data:
             logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção.")
-            return 0
+            return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
 
-        # --- INÍCIO DA CORREÇÃO: REMOÇÃO DE DUPLICATAS ---
+        # Buscar índices das colunas necessárias
         try:
             codigo_idx = reports_boletos_columns_order.index('codigo')
             atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
+            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso')
+            consumo_medio_idx = reports_boletos_columns_order.index('consumomedio')
         except ValueError as e:
-            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível contar clientes com atraso.")
-            return 0
+            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível processar clientes com atraso.")
+            return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
 
+        # Processar dados únicos por cliente
         seen_codigos = set()
         unique_overdue_count = 0
+        total_dias_atraso = 0
+        total_consumo_medio = 0
+        clientes_com_dias_validos = 0
+
         for row in all_clients_data:
             codigo_cliente = row[codigo_idx]
             if codigo_cliente not in seen_codigos:
                 seen_codigos.add(codigo_cliente)
                 if row[atraso_idx] == 'SIM':
                     unique_overdue_count += 1
-        
-        logger.info(f"Total de clientes únicos com Atraso na Injeção encontrados: {unique_overdue_count}")
-        return unique_overdue_count
-        # --- FIM DA CORREÇÃO ---
+                    
+                    # Processar dias em atraso
+                    try:
+                        dias_atraso = float(row[dias_atraso_idx]) if row[dias_atraso_idx] not in [None, '', 'N/A'] else 0
+                        if dias_atraso > 0:
+                            total_dias_atraso += dias_atraso
+                            clientes_com_dias_validos += 1
+                    except (ValueError, TypeError):
+                        pass  # Ignora valores inválidos
+                    
+                    # Processar consumo médio
+                    try:
+                        consumo_medio = float(row[consumo_medio_idx]) if row[consumo_medio_idx] not in [None, '', 'N/A'] else 0
+                        total_consumo_medio += consumo_medio
+                    except (ValueError, TypeError):
+                        pass  # Ignora valores inválidos
+
+        # Calcular média de dias de atraso
+        average_delay_days = int(total_dias_atraso / clientes_com_dias_validos) if clientes_com_dias_validos > 0 else 0
+
+        # Log detalhado da contagem e cálculos
+        logger.info(f"Contagem de clientes com atraso na injeção: {unique_overdue_count}")
+        logger.info(f"Soma total de dias de atraso: {total_dias_atraso} (Clientes com dias válidos: {clientes_com_dias_validos})")
+        logger.info(f"Soma total de consumo médio (kWh pendentes): {total_consumo_medio}")
+
+        return {
+            'count': unique_overdue_count,
+            'average_delay_days': average_delay_days,
+            'pending_kwh': total_consumo_medio
+        }
 
     except Exception as e:
         logger.error(f"Erro inesperado ao contar clientes com atraso na injeção: {e}", exc_info=True)
-        return 0
+        return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}

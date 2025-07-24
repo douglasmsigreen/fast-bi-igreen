@@ -45,6 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // NOVO: Elemento para o KPI de Clientes com Atraso na Injeção
     const kpiClientesAtrasoInjecao = document.getElementById('kpi-clientes-atraso-injecao');
+    const kpiMediaDiasAtraso = document.getElementById('kpi-media-dias-atraso');
+    const kpiKwhPendentes = document.getElementById('kpi-kwh-pendentes');
 
     // Elementos para o gráfico de linha anual
     const greenScoreChartYearSelect = document.getElementById('green-score-chart-year');
@@ -246,6 +248,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
         if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
         if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>'; // NOVO: Spinner para atraso na injeção
+        if (kpiMediaDiasAtraso) kpiMediaDiasAtraso.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if (kpiKwhPendentes) kpiKwhPendentes.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
 
         try {
             // Se a fornecedora for 'Consolidado', não passamos o parâmetro 'fornecedora' na URL.
@@ -279,12 +283,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Erro ao buscar clientes ativados consolidados:', ativosResponse?.error || 'Resposta inválida');
             }
 
-            // NOVO: Busca Clientes com Atraso na Injeção
+            // MODIFICADO: Busca Clientes com Atraso na Injeção com dados adicionais
             const atrasoInjecaoResponse = await fetchData(`/api/kpi/overdue-injection-clients?${fornecedoraParam}`, "KPI Clientes com Atraso na Injeção");
             if (atrasoInjecaoResponse && atrasoInjecaoResponse.overdue_injection_clients_count !== undefined) {
                 if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.textContent = formatNumber(atrasoInjecaoResponse.overdue_injection_clients_count, 0);
+                
+                // Novos campos
+                if (kpiMediaDiasAtraso) {
+                    const mediaDias = atrasoInjecaoResponse.average_delay_days || 0;
+                    kpiMediaDiasAtraso.textContent = `${formatNumber(mediaDias, 0)} dias`;
+                }
+                
+                if (kpiKwhPendentes) {
+                    const kwhPendentes = atrasoInjecaoResponse.pending_kwh || 0;
+                    kpiKwhPendentes.textContent = `${formatNumber(kwhPendentes, 0)} kWh`;
+                }
             } else {
                 if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiMediaDiasAtraso) kpiMediaDiasAtraso.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiKwhPendentes) kpiKwhPendentes.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
                 console.error('Erro ao buscar clientes com atraso na injeção:', atrasoInjecaoResponse?.error || 'Resposta inválida');
             }
 
@@ -296,6 +313,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>'; // NOVO: Mensagem de erro para atraso na injeção
+            if (kpiMediaDiasAtraso) kpiMediaDiasAtraso.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            if (kpiKwhPendentes) kpiKwhPendentes.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             // Se houver um contêiner para os KPIs consolidados, pode-se esconder em caso de erro
             if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none'; 
         }

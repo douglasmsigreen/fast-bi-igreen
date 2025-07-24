@@ -455,14 +455,19 @@ def api_kpi_clientes_registrados_consolidated():
 def api_kpi_overdue_injection_clients():
     """
     Retorna o KPI de contagem de clientes com 'Atraso na Injeção' = 'SIM',
+    média de dias de atraso e total de kWh pendentes,
     opcionalmente filtrado por fornecedora.
     """
     fornecedora = request.args.get('fornecedora', None)
     logger.info(f"API KPI Clientes com Atraso na Injeção: Requisição recebida (Forn: {fornecedora or 'Todos'})")
     try:
-        count = db.count_overdue_injection_clients(fornecedora=fornecedora)
-        logger.debug(f"API KPI Clientes com Atraso na Injeção: Fornecedora={fornecedora}, Resultado={count}")
-        return jsonify({"overdue_injection_clients_count": count})
+        result = db.count_overdue_injection_clients(fornecedora=fornecedora)
+        logger.debug(f"API KPI Clientes com Atraso na Injeção: Fornecedora={fornecedora}, Resultado={result}")
+        return jsonify({
+            "overdue_injection_clients_count": result['count'],
+            "average_delay_days": result['average_delay_days'],
+            "pending_kwh": result['pending_kwh']
+        })
     except Exception as e:
         logger.error(f"Erro api_kpi_overdue_injection_clients (Forn: {fornecedora}): {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado ao buscar KPI Clientes com Atraso na Injeção."}), 500

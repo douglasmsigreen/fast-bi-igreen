@@ -1,8 +1,9 @@
 cd "/home/bi-igreen/Documentos/Nova Aplicação Web BI/exportador_web"
 python3 -m venv venv
-source venv/bin/activate  # No Windows: venv\Scripts\activate
-
+source venv/bin/activate  
 python run.py
+
+# No Windows: venv\Scripts\activate
 
 # 1. Verificar o que mudou (opcional)
 git status
