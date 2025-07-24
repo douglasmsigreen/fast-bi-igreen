@@ -19,8 +19,27 @@
     left: 0;
     height: 100vh;
     z-index: 1000;
-    transition: width 0.3s ease;
+    transition: width 0.3s ease, transform 0.3s ease;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Sidebar collapsed state */
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed .sidebar-nav li a span {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-nav li a {
+    justify-content: center;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.sidebar.collapsed .sidebar-nav li a i {
+    margin-right: 0;
 }
 
 .sidebar-header {
@@ -121,6 +140,11 @@
     transition: margin-left 0.3s ease; /* Transição suave ao recolher sidebar */
 }
 
+/* Main content when sidebar is collapsed */
+.main-content.sidebar-collapsed {
+    margin-left: 60px;
+}
+
 .content-header {
     background-color: var(--cor-fundo-elemento);
     padding: 0 30px;
@@ -131,6 +155,44 @@
     align-items: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     flex-shrink: 0; /* Evita que encolha */
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    color: var(--cor-texto-secundario);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.sidebar-toggle:hover {
+    color: var(--cor-texto-principal);
+    background-color: var(--cor-fundo-hover);
+}
+
+.theme-toggle {
+    background: none;
+    border: none;
+    color: var(--cor-texto-secundario);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.theme-toggle:hover {
+    color: var(--cor-texto-principal);
+    background-color: var(--cor-fundo-hover);
 }
 .page-title {
     font-size: 1.75rem;
@@ -176,11 +238,13 @@
 /* --- Responsividade do Layout --- */
 @media (max-width: 992px) {
     .sidebar { width: 70px; }
+    .sidebar.collapsed { width: 60px; }
     .sidebar-header img { max-height: 30px; }
     .sidebar-nav li a span { display: none; }
     .sidebar-nav li a { justify-content: center; padding-left: 10px; padding-right: 10px; }
     .sidebar-nav li a i { margin-right: 0; }
     .main-content { margin-left: 70px; }
+    .main-content.sidebar-collapsed { margin-left: 60px; }
     .page-title { font-size: 1.5rem; }
 }
 @media (max-width: 768px) {

@@ -36,6 +36,13 @@
 
         {# Coluna da Direita (Formulário) #}
         <div class="login-form-column">
+            {# Theme toggle button for login page #}
+            <div class="login-theme-toggle">
+                <button class="theme-toggle" id="themeToggle" title="Alternar Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+            
             <div class="login-form-container">
 
                 {# Logo #}
@@ -104,6 +111,6 @@
     </div> {# Fim login-wrapper #}
 
 {# Scripts JS no final, se necessário #}
-{# <script src="{{ url_for('static', filename='js/script.js') }}"></script> #}
+<script src="{{ url_for('static', filename='js/theme-sidebar.js') }}"></script>
 </body>
 </html>

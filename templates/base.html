@@ -112,10 +112,17 @@
         <main class="main-content">
             {# Barra Superior (Header) #}
             <header class="content-header">
-                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="header-left">
+                    <button class="sidebar-toggle" id="sidebarToggle" title="Recolher/Expandir Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
                  <div class="header-user-info">
                     {% if current_user.is_authenticated %}
-                         {# <i class="fas fa-user-circle fa-fw" style="margin-right: 5px;"></i> #} {# Ícone de usuário (opcional) #}
+                         <button class="theme-toggle" id="themeToggle" title="Alternar Modo Escuro">
+                             <i class="fas fa-moon"></i>
+                         </button>
                          <span title="Usuário logado">{{ current_user.nome | default('Utilizador', true) }}</span>
                          <span class="current-date" style="margin-left: auto; margin-right: 15px;" title="Data atual"></span> {# Data será preenchida por JS #}
                          <a href="{{ url_for('auth_bp.logout') }}" class="btn-logout-alt" title="Sair"><i class="fas fa-sign-out-alt"></i></a>
@@ -164,6 +171,9 @@
 
     {# Script JS Global para funcionalidades básicas (como fechar flash messages) #}
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    {# Script para tema escuro e sidebar recolhível #}
+    <script src="{{ url_for('static', filename='js/theme-sidebar.js') }}"></script>
 
     {# Script para atualizar data no header #}
     <script>

@@ -32,6 +32,30 @@ body.login-page-body {
     align-items: center;
     padding: 40px;
     background-color: var(--cor-fundo-elemento); /* Fundo branco */
+    position: relative; /* For positioning theme toggle */
+}
+
+/* Theme toggle for login page */
+.login-theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.login-theme-toggle .theme-toggle {
+    background: none;
+    border: none;
+    color: var(--cor-texto-secundario);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.login-theme-toggle .theme-toggle:hover {
+    color: var(--cor-texto-principal);
+    background-color: var(--cor-fundo-hover);
 }
 
 /* Container do formulário para limitar largura */

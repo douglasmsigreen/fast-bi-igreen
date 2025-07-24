@@ -9,7 +9,7 @@
 
 /* --- Variáveis de Cor e Tipografia --- */
 :root {
-  /* Cores Originais */
+  /* Cores Originais (Light Mode) */
   --cor-primaria: #00B034;
   --cor-primaria-hover: #00962C;
   --cor-primaria-texto: #FFFFFF;
@@ -32,6 +32,32 @@
   --cor-aviso-fundo: #fef3c7;
   --cor-info: #0369a1;
   --cor-info-fundo: #e0f2fe;
+}
+
+/* Dark Mode Variables */
+[data-theme="dark"] {
+  --cor-primaria: #00D040;
+  --cor-primaria-hover: #00B034;
+  --cor-primaria-texto: #FFFFFF;
+  --cor-fundo-geral: #0F172A;
+  --cor-fundo-elemento: #1E293B;
+  --cor-fundo-header-card: #334155;
+  --cor-fundo-hover: #334155;
+  --cor-fundo-zebrado: #1E293B;
+  --cor-borda-suave: #334155;
+  --cor-borda-forte: #475569;
+  --cor-texto-principal: #F1F5F9;
+  --cor-texto-secundario: #CBD5E1;
+  --cor-texto-link: #3B82F6;
+  --cor-texto-link-hover: #60A5FA;
+  --cor-sucesso: #22C55E;
+  --cor-sucesso-fundo: #14532D;
+  --cor-erro: #EF4444;
+  --cor-erro-fundo: #7F1D1D;
+  --cor-aviso: #F59E0B;
+  --cor-aviso-fundo: #78350F;
+  --cor-info: #06B6D4;
+  --cor-info-fundo: #164E63;
 
   /* Novas Variáveis (Sugestões anteriores) */
   --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
@@ -56,6 +82,7 @@ body {
     color: var(--cor-texto-principal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* --- Estilos para Cabeçalhos --- */
