@@ -71,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'VANTAGE': '/static/img/fornecedoras/vantage.png',
         'EDP': '/static/img/fornecedoras/edp.png',
         'GV': '/static/img/fornecedoras/gv.png',
+        'SUNNE': '/static/img/fornecedoras/sunne.png',
         'FARO': '/static/img/fornecedoras/faro.png',
     };
 
