@@ -345,25 +345,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Erro ao buscar clientes com atraso na injeção:', atrasoInjecaoResponse?.error || 'Resposta inválida');
             }
 
-            // NOVO: Chamada de API ESPECÍFICA para o CLONE 1 (com filtro max_delay_days=30)
-            const atrasoInjecaoClone1Response = await fetchData(`/api/kpi/overdue-injection-clients?max_delay_days=30${fornecedoraParam}`, "KPI Clientes com Atraso na Injeção (Clone 1)");
-            if (atrasoInjecaoClone1Response && atrasoInjecaoClone1Response.overdue_injection_clients_count !== undefined) {
-                if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.textContent = formatNumber(atrasoInjecaoClone1Response.overdue_injection_clients_count, 0);
+            // NOVO: Chamada de API ESPECÍFICA para o CLONE 1 (com filtro de até 30 dias)
+            const atrasoInjecaoClone1Response = await fetchData(`/api/kpi/overdue-injection-clients-up-to-30-days?${fornecedoraParam.slice(1)}`, "KPI Clientes com Atraso na Injeção (Até 30 dias)");
+            if (atrasoInjecaoClone1Response && atrasoInjecaoClone1Response.overdue_injection_clients_count_30d !== undefined) {
+                if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.textContent = formatNumber(atrasoInjecaoClone1Response.overdue_injection_clients_count_30d, 0);
                 
                 if (kpiMediaDiasAtraso2) {
-                    const mediaDias = atrasoInjecaoClone1Response.average_delay_days || 0;
+                    const mediaDias = atrasoInjecaoClone1Response.average_delay_days_30d || 0;
                     kpiMediaDiasAtraso2.textContent = `${formatNumber(mediaDias, 0)} dias`;
                 }
                 
                 if (kpiKwhPendentes2) {
-                    const kwhPendentes = atrasoInjecaoClone1Response.pending_kwh || 0;
+                    const kwhPendentes = atrasoInjecaoClone1Response.pending_kwh_30d || 0;
                     kpiKwhPendentes2.textContent = `${formatNumber(kwhPendentes, 0)} kWh`;
                 }
             } else {
                 if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
                 if (kpiMediaDiasAtraso2) kpiMediaDiasAtraso2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
                 if (kpiKwhPendentes2) kpiKwhPendentes2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
-                console.error('Erro ao buscar clientes com atraso na injeção (Clone 1):', atrasoInjecaoClone1Response?.error || 'Resposta inválida');
+                console.error('Erro ao buscar clientes com atraso na injeção (Até 30 dias):', atrasoInjecaoClone1Response?.error || 'Resposta inválida');
             }
 
 

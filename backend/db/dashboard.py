@@ -779,3 +779,101 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> dict:
     except Exception as e:
         logger.error(f"Erro inesperado ao contar clientes com atraso na injeção: {e}", exc_info=True)
         return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
+
+
+# --- NOVA FUNÇÃO: count_overdue_injection_clients_up_to_30_days ---
+def count_overdue_injection_clients_up_to_30_days(fornecedora: Optional[str] = None) -> dict:
+    """
+    Conta o número total de clientes com "Atraso na Injeção" = 'SIM'
+    E cujo "Dias em Atraso" seja MENOR OU IGUAL a 30 dias.
+    Calcula também a média de dias de atraso e soma o consumo médio (kWh pendentes)
+    para esses clientes específicos.
+
+    Args:
+        fornecedora: Opcional. Filtra os resultados por uma fornecedora específica.
+
+    Returns:
+        dict: {
+            'count': int,
+            'average_delay_days': int,
+            'pending_kwh': float
+        }
+    """
+    log_msg = "Contando clientes com Atraso na Injeção <= 30 dias"
+    if fornecedora:
+        log_msg += f" para a fornecedora: {fornecedora}"
+    else:
+        log_msg += " para TODAS as fornecedoras (Consolidado)"
+    logger.info(log_msg)
+
+    try:
+        # Reutiliza a função get_boletos_por_cliente_data para obter os dados já processados.
+        # Isso garante que a lógica de "Atraso na Injeção" e "Dias em Atraso" já esteja aplicada.
+        all_clients_data = reports_boletos.get_boletos_por_cliente_data(
+            limit=None,
+            export_mode=True,
+            fornecedora=fornecedora
+        )
+
+        if not all_clients_data:
+            logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção <= 30 dias.")
+            return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
+
+        # Buscar índices das colunas necessárias usando reports_boletos_columns_order
+        try:
+            codigo_idx = reports_boletos_columns_order.index('codigo')
+            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
+            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso')
+            consumo_medio_idx = reports_boletos_columns_order.index('consumomedio')
+        except ValueError as e:
+            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível processar clientes com atraso <= 30 dias.")
+            return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
+
+        # Processar dados únicos por cliente com a nova condição de 30 dias
+        seen_codigos = set()
+        unique_overdue_count = 0
+        total_dias_atraso = 0
+        total_consumo_medio = 0
+        clientes_com_dias_validos = 0
+
+        for row in all_clients_data:
+            codigo_cliente = row[codigo_idx]
+            if codigo_cliente not in seen_codigos:
+                seen_codigos.add(codigo_cliente)
+                
+                # Verifica a condição principal de atraso na injeção
+                if row[atraso_idx] == 'SIM':
+                    # Nova condição: Dias em Atraso <= 30
+                    try:
+                        dias_atraso = float(row[dias_atraso_idx]) if row[dias_atraso_idx] not in [None, '', 'N/A'] else 0
+                        
+                        if dias_atraso > 0 and dias_atraso <= 30: # Aplica o filtro de 30 dias
+                            unique_overdue_count += 1
+                            total_dias_atraso += dias_atraso
+                            clientes_com_dias_validos += 1
+                            
+                            # Processar consumo médio para os clientes filtrados
+                            try:
+                                consumo_medio = float(row[consumo_medio_idx]) if row[consumo_medio_idx] not in [None, '', 'N/A'] else 0
+                                total_consumo_medio += consumo_medio
+                            except (ValueError, TypeError):
+                                pass  # Ignora valores inválidos
+                    except (ValueError, TypeError):
+                        pass  # Ignora valores inválidos para 'dias_em_atraso'
+
+        # Calcular média de dias de atraso
+        average_delay_days = int(total_dias_atraso / clientes_com_dias_validos) if clientes_com_dias_validos > 0 else 0
+
+        logger.info(f"Contagem de clientes com atraso na injeção <= 30 dias: {unique_overdue_count}")
+        logger.info(f"Soma total de dias de atraso (<= 30d): {total_dias_atraso} (Clientes com dias válidos: {clientes_com_dias_validos})")
+        logger.info(f"Soma total de consumo médio (kWh pendentes <= 30d): {total_consumo_medio}")
+
+        return {
+            'count': unique_overdue_count,
+            'average_delay_days': average_delay_days,
+            'pending_kwh': total_consumo_medio
+        }
+
+    except Exception as e:
+        logger.error(f"Erro inesperado ao contar clientes com atraso na injeção <= 30 dias: {e}", exc_info=True)
+        return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}

@@ -56,7 +56,8 @@ from .dashboard import (
     get_total_consumo_medio_consolidado,
     count_clientes_ativos_consolidado,
     count_clientes_registrados_consolidado,
-    count_overdue_injection_clients
+    count_overdue_injection_clients,
+    count_overdue_injection_clients_up_to_30_days
     # --- FIM DAS NOVAS IMPORTAÇÕES ---
 )
 
