@@ -366,6 +366,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Erro ao buscar clientes com atraso na injeção (Até 30 dias):', atrasoInjecaoClone1Response?.error || 'Resposta inválida');
             }
 
+            // NOVO: Chamada de API ESPECÍFICA para o CLONE 2 (com filtro acima de 30 dias)
+            const atrasoInjecaoClone2Response = await fetchData(`/api/kpi/overdue-injection-clients-over-30-days?${fornecedoraParam.slice(1)}`, "KPI Clientes com Atraso na Injeção (Acima de 30 dias)");
+            if (atrasoInjecaoClone2Response && atrasoInjecaoClone2Response.overdue_injection_clients_count_over_30d !== undefined) {
+                if (kpiClientesAtrasoInjecao3) kpiClientesAtrasoInjecao3.textContent = formatNumber(atrasoInjecaoClone2Response.overdue_injection_clients_count_over_30d, 0);
+                
+                if (kpiMediaDiasAtraso3) {
+                    const mediaDias = atrasoInjecaoClone2Response.average_delay_days_over_30d || 0;
+                    kpiMediaDiasAtraso3.textContent = `${formatNumber(mediaDias, 0)} dias`;
+                }
+                
+                if (kpiKwhPendentes3) {
+                    const kwhPendentes = atrasoInjecaoClone2Response.pending_kwh_over_30d || 0;
+                    kpiKwhPendentes3.textContent = `${formatNumber(kwhPendentes, 0)} kWh`;
+                }
+            } else {
+                if (kpiClientesAtrasoInjecao3) kpiClientesAtrasoInjecao3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiMediaDiasAtraso3) kpiMediaDiasAtraso3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiKwhPendentes3) kpiKwhPendentes3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                console.error('Erro ao buscar clientes com atraso na injeção (Acima de 30 dias):', atrasoInjecaoClone2Response?.error || 'Resposta inválida');
+            }
+
 
             console.log("KPIs consolidados e de atraso na injeção atualizados com sucesso.");
 

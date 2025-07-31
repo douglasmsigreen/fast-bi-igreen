@@ -495,3 +495,27 @@ def api_kpi_overdue_injection_clients_up_to_30_days():
     except Exception as e:
         logger.error(f"Erro api_kpi_overdue_injection_clients_up_to_30_days (Forn: {fornecedora}): {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado ao buscar KPI Clientes com Atraso na Injeção <= 30 dias."}), 500
+
+# --- NOVA ROTA API para KPI de Clientes com Atraso na Injeção (> 30 dias) ---
+@api_bp.route('/kpi/overdue-injection-clients-over-30-days')
+@login_required
+def api_kpi_overdue_injection_clients_over_30_days():
+    """
+    Retorna o KPI de contagem de clientes com 'Atraso na Injeção' = 'SIM'
+    E cujo 'Dias em Atraso' seja MAIOR que 30 dias.
+    Calcula também a média de dias de atraso e total de kWh pendentes,
+    opcionalmente filtrado por fornecedora.
+    """
+    fornecedora = request.args.get('fornecedora', None)
+    logger.info(f"API KPI Clientes com Atraso na Injeção > 30 dias: Requisição recebida (Forn: {fornecedora or 'Todos'})")
+    try:
+        result = db.count_overdue_injection_clients_over_30_days(fornecedora=fornecedora)
+        logger.debug(f"API KPI Clientes com Atraso na Injeção > 30 dias: Fornecedora={fornecedora}, Resultado={result}")
+        return jsonify({
+            "overdue_injection_clients_count_over_30d": result['count'],
+            "average_delay_days_over_30d": result['average_delay_days'],
+            "pending_kwh_over_30d": result['pending_kwh']
+        })
+    except Exception as e:
+        logger.error(f"Erro api_kpi_overdue_injection_clients_over_30_days (Forn: {fornecedora}): {e}", exc_info=True)
+        return jsonify({"error": "Erro inesperado ao buscar KPI Clientes com Atraso na Injeção > 30 dias."}), 500
