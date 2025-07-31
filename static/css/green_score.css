@@ -62,23 +62,36 @@
     flex: 1; /* Ocupa o espaço restante */
     min-width: 300px; /* Largura mínima para os KPIs */
     display: grid; /* Usa grid para organizar os cards de KPI */
-    grid-template-columns: 1fr; /* Uma coluna por padrão */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Colunas responsivas */
     gap: 20px; /* Espaçamento entre os cards KPI */
     padding: 10px; /* Padding interno */
     background-color: var(--cor-fundo-elemento); /* Fundo igual ao contêiner principal */
     border-radius: 10px; /* Borda arredondada igual aos cards */
+    align-items: start; /* Alinha os cards ao topo */
 }
 
 /* NOVO: Estilo para o contêiner dos KPIs CONSOLIDADOS */
 .consolidated-kpis-wrapper {
-    flex: 1; /* Permite que o wrapper dos KPIs consolidados ocupe espaço */
-    min-width: 300px; /* Garante que não encolha demais */
-    display: grid; /* Usa grid para organizar os cards de KPI */
-    grid-template-columns: 1fr; /* Uma coluna por padrão */
-    gap: 20px; /* Espaçamento entre os cards KPI */
-    padding: 10px; /* Padding interno, como os outros KPIs */
-    background-color: var(--cor-fundo-elemento);
-    border-radius: 10px;
+    display: grid;
+    /* Ajuste as colunas conforme necessário. 'repeat(auto-fit, minmax(280px, 1fr))' é flexível */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Garante que os cards tenham no mínimo 300px e se ajustem */
+    gap: 20px; /* Espaçamento entre os cards */
+    justify-content: center; /* Centraliza os cards se não preencherem toda a largura */
+    align-items: start; /* Alinha os cards ao topo */
+    width: 100%; /* Garante que o contêiner ocupe a largura total */
+    margin-top: 20px; /* Espaçamento superior */
+    padding: 10px; /* Preenchimento interno */
+}
+
+/* Se você quiser um espaçamento específico para os cards de KPI */
+.kpi-card, .qualification-card {
+    min-width: 280px; /* Garante uma largura mínima para os cards */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    height: 100%; /* Garante que os cards tenham a mesma altura */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 /* Grids de velocímetros para a opção "Consolidado" */

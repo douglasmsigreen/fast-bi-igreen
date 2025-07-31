@@ -1,4 +1,4 @@
-// static/js/green_score.js - ATUALIZADO PARA INCLUIR GRÁFICO DE LINHA E CORRIGIR ERROS DE NULL
+// static/js/green_score.js - ATUALIZADO PARA INCLUIR LÓGICA DO CLONE 1 COM FILTRO DE DIAS
 
 document.addEventListener('DOMContentLoaded', function() {
     // Definir fetchData aqui, pois dashboard_controls.js não é carregado na página green_score.html
@@ -32,21 +32,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const kpiSummaryContainer = document.getElementById('kpi-summary-container'); // KPIs do Mês
     const consolidatedKpisWrapper = document.getElementById('consolidated-kpis-wrapper'); // KPIs Consolidados
+    const injectionDelayKpiWrapper = document.getElementById('injection-delay-kpi-wrapper'); // Contêiner para o KPI de Atraso na Injeção
     
     // Elementos dos KPIs
     const kpiTotalKwh = document.getElementById('kpi-total-kwh-green-score');
     const kpiClientesRegistrados = document.getElementById('kpi-clientes-registrados-green-score');
     const kpiClientesAtivos = document.getElementById('kpi-clientes-ativos-green-score');
 
-    // NOVOS Elementos dos KPIs CONSOLIDADOS
+    // Elementos dos KPIs CONSOLIDADOS
     const kpiTotalKwhConsolidado = document.getElementById('kpi-total-kwh-consolidado');
     const kpiClientesRegistradosConsolidado = document.getElementById('kpi-clientes-registrados-consolidado');
     const kpiClientesAtivosConsolidado = document.getElementById('kpi-clientes-ativos-consolidado');
 
-    // NOVO: Elemento para o KPI de Clientes com Atraso na Injeção
+    // Elementos do KPI de Clientes com Atraso na Injeção (Original)
     const kpiClientesAtrasoInjecao = document.getElementById('kpi-clientes-atraso-injecao');
     const kpiMediaDiasAtraso = document.getElementById('kpi-media-dias-atraso');
     const kpiKwhPendentes = document.getElementById('kpi-kwh-pendentes');
+
+    // Elementos do KPI de Clientes com Atraso na Injeção (Clone 1)
+    const kpiClientesAtrasoInjecao2 = document.getElementById('kpi-clientes-atraso-injecao-2');
+    const kpiMediaDiasAtraso2 = document.getElementById('kpi-media-dias-atraso-2');
+    const kpiKwhPendentes2 = document.getElementById('kpi-kwh-pendentes-2');
+
+    // Elementos do KPI de Clientes com Atraso na Injeção (Clone 2)
+    const kpiClientesAtrasoInjecao3 = document.getElementById('kpi-clientes-atraso-injecao-3');
+    const kpiMediaDiasAtraso3 = document = document.getElementById('kpi-media-dias-atraso-3');
+    const kpiKwhPendentes3 = document.getElementById('kpi-kwh-pendentes-3');
 
     // Elementos para o gráfico de linha anual
     const greenScoreChartYearSelect = document.getElementById('green-score-chart-year');
@@ -244,13 +255,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // NOVA FUNÇÃO: Atualiza os KPIs CONSOLIDADOS (sem filtro de mês, com filtro de fornecedora)
     async function updateConsolidatedKPIs(fornecedora) {
         
-        // Exibir spinners nos KPIs consolidados
+        // Exibir spinners nos KPIs consolidados (Original)
         if (kpiTotalKwhConsolidado) kpiTotalKwhConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
         if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
         if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
-        if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>'; // NOVO: Spinner para atraso na injeção
+        if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>'; 
         if (kpiMediaDiasAtraso) kpiMediaDiasAtraso.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
         if (kpiKwhPendentes) kpiKwhPendentes.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+
+        // Exibir spinners nos KPIs de Clientes com Atraso na Injeção (Clone 1)
+        if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if (kpiMediaDiasAtraso2) kpiMediaDiasAtraso2.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if (kpiKwhPendentes2) kpiKwhPendentes2.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+
+        // Exibir spinners nos KPIs de Clientes com Atraso na Injeção (Clone 2)
+        if (kpiClientesAtrasoInjecao3) kpiClientesAtrasoInjecao3.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if (kpiMediaDiasAtraso3) kpiMediaDiasAtraso3.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+        if (kpiKwhPendentes3) kpiKwhPendentes3.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+
 
         try {
             // Se a fornecedora for 'Consolidado', não passamos o parâmetro 'fornecedora' na URL.
@@ -284,12 +306,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Erro ao buscar clientes ativados consolidados:', ativosResponse?.error || 'Resposta inválida');
             }
 
-            // MODIFICADO: Busca Clientes com Atraso na Injeção com dados adicionais
+            // MODIFICADO: Busca Clientes com Atraso na Injeção com dados adicionais (Original)
             const atrasoInjecaoResponse = await fetchData(`/api/kpi/overdue-injection-clients?${fornecedoraParam}`, "KPI Clientes com Atraso na Injeção");
             if (atrasoInjecaoResponse && atrasoInjecaoResponse.overdue_injection_clients_count !== undefined) {
                 if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.textContent = formatNumber(atrasoInjecaoResponse.overdue_injection_clients_count, 0);
                 
-                // Novos campos
+                // Novos campos (Original)
                 if (kpiMediaDiasAtraso) {
                     const mediaDias = atrasoInjecaoResponse.average_delay_days || 0;
                     kpiMediaDiasAtraso.textContent = `${formatNumber(mediaDias, 0)} dias`;
@@ -299,12 +321,51 @@ document.addEventListener('DOMContentLoaded', function() {
                     const kwhPendentes = atrasoInjecaoResponse.pending_kwh || 0;
                     kpiKwhPendentes.textContent = `${formatNumber(kwhPendentes, 0)} kWh`;
                 }
+
+                // NOVO: Preencher Clones
+                // CLONE 2 (kpiClientesAtrasoInjecao3) continua a exibir os mesmos dados do original (sem filtro)
+                if (kpiClientesAtrasoInjecao3) kpiClientesAtrasoInjecao3.textContent = formatNumber(atrasoInjecaoResponse.overdue_injection_clients_count, 0);
+                if (kpiMediaDiasAtraso3) kpiMediaDiasAtraso3.textContent = `${formatNumber(atrasoInjecaoResponse.average_delay_days || 0, 0)} dias`;
+                if (kpiKwhPendentes3) kpiKwhPendentes3.textContent = `${formatNumber(atrasoInjecaoResponse.pending_kwh || 0, 0)} kWh`;
+
             } else {
                 if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
                 if (kpiMediaDiasAtraso) kpiMediaDiasAtraso.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
                 if (kpiKwhPendentes) kpiKwhPendentes.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                
+                // Mensagens de erro para os clones (se a chamada original falhar)
+                if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiMediaDiasAtraso2) kpiMediaDiasAtraso2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiKwhPendentes2) kpiKwhPendentes2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+
+                if (kpiClientesAtrasoInjecao3) kpiClientesAtrasoInjecao3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiMediaDiasAtraso3) kpiMediaDiasAtraso3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiKwhPendentes3) kpiKwhPendentes3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+
                 console.error('Erro ao buscar clientes com atraso na injeção:', atrasoInjecaoResponse?.error || 'Resposta inválida');
             }
+
+            // NOVO: Chamada de API ESPECÍFICA para o CLONE 1 (com filtro max_delay_days=30)
+            const atrasoInjecaoClone1Response = await fetchData(`/api/kpi/overdue-injection-clients?max_delay_days=30${fornecedoraParam}`, "KPI Clientes com Atraso na Injeção (Clone 1)");
+            if (atrasoInjecaoClone1Response && atrasoInjecaoClone1Response.overdue_injection_clients_count !== undefined) {
+                if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.textContent = formatNumber(atrasoInjecaoClone1Response.overdue_injection_clients_count, 0);
+                
+                if (kpiMediaDiasAtraso2) {
+                    const mediaDias = atrasoInjecaoClone1Response.average_delay_days || 0;
+                    kpiMediaDiasAtraso2.textContent = `${formatNumber(mediaDias, 0)} dias`;
+                }
+                
+                if (kpiKwhPendentes2) {
+                    const kwhPendentes = atrasoInjecaoClone1Response.pending_kwh || 0;
+                    kpiKwhPendentes2.textContent = `${formatNumber(kwhPendentes, 0)} kWh`;
+                }
+            } else {
+                if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiMediaDiasAtraso2) kpiMediaDiasAtraso2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                if (kpiKwhPendentes2) kpiKwhPendentes2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+                console.error('Erro ao buscar clientes com atraso na injeção (Clone 1):', atrasoInjecaoClone1Response?.error || 'Resposta inválida');
+            }
+
 
             console.log("KPIs consolidados e de atraso na injeção atualizados com sucesso.");
 
@@ -313,9 +374,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiTotalKwhConsolidado) kpiTotalKwhConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             if (kpiClientesRegistradosConsolidado) kpiClientesRegistradosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             if (kpiClientesAtivosConsolidado) kpiClientesAtivosConsolidado.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
-            if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>'; // NOVO: Mensagem de erro para atraso na injeção
+            
+            // Mensagens de erro para os KPIs de atraso na injeção (todos os cards)
+            if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>'; 
             if (kpiMediaDiasAtraso) kpiMediaDiasAtraso.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
             if (kpiKwhPendentes) kpiKwhPendentes.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+
+            if (kpiClientesAtrasoInjecao2) kpiClientesAtrasoInjecao2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            if (kpiMediaDiasAtraso2) kpiMediaDiasAtraso2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            if (kpiKwhPendentes2) kpiKwhPendentes2.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+
+            if (kpiClientesAtrasoInjecao3) kpiClientesAtrasoInjecao3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            if (kpiMediaDiasAtraso3) kpiMediaDiasAtraso3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+            if (kpiKwhPendentes3) kpiKwhPendentes3.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
+
             // Se houver um contêiner para os KPIs consolidados, pode-se esconder em caso de erro
             if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none'; 
         }
@@ -428,6 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
             if (gaugeContainer) gaugeContainer.style.display = 'none';
             if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none';
+            if (injectionDelayKpiWrapper) injectionDelayKpiWrapper.style.display = 'none'; 
             return;
         }
 
@@ -445,6 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'none'; // Esconder KPIs do mês
             if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
             if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'grid'; // Mostrar KPIs consolidados
+            if (injectionDelayKpiWrapper) injectionDelayKpiWrapper.style.display = 'grid'; 
             if (gaugeContainer) {
                 gaugeContainer.classList.add('gauge-grid-consolidated');
                 gaugeContainer.style.display = 'grid';
@@ -484,6 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (kpiSummaryContainer) kpiSummaryContainer.style.display = 'grid'; // Mostrar KPIs do mês
             if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'block';
             if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'grid'; // Mostrar KPIs consolidados
+            if (injectionDelayKpiWrapper) injectionDelayKpiWrapper.style.display = 'grid'; 
             if (gaugeContainer) {
                 gaugeContainer.classList.add('gauge-single-container');
                 gaugeContainer.style.display = 'flex';
@@ -551,6 +626,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (greenScoreMonthlyChartCard) greenScoreMonthlyChartCard.style.display = 'none';
     if (gaugeContainer) gaugeContainer.style.display = 'none';
     if (consolidatedKpisWrapper) consolidatedKpisWrapper.style.display = 'none';
+    if (injectionDelayKpiWrapper) injectionDelayKpiWrapper.style.display = 'none'; 
 
     loadScoreFor(fornecedoraFilter.value);
 });
