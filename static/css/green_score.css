@@ -158,10 +158,49 @@
     max-width: none; /* Remove a largura máxima do chart-card base do dashboard */
 }
 
-/* Estilo para o número de Clientes com Atraso na Injeção */
-#kpi-clientes-atraso-injecao {
-    color: #dc3545; /* Vermelho padrão do Bootstrap (danger) */
+/* --- CORES PARA OS CARDS DE ATRASO NA INJEÇÃO --- */
+
+/* Card 1 (Consolidado): Vermelho */
+#injection-delay-kpi-card-1 .kpi-main-value,
+#injection-delay-kpi-card-1 .kpi-metric-value {
+    color: #fd7e14; /* Vermelho padrão */
+    font-weight: 600;
 }
+#injection-delay-kpi-card-1 .kpi-metric {
+    border-left-color: #fd7e14;
+}
+
+/* Card 2 (Não Críticos): Laranja */
+#injection-delay-kpi-card-2 .kpi-main-value,
+#injection-delay-kpi-card-2 .kpi-metric-value {
+    color: #d3d00f; /* Laranja */
+    font-weight: 600;
+}
+#injection-delay-kpi-card-2 .kpi-metric {
+    border-left-color: #d3d00f;
+}
+
+/* Card 3 (Críticos): Vermelho Escuro */
+#injection-delay-kpi-card-3 .kpi-main-value,
+#injection-delay-kpi-card-3 .kpi-metric-value {
+    color: #ff0000; /* Vermelho escuro */
+    font-weight: 600;
+}
+#injection-delay-kpi-card-3 .kpi-metric {
+    border-left-color: #ff0000;
+}
+
+/* NOVO: Cor para os KPIs dentro do wrapper consolidado */
+.consolidated-kpis-wrapper .kpi-main-value,
+.consolidated-kpis-wrapper .kpi-metric-value,
+.consolidated-kpis-wrapper .qualification-card .qual-number { /* Alvo corrigido para a classe correta '.qual-number' */
+    color: #00771c; /* Verde escuro */
+}
+
+.consolidated-kpis-wrapper .kpi-metric {
+    border-left-color: #00771c; /* Verde escuro */
+}
+
 
 /* Estilos para os novos KPIs adicionais no card de Atraso na Injeção */
 .kpi-additional-metrics {
@@ -177,13 +216,14 @@
     padding: 8px;
     background-color: rgba(248, 249, 250, 0.8);
     border-radius: 6px;
-    border-left: 3px solid #dc3545;
+    border-left: 3px solid; /* A cor será definida pelas regras acima */
 }
 
+/* A propriedade 'color' foi movida para as regras específicas acima */
 .kpi-metric-value {
     font-size: 1.4em;
     font-weight: bold;
-    color: #dc3545;
+    /* color: #dc3545; */ /* Removido daqui */
     margin-bottom: 2px;
 }
 
