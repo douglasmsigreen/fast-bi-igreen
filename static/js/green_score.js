@@ -322,12 +322,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     kpiKwhPendentes.textContent = `${formatNumber(kwhPendentes, 0)} kWh`;
                 }
 
-                // NOVO: Preencher Clones
-                // CLONE 2 (kpiClientesAtrasoInjecao3) continua a exibir os mesmos dados do original (sem filtro)
-                if (kpiClientesAtrasoInjecao3) kpiClientesAtrasoInjecao3.textContent = formatNumber(atrasoInjecaoResponse.overdue_injection_clients_count, 0);
-                if (kpiMediaDiasAtraso3) kpiMediaDiasAtraso3.textContent = `${formatNumber(atrasoInjecaoResponse.average_delay_days || 0, 0)} dias`;
-                if (kpiKwhPendentes3) kpiKwhPendentes3.textContent = `${formatNumber(atrasoInjecaoResponse.pending_kwh || 0, 0)} kWh`;
-
             } else {
                 if (kpiClientesAtrasoInjecao) kpiClientesAtrasoInjecao.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';
                 if (kpiMediaDiasAtraso) kpiMediaDiasAtraso.innerHTML = '<span style="color: red; font-size: 0.7em;">Erro!</span>';

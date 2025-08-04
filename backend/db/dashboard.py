@@ -468,9 +468,10 @@ def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[st
 # --- INÍCIO DA NOVA FUNÇÃO PARA GREEN SCORE ---
 def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> List[Tuple[str, float]] or None:
     """
-    Calcula o "Green Score" para cada fornecedora baseado na pontualidade de injeção.
-    O score é a porcentagem de clientes ativos que NÃO estão com a injeção atrasada.
-    Lógica derivada do relatório 'Boletos por Cliente'.
+    Calcula o "Green Score" para cada fornecedora baseado na pontualidade de injeção,
+    aplicando pesos diferentes para clientes "Críticos" (dias_em_atraso > 30, peso 2)
+    e "Não Críticos" (dias_em_atraso <= 30, peso 1) no cálculo da deterioração.
+    A lógica é derivada do relatório 'Boletos por Cliente'.
     
     Args:
         fornecedora_filter: Se None, retorna scores para todas as fornecedoras.
@@ -478,7 +479,7 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
     Returns:
         Uma lista de tuplas (fornecedora, score) ou None em caso de erro.
     """
-    log_msg = "Calculando Green Score"
+    log_msg = "Calculando Green Score com pesos para Críticos/Não Críticos"
     if fornecedora_filter:
         log_msg += f" para a fornecedora: {fornecedora_filter}"
     else:
@@ -499,60 +500,94 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
             return []
 
         # 2. ATENÇÃO: A lógica abaixo depende da ordem das colunas definida em `reports_boletos.py`.
-        # Se a ordem lá mudar, aqui também precisará ser ajustado.
-        # Esta é a ordem esperada, conforme o arquivo `reports_boletos.py`:
-        final_columns_order = [
-             "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
-             "ufconsumo", "concessionaria", "fornecedora", 
-             "consumomedio", "data_ativo", "dias_desde_ativacao",
-             "injecao", "atraso_na_injecao", "dias_em_atraso", # <-- 'atraso_na_injecao' é a 14ª coluna (índice 13)
-             "validado_sucesso", "devolutiva", "retorno_fornecedora",
-             "id_licenciado", "licenciado", "status_pro",
-             "data_graduacao_pro", "quantidade_boletos"
-        ]
-        
+        # Nomes das colunas esperadas para garantir robustez, mesmo que a ordem mude
         try:
-            fornecedora_idx = final_columns_order.index('fornecedora')
-            atraso_idx = final_columns_order.index('atraso_na_injecao')
+            fornecedora_idx = reports_boletos_columns_order.index('fornecedora')
+            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
+            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso') # Adicionado: Novo índice para dias_em_atraso
+            codigo_cliente_idx = reports_boletos_columns_order.index('codigo') # Adicionado: Para garantir unicidade do cliente
         except ValueError as e:
             logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem definida. O cálculo do score falhará.")
             return None
 
         # 3. Processar os dados em Python para calcular o score por fornecedora
-        totals_by_supplier = defaultdict(int)
-        on_time_by_supplier = defaultdict(int)
+        # Usaremos defaultdicts para acumular os contadores necessários
+        total_unique_clients_by_supplier = defaultdict(int)
+        total_deterioration_points_by_supplier = defaultdict(float) # Float para permitir soma de pontos
+
+        # Para garantir que cada cliente seja contado apenas uma vez por fornecedora
+        seen_clients_by_supplier = defaultdict(set)
 
         for row in all_clients_data:
-            fornecedora = row[fornecedora_idx]
-            atraso_status = row[atraso_idx]
+            try:
+                fornecedora_raw = row[fornecedora_idx]
+                atraso_status = row[atraso_idx]
+                dias_atraso_raw = row[dias_atraso_idx]
+                codigo_cliente = row[codigo_cliente_idx]
 
-            # >>> MODIFICAÇÃO AQUI: Ignora o registro se a fornecedora for nula, vazia ou 'NÃO ESPECIFICADA' <<<
-            if not fornecedora or (isinstance(fornecedora, str) and fornecedora.strip() == '') or pd.isna(fornecedora):
-                continue # Pula para o próximo registro no loop
-            
-            # Limpa espaços em branco e padroniza para maiúsculas (importante manter)
-            if isinstance(fornecedora, str):
-                fornecedora = fornecedora.strip().upper()
+                # Limpeza e padronização da fornecedora
+                if not fornecedora_raw or (isinstance(fornecedora_raw, str) and fornecedora_raw.strip() == '') or pd.isna(fornecedora_raw):
+                    continue # Pula para o próximo registro no loop
+                fornecedora = fornecedora_raw.strip().upper()
 
-            totals_by_supplier[fornecedora] += 1
-            if atraso_status == 'NÃO':
-                on_time_by_supplier[fornecedora] += 1
-        
+                # Garante que o cliente seja contado apenas uma vez por fornecedora
+                if codigo_cliente in seen_clients_by_supplier[fornecedora]:
+                    continue
+                seen_clients_by_supplier[fornecedora].add(codigo_cliente)
+
+                total_unique_clients_by_supplier[fornecedora] += 1
+
+                # Determinar os pontos de deterioração
+                if atraso_status == 'SIM':
+                    try:
+                        dias_atraso = float(dias_atraso_raw) if dias_atraso_raw not in [None, '', 'N/A'] else 0
+                        if dias_atraso > 30: # Crítico: peso 2
+                            total_deterioration_points_by_supplier[fornecedora] += 2
+                        elif dias_atraso > 0 and dias_atraso <= 30: # Não Crítico: peso 1
+                            total_deterioration_points_by_supplier[fornecedora] += 1
+                        # Se dias_atraso <= 0 (e atraso_status == 'SIM'), não adiciona pontos de deterioração
+                    except (ValueError, TypeError):
+                        logger.warning(f"Dias de atraso inválidos para cliente {codigo_cliente}: '{dias_atraso_raw}'. Tratando como 0 pontos de deterioração.")
+                        # Se não conseguir parsear, não adiciona pontos de deterioração
+                # Se atraso_status == 'NÃO', não adiciona pontos de deterioração
+
+            except IndexError as ie:
+                logger.error(f"Erro de índice ao processar linha: {ie}. Linha de dados: {row}")
+                continue # Pula para a próxima linha para evitar quebrar o loop
+
         # 4. Calcular o score final para cada fornecedora
         scores = []
-        for fornecedora, total_count in totals_by_supplier.items():
-            on_time_count = on_time_by_supplier.get(fornecedora, 0)
-            score = (on_time_count / total_count) * 100 if total_count > 0 else 0
+        for fornecedora, total_clients in total_unique_clients_by_supplier.items():
+            deterioration_points = total_deterioration_points_by_supplier.get(fornecedora, 0)
+
+            # O máximo de pontos de deterioração se todos os clientes fossem críticos (peso 2)
+            max_possible_deterioration_points = total_clients * 2
+
+            score = 0.0
+            if total_clients > 0:
+                # Evita divisão por zero para max_possible_deterioration_points
+                if max_possible_deterioration_points > 0:
+                    score = 100 - ((deterioration_points / max_possible_deterioration_points) * 100)
+                    # Garante que o score não seja negativo
+                    score = max(0.0, score)
+                else: 
+                    # Se não há clientes com atraso (max_possible_deterioration_points é 0),
+                    # ou todos estão no tempo, o score é 100
+                    score = 100.0
+            else: 
+                # Se não há clientes para essa fornecedora, o score pode ser considerado 100 (saúde perfeita por ausência de dados negativos)
+                score = 100.0 
+
             scores.append((fornecedora, round(score, 2)))
 
         # 5. Ordenar pelo score, do maior para o menor
         scores.sort(key=lambda x: x[1], reverse=True)
         
-        logger.info(f"Green Score (Atraso Injeção) calculado para {len(scores)} fornecedoras.")
+        logger.info(f"Green Score (Atraso Injeção) calculado para {len(scores)} fornecedoras com pesos.")
         return scores
 
     except Exception as e:
-        logger.error(f"Erro inesperado ao calcular o Green Score (Atraso Injeção): {e}", exc_info=True)
+        logger.error(f"Erro inesperado ao calcular o Green Score (Atraso Injeção) com pesos: {e}", exc_info=True)
         return None
 # --- FIM DA NOVA FUNÇÃO ---
 
