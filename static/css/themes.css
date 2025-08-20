@@ -1,0 +1,478 @@
+/* ===== VARIÁVEIS CSS PARA TEMAS - Fast BI iGreen ===== */
+:root {
+  /* Tema Claro (padrão) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-card: #ffffff;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --navbar-bg: #ffffff;
+  --sidebar-bg: #1a2332; /* Mantém o azul escuro da sidebar */
+  --sidebar-text: #ffffff;
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --chart-grid: #e9ecef;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --green-primary: #00b034; /* Verde iGreen */
+  --green-hover: #009a2e;
+  --alert-bg: #f8f9fa;
+  --input-bg: #ffffff;
+  --table-stripe: #f8f9fa;
+  --content-header-bg: #ffffff;
+}
+
+[data-theme="dark"] {
+  /* Tema Escuro */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card: #21262d;
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --border-color: #30363d;
+  --navbar-bg: #161b22;
+  --sidebar-bg: #0d1117; /* Sidebar mais escura no modo escuro */
+  --sidebar-text: #f0f6fc;
+  --sidebar-hover: rgba(240, 246, 252, 0.1);
+  --chart-grid: #30363d;
+  --shadow: rgba(0, 0, 0, 0.4);
+  --green-primary: #00d946; /* Verde mais vibrante para modo escuro */
+  --green-hover: #00b034;
+  --alert-bg: #21262d;
+  --input-bg: #21262d;
+  --table-stripe: #161b22;
+  --content-header-bg: #161b22;
+}
+
+/* ===== APLICAÇÃO DOS TEMAS ===== */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Sidebar adaptada */
+.sidebar {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--sidebar-text);
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar-nav a {
+  color: var(--sidebar-text) !important;
+  transition: background-color 0.3s ease;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav li.active a {
+  background-color: var(--sidebar-hover) !important;
+}
+
+/* Main content area */
+.main-content {
+  background-color: var(--bg-primary);
+}
+
+.content-header {
+  background-color: var(--content-header-bg);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.content-area {
+  background-color: var(--bg-primary);
+}
+
+/* Cards */
+.card {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color);
+  box-shadow: 0 0.125rem 0.25rem var(--shadow);
+  color: var(--text-primary);
+}
+
+.card-header {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.card-body {
+  color: var(--text-primary);
+}
+
+/* KPI Cards específicos */
+.kpi-card .kpi-main-value {
+  color: var(--text-primary);
+}
+
+.kpi-card .kpi-sub-label {
+  color: var(--text-secondary);
+}
+
+/* Tabelas */
+.table {
+  color: var(--text-primary);
+  --bs-table-bg: var(--bg-card);
+  --bs-table-striped-bg: var(--table-stripe);
+}
+
+.table th {
+  border-color: var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.table td {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+  background-color: var(--table-stripe);
+}
+
+/* Formulários */
+.form-control, .form-select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color);
+  color: var(--text-primary) !important;
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: var(--input-bg) !important;
+  border-color: var(--green-primary);
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 176, 52, 0.25);
+}
+
+.form-label {
+  color: var(--text-primary);
+}
+
+/* Botões */
+.btn-primary {
+  background-color: var(--green-primary);
+  border-color: var(--green-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--green-hover);
+  border-color: var(--green-hover);
+}
+
+.btn-outline-secondary {
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Alertas */
+.alert {
+  background-color: var(--alert-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Filter row */
+.filter-row {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+}
+
+/* Dashboard grid */
+.dashboard-grid {
+  background-color: var(--bg-primary);
+}
+
+/* Modais */
+.modal-content {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.modal-header {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Botão Toggle Tema */
+.theme-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.theme-toggle:hover {
+  background-color: var(--bg-secondary);
+  transform: translateY(-1px);
+}
+
+.theme-toggle i {
+  margin-right: 0.5rem;
+}
+
+/* Footer */
+.main-footer {
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+/* Paginação */
+.pagination a, .pagination span {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.pagination .active span {
+  background-color: var(--green-primary);
+  border-color: var(--green-primary);
+  color: white;
+}
+
+/* Search box */
+.search-box input {
+  background-color: var(--input-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Tooltips customizados se existirem */
+.tooltip-icon {
+  color: var(--text-secondary);
+}
+
+/* Gráficos - para Chart.js */
+.chart-card canvas {
+  background-color: transparent !important;
+}
+
+/* Loading states */
+.fa-spinner {
+  color: var(--text-secondary);
+}
+
+/* Links */
+a {
+  color: var(--green-primary);
+}
+
+a:hover {
+  color: var(--green-hover);
+}
+
+/* Login page adaptations */
+.login-page-body[data-theme="dark"] {
+  background-color: var(--bg-primary);
+}
+
+.login-form-container {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+/* Componentes específicos do Fast BI */
+.qualification-card .qual-number,
+.qualification-card .qual-label {
+  color: var(--text-primary);
+}
+
+.kpi-additional-metrics .kpi-metric-value,
+.kpi-additional-metrics .kpi-metric-label {
+  color: var(--text-primary);
+}
+
+.gauge-single-container {
+  background-color: var(--bg-card);
+  border-radius: 0.5rem;
+}
+
+/* Green Score específico */
+.green-score-content-wrapper {
+  background-color: var(--bg-primary);
+}
+
+.supplier-logo-container {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+/* Dashboard grid responsive */
+.dashboard-grid-responsive .card {
+  transition: all 0.3s ease;
+}
+
+/* Filter components */
+.filter-group label {
+  color: var(--text-primary);
+}
+
+.filter-group select,
+.filter-group input {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-color);
+  color: var(--text-primary) !important;
+}
+
+/* Summary tables */
+.summary-table-card .table-responsive {
+  background-color: var(--bg-card);
+  border-radius: 0.375rem;
+}
+
+/* Chart status indicators */
+.chart-status {
+  color: var(--text-secondary);
+}
+
+/* Sortable headers */
+.sortable-header {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+.sortable-header:hover {
+  background-color: var(--border-color) !important;
+}
+
+.sort-icon {
+  color: var(--text-secondary);
+}
+
+/* Login page specific */
+.login-wrapper {
+  background-color: var(--bg-primary);
+}
+
+.login-form-container {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.login-title {
+  color: var(--text-primary);
+}
+
+.login-form .form-group label {
+  color: var(--text-primary);
+}
+
+/* Map container */
+#brazil-map-div {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Report page specific */
+.table-info {
+  color: var(--text-secondary);
+}
+
+.report-type-disabled {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+/* Flash messages */
+.alert-info {
+  background-color: var(--alert-bg);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.alert-success {
+  background-color: var(--alert-bg);
+  border-left: 4px solid var(--green-primary);
+  color: var(--text-primary);
+}
+
+.alert-warning {
+  background-color: var(--alert-bg);
+  border-left: 4px solid #ffc107;
+  color: var(--text-primary);
+}
+
+.alert-danger {
+  background-color: var(--alert-bg);
+  border-left: 4px solid #dc3545;
+  color: var(--text-primary);
+}
+
+/* Sidebar improvements */
+.sidebar-header a:hover {
+  background-color: transparent;
+}
+
+.sidebar-nav li.disabled a {
+  color: var(--text-secondary) !important;
+  opacity: 0.6;
+}
+
+.sidebar-logout a {
+  border-top: 1px solid var(--border-color);
+  margin-top: auto;
+}
+
+/* Header improvements */
+.header-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-logout-alt {
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.3s ease;
+}
+
+.btn-logout-alt:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+
+/* Current date display */
+.current-date {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Responsividade para o botão de tema */
+@media (max-width: 768px) {
+  .theme-toggle {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .theme-toggle i {
+    margin-right: 0.25rem;
+  }
+  
+  .theme-toggle .theme-text {
+    display: none !important;
+  }
+  
+  .header-user-info {
+    gap: 5px;
+  }
+  
+  .current-date {
+    display: none;
+  }
+}
