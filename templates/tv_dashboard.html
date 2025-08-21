@@ -1,0 +1,99 @@
+{# templates/tv_dashboard.html #}
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{{ title }}</title>
+
+    {# --- Google Font (Inter) --- #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    {# --- Font Awesome (Para ícones) --- #}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    {# --- Chart.js (Para o gráfico) --- #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {# --- CSS Personalizado --- #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tv_dashboard.css') }}">
+
+</head>
+<body class="tv-dashboard-body">
+
+    <div class="tv-dashboard-header">
+        <img src="{{ url_for('static', filename='img/logo_igreen_branco.png') }}" alt="iGreen Energy Logo" class="tv-logo">
+        <h1 class="tv-title">Dashboard TV - Resumo em Tempo Real</h1>
+        <div id="relogio" class="tv-clock"></div>
+    </div>
+
+    <div class="tv-dashboard-grid">
+        
+        {# Card 1: Total de Ativações #}
+        <div class="tv-card-main">
+            <h3 class="card-title">Ativações no Mês</h3>
+            <div class="main-number-container">
+                <span id="ativacoes-mes" class="main-number loading-pulse">...</span>
+            </div>
+            <p class="sub-text">vs. mês anterior: <span id="ativacoes-percentual" class="percent-text loading-pulse">...</span></p>
+        </div>
+
+        {# Card 2: Total de kWh #}
+        <div class="tv-card-main">
+            <h3 class="card-title">Consumo Total (kWh)</h3>
+            <div class="main-number-container">
+                <span id="kwh-mes" class="main-number loading-pulse">...</span>
+            </div>
+            <p class="sub-text">vs. mês anterior: <span id="kwh-percentual" class="percent-text loading-pulse">...</span></p>
+        </div>
+
+        {# Card 3: Gráfico de Ativações por Mês #}
+        <div class="tv-card-large">
+            <h3 class="card-title">Ativações por Mês (Ano Atual)</h3>
+            <canvas id="ativacoesMensalChart"></canvas>
+        </div>
+
+        {# Card 4: Top 5 Regiões #}
+        <div class="tv-card-side">
+            <h3 class="card-title">Top 5 Regiões</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Região</th>
+                        <th>Ativações</th>
+                        <th>kWh</th>
+                    </tr>
+                </thead>
+                <tbody id="top-regioes-table">
+                    <tr><td colspan="3" class="loading-text">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        {# Card 5: Top 5 Fornecedoras #}
+        <div class="tv-card-side">
+            <h3 class="card-title">Top 5 Fornecedoras</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Fornecedora</th>
+                        <th>Ativações</th>
+                        <th>kWh</th>
+                    </tr>
+                </thead>
+                <tbody id="top-fornecedoras-table">
+                    <tr><td colspan="3" class="loading-text">Carregando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    {# Script JS para carregar os dados e atualizar a página #}
+    <script src="{{ url_for('static', filename='js/tv_dashboard.js') }}"></script>
+
+</body>
+</html>

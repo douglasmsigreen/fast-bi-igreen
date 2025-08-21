@@ -1,9 +1,10 @@
 # backend/routes/api.py
 import logging
 import re
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required
 from .. import db
+from ..db.tv_dashboard import get_tv_dashboard_data  # Adicione esta linha
 
 logger = logging.getLogger(__name__)
 
@@ -519,3 +520,17 @@ def api_kpi_overdue_injection_clients_over_30_days():
     except Exception as e:
         logger.error(f"Erro api_kpi_overdue_injection_clients_over_30_days (Forn: {fornecedora}): {e}", exc_info=True)
         return jsonify({"error": "Erro inesperado ao buscar KPI Clientes com Atraso na Injeção > 30 dias."}), 500
+
+# --- ROTA API PARA DADOS DO DASHBOARD DA TV ---
+@api_bp.route('/tv-data', methods=['GET'])
+def get_tv_data():
+    """Endpoint para buscar todos os dados do dashboard da TV."""
+    try:
+        data = get_tv_dashboard_data()
+        if data is None:
+            return jsonify({"status": "error", "message": "Falha ao buscar dados do banco."}), 500
+
+        return jsonify({"status": "success", "data": data})
+    except Exception as e:
+        current_app.logger.error(f"Erro no endpoint /api/tv-data: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": "Ocorreu um erro interno no servidor."}), 500

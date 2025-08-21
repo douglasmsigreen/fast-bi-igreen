@@ -2,10 +2,10 @@
 import logging
 
 # Importações do connection.py
-from .connection import init_pool, get_db, close_db, close_pool, db_pool
+from .connection import init_app, get_db, close_db, close_pool, db_pool
 
 # Importações do executor.py
-from .executor import execute_query
+from .executor import execute_query, execute_query_one
 
 # Importações do reports_base.py
 from .reports_base import (
@@ -52,21 +52,7 @@ from .dashboard import (
     get_overdue_payments_by_fornecedora,
     get_green_score_by_fornecedora,
     get_overdue_clients_by_state_for_map,
-    # --- NOVAS IMPORTAÇÕES ADICIONADAS AQUI ---
-    get_total_consumo_medio_consolidado,
-    count_clientes_ativos_consolidado,
-    count_clientes_registrados_consolidado,
-    count_overdue_injection_clients,
-    count_overdue_injection_clients_up_to_30_days,
-    count_overdue_injection_clients_over_30_days
-    # --- FIM DAS NOVAS IMPORTAÇÕES ---
 )
 
-# Importações do utils.py
-from .utils import (
-    get_fornecedoras,
-    get_headers
-)
-
-logger = logging.getLogger(__name__)
-logger.info("Módulo backend.db inicializado.")
+# Importa a função do novo dashboard da TV
+from .tv_dashboard import get_tv_dashboard_data

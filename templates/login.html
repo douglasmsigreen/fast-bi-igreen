@@ -101,6 +101,12 @@
             </div> {# Fim login-form-container #}
         </div> {# Fim login-form-column #}
 
+        {# --- NOVO: Botão para o Dashboard da TV --- #}
+        <a href="{{ url_for('dashboard_bp.tv_dashboard') }}" class="btn-tv-dashboard" title="Dashboard para TV">
+            <i class="fas fa-tv"></i>
+        </a>
+        {# --- FIM DO NOVO BOTÃO --- #}
+
     </div> {# Fim login-wrapper #}
 
 {# Scripts JS no final, se necessário #}

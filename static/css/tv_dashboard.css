@@ -1,0 +1,158 @@
+/* static/css/tv_dashboard.css */
+
+:root {
+    --bg-dark: #121212;
+    --card-bg: #1e1e1e;
+    --text-light: #e0e0e0;
+    --primary-color: #4CAF50; /* Verde iGreen */
+    --highlight-number-color: #66BB6A;
+    --positive-percent-color: #4CAF50;
+    --negative-percent-color: #FF5252;
+}
+
+body.tv-dashboard-body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    margin: 0;
+    padding: 20px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Evita barras de rolagem */
+}
+
+.tv-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 20px;
+}
+
+.tv-logo {
+    height: 50px;
+}
+
+.tv-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--highlight-number-color);
+}
+
+.tv-clock {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+.tv-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto auto auto; /* 3 linhas de altura automática */
+    gap: 20px;
+    flex-grow: 1;
+}
+
+/* Estilos para os cards */
+.tv-card-main, .tv-card-side, .tv-card-large {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.tv-card-main {
+    grid-column: span 1;
+}
+
+.tv-card-large {
+    grid-column: span 2;
+}
+
+.tv-card-side {
+    grid-column: span 1;
+}
+
+/* Estilos de texto */
+.card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 0;
+    color: var(--primary-color);
+}
+
+.main-number-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.main-number {
+    font-size: 4rem; /* Tamanho do número principal */
+    font-weight: 700;
+    color: var(--highlight-number-color);
+    margin: 0;
+}
+
+.sub-text {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-light);
+    margin-top: auto;
+}
+
+.percent-text {
+    font-weight: 600;
+}
+
+.percent-text.positive {
+    color: var(--positive-percent-color);
+}
+
+.percent-text.negative {
+    color: var(--negative-percent-color);
+}
+
+/* Tabela de dados */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.data-table th, .data-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #333;
+}
+
+.data-table th {
+    font-weight: 600;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+/* Efeito de loading */
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1.0; }
+    100% { opacity: 0.5; }
+}
+
+.loading-pulse {
+    animation: pulse 1.5s infinite;
+}
+
+.loading-text {
+    text-align: center;
+    font-style: italic;
+    color: #888;
+}
+
+#ativacoesMensalChart {
+    max-height: 300px; /* Ajuste este valor conforme necessário */
+}

@@ -53,17 +53,7 @@ def create_app(config_class=Config):
 
     # --- Inicializar Extensões ---
     login_manager.init_app(app)
-    # Não precisamos inicializar o DB pool aqui explicitamente se database.py
-    # já faz isso na primeira chamada a get_db, mas é bom garantir o contexto.
-    with app.app_context():
-        try:
-            db.init_pool() # Garante que o pool seja inicializado com o contexto da app
-        except ConnectionError as e:
-            logger.critical(f"Falha CRÍTICA ao inicializar pool de conexões na factory: {e}")
-            # Considerar lançar o erro ou lidar de outra forma
-        except Exception as e:
-             logger.critical(f"Erro inesperado ao inicializar pool DB na factory: {e}", exc_info=True)
-
+    db.init_app(app)  # Inicializa o banco de dados (pool de conexões)
 
     # --- Registrar Context Processors e Teardown ---
     @app.teardown_appcontext

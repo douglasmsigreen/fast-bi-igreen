@@ -117,3 +117,11 @@ def green_score():
                            title="Green Score - Fast BI",
                            fornecedoras=fornecedoras)
 # --- FIM DA ROTA ---
+
+# --- ROTA PARA O DASHBOARD DA TV (sem login) ---
+@dashboard_bp.route('/tv-dashboard')
+def tv_dashboard():
+    """Rota para o Dashboard da TV. Não requer autenticação."""
+    current_app.logger.info(f"Acessando o Dashboard da TV (rota pública).")
+    return render_template('tv_dashboard.html', title="Dashboard TV - Fast BI")
+# --- FIM DA ROTA ---
