@@ -16,6 +16,8 @@
 
     {# --- Chart.js (Para o gráfico) --- #}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {# --- NOVO: Plugin de rótulos de dados --- #}
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
     {# --- CSS Personalizado --- #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
@@ -25,71 +27,100 @@
 <body class="tv-dashboard-body">
 
     <div class="tv-dashboard-header">
-        <img src="{{ url_for('static', filename='img/logo_igreen_branco.png') }}" alt="iGreen Energy Logo" class="tv-logo">
+        {# --- CORRIGIDO: Logo como link para a página de login --- #}
+        <a href="{{ url_for('auth_bp.login') }}">
+            <img src="{{ url_for('static', filename='img/logo_igreen_branco.png') }}" alt="iGreen Energy Logo" class="tv-logo">
+        </a>
+        {# --- FIM DA CORREÇÃO --- #}
         <h1 class="tv-title">Dashboard TV - Resumo em Tempo Real</h1>
         <div id="relogio" class="tv-clock"></div>
     </div>
 
     <div class="tv-dashboard-grid">
-        
-        {# Card 1: Total de Ativações #}
-        <div class="tv-card-main">
-            <h3 class="card-title">Ativações no Mês</h3>
-            <div class="main-number-container">
-                <span id="ativacoes-mes" class="main-number loading-pulse">...</span>
+
+        {# Coluna da Esquerda (KPIs e Gráfico) #}
+        <div class="grid-left-column">
+            
+            {# Card 1: Total de Ativações #}
+            <div class="tv-card-small">
+                <h3 class="card-title">Ativações no Mês</h3>
+                <div class="main-number-container">
+                    <span id="ativacoes-mes" class="main-number loading-pulse">...</span>
+                </div>
+                <p class="sub-text">vs. mês anterior: <span id="ativacoes-percentual" class="percent-text loading-pulse">...</span></p>
             </div>
-            <p class="sub-text">vs. mês anterior: <span id="ativacoes-percentual" class="percent-text loading-pulse">...</span></p>
-        </div>
 
-        {# Card 2: Total de kWh #}
-        <div class="tv-card-main">
-            <h3 class="card-title">Consumo Total (kWh)</h3>
-            <div class="main-number-container">
-                <span id="kwh-mes" class="main-number loading-pulse">...</span>
+            {# Card 2: Total de kWh #}
+            <div class="tv-card-small">
+                <h3 class="card-title">Consumo Total (kWh)</h3>
+                <div class="main-number-container">
+                    <span id="kwh-mes" class="main-number loading-pulse">...</span>
+                </div>
+                <p class="sub-text">vs. mês anterior: <span id="kwh-percentual" class="percent-text loading-pulse">...</span></p>
             </div>
-            <p class="sub-text">vs. mês anterior: <span id="kwh-percentual" class="percent-text loading-pulse">...</span></p>
+
+            {# Card 3: Gráfico de Ativações por Mês #}
+            <div class="tv-card-chart">
+                <h3 class="card-title">Ativações por Mês (Ano Atual)</h3>
+                <canvas id="ativacoesMensalChart"></canvas>
+            </div>
         </div>
 
-        {# Card 3: Gráfico de Ativações por Mês #}
-        <div class="tv-card-large">
-            <h3 class="card-title">Ativações por Mês (Ano Atual)</h3>
-            <canvas id="ativacoesMensalChart"></canvas>
-        </div>
+        {# Coluna da Direita (Top 5) #}
+        <div class="grid-right-column">
+            
+            {# Card 4: Top 5 Regiões #}
+            <div class="tv-card-small">
+                <h3 class="card-title">Top 5 Regiões</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Região</th>
+                            <th>Ativações</th>
+                            <th>kWh</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-regioes-table">
+                        <tr><td colspan="3" class="loading-text">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
-        {# Card 4: Top 5 Regiões #}
-        <div class="tv-card-side">
-            <h3 class="card-title">Top 5 Regiões</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Região</th>
-                        <th>Ativações</th>
-                        <th>kWh</th>
-                    </tr>
-                </thead>
-                <tbody id="top-regioes-table">
-                    <tr><td colspan="3" class="loading-text">Carregando...</td></tr>
-                </tbody>
-            </table>
-        </div>
+            {# Card 5: Top 5 Fornecedoras #}
+            <div class="tv-card-small">
+                <h3 class="card-title">Top 5 Fornecedoras</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fornecedora</th>
+                            <th>Ativações</th>
+                            <th>kWh</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-fornecedoras-table">
+                        <tr><td colspan="3" class="loading-text">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
-        {# Card 5: Top 5 Fornecedoras #}
-        <div class="tv-card-side">
-            <h3 class="card-title">Top 5 Fornecedoras</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Fornecedora</th>
-                        <th>Ativações</th>
-                        <th>kWh</th>
-                    </tr>
-                </thead>
-                <tbody id="top-fornecedoras-table">
-                    <tr><td colspan="3" class="loading-text">Carregando...</td></tr>
-                </tbody>
-            </table>
+            {# Card 6: Top 5 Licenciados #}
+            <div class="tv-card-small">
+                <h3 class="card-title">Top 5 Licenciados</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Licenciado</th>
+                            <th>UF</th>
+                            <th>Ativações</th>
+                            <th>kWh</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-licenciados-table">
+                        <tr><td colspan="4" class="loading-text">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-
     </div>
 
     {# Script JS para carregar os dados e atualizar a página #}

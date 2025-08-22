@@ -1,11 +1,11 @@
 /* static/css/tv_dashboard.css */
 
 :root {
-    --bg-dark: #121212;
-    --card-bg: #1e1e1e;
+    --bg-dark: #111827;
+    --card-bg: #1F2937;
     --text-light: #e0e0e0;
-    --primary-color: #4CAF50; /* Verde iGreen */
-    --highlight-number-color: #66BB6A;
+    --primary-color: #22C55E; /* Nova cor verde */
+    --highlight-number-color: #22C55E;
     --positive-percent-color: #4CAF50;
     --negative-percent-color: #FF5252;
 }
@@ -45,16 +45,32 @@ body.tv-dashboard-body {
     font-weight: 500;
 }
 
+/* NOVO LAYOUT FLEXBOX PARA O GRID PRINCIPAL */
 .tv-dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto auto auto; /* 3 linhas de altura automática */
+    display: flex; /* Mudamos para flexbox para alinhar as colunas */
     gap: 20px;
     flex-grow: 1;
 }
 
+.grid-left-column, .grid-right-column {
+    display: grid;
+    gap: 20px;
+}
+
+.grid-left-column {
+    flex: 2; /* Ocupa 2/3 da tela */
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr 1fr;
+}
+
+.grid-right-column {
+    flex: 1; /* Ocupa 1/3 da tela */
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, 1fr);
+}
+
 /* Estilos para os cards */
-.tv-card-main, .tv-card-side, .tv-card-large {
+.tv-card-main, .tv-card-side, .tv-card-large, .tv-card-large-full, .tv-card-small, .tv-card-chart {
     background-color: var(--card-bg);
     border-radius: 12px;
     padding: 20px;
@@ -63,16 +79,40 @@ body.tv-dashboard-body {
     flex-direction: column;
 }
 
+/* Reduzindo a altura e o padding de todos os cards */
+.tv-card-small, .tv-card-chart {
+    padding: 10px 15px; /* Reduzimos o padding */
+}
+
+/* Gráfico agora ocupa a linha inferior na coluna da esquerda */
+.tv-card-chart {
+    grid-column: span 2;
+    padding: 15px 20px; /* Mantém um padding maior para o gráfico */
+}
+
 .tv-card-main {
-    grid-column: span 1;
+    grid-column: span 1; /* Ocupa 1 coluna */
 }
 
 .tv-card-large {
-    grid-column: span 2;
+    /* Remova ou ajuste se necessário, pois agora usamos .tv-card-large-full */
+    /* ...existing code... */
 }
 
 .tv-card-side {
-    grid-column: span 1;
+    grid-column: span 1; /* Ocupa 1 coluna */
+}
+
+/* NOVO: Gráfico ocupa 3 colunas na linha inferior */
+.tv-card-large-full {
+    grid-column: span 3;
+    grid-row: 2; /* Garante que ocupe a segunda linha */
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
 }
 
 /* Estilos de texto */
@@ -83,15 +123,16 @@ body.tv-dashboard-body {
     color: var(--primary-color);
 }
 
+/* Estilos para os números principais (agora em cards menores) */
 .main-number-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
     flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .main-number {
-    font-size: 4rem; /* Tamanho do número principal */
+    font-size: 4rem; /* Reduzimos o tamanho da fonte para caber */
     font-weight: 700;
     color: var(--highlight-number-color);
     margin: 0;
@@ -124,9 +165,10 @@ body.tv-dashboard-body {
 }
 
 .data-table th, .data-table td {
-    padding: 10px;
+    padding: 5px;
     text-align: left;
     border-bottom: 1px solid #333;
+    font-size: 0.9rem;
 }
 
 .data-table th {

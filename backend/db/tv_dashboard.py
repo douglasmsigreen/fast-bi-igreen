@@ -97,19 +97,86 @@ def get_tv_dashboard_data():
         fornecedoras = execute_query(query_fornecedoras)
         data['top_fornecedoras'] = fornecedoras
 
+        # --- NOVO: Top 5 Licenciados ---
+        query_licenciados = """
+            SELECT
+              vc."licenciado",
+              co.uf,
+              COUNT(vc.*) AS "quantidade_registros",
+              SUM(vc."média consumo") AS "soma_consumo"
+            FROM
+              public."V_CUSTOMER" AS vc
+            INNER JOIN
+              public."CONSULTOR" AS co ON vc."id licenciado" = co.idconsultor
+            WHERE
+              vc."data ativo" BETWEEN DATE_TRUNC('month', CURRENT_DATE) AND CURRENT_DATE
+            GROUP BY
+              vc."licenciado",
+              co.uf
+            ORDER BY
+              "quantidade_registros" DESC
+            LIMIT 5;
+        """
+        licenciados = execute_query(query_licenciados)
+        data['top_licenciados'] = licenciados
+        # --- FIM NOVO ---
+
         # 5. Gráfico de ativações por mês
         query_grafico_mes = """
+            WITH daily_cumulative_counts AS (
+              SELECT
+                EXTRACT(MONTH FROM "data ativo") AS mes,
+                EXTRACT(DAY FROM "data ativo") AS dia,
+                COUNT(*) AS contagem_diaria,
+                SUM(COUNT(*)) OVER (PARTITION BY EXTRACT(MONTH FROM "data ativo") ORDER BY EXTRACT(DAY FROM "data ativo")) AS soma_acumulada
+              FROM
+                public."V_CUSTOMER"
+              WHERE
+                EXTRACT(YEAR FROM "data ativo") = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND "data ativo" <= CURRENT_DATE
+              GROUP BY
+                mes,
+                dia
+            )
             SELECT
-              EXTRACT(MONTH FROM "data ativo") AS "mes",
-              COUNT(*) AS "quantidade"
+              mes,
+              SUM(CASE WHEN dia = 1 THEN soma_acumulada ELSE 0 END) AS "dia_1",
+              SUM(CASE WHEN dia = 2 THEN soma_acumulada ELSE 0 END) AS "dia_2",
+              SUM(CASE WHEN dia = 3 THEN soma_acumulada ELSE 0 END) AS "dia_3",
+              SUM(CASE WHEN dia = 4 THEN soma_acumulada ELSE 0 END) AS "dia_4",
+              SUM(CASE WHEN dia = 5 THEN soma_acumulada ELSE 0 END) AS "dia_5",
+              SUM(CASE WHEN dia = 6 THEN soma_acumulada ELSE 0 END) AS "dia_6",
+              SUM(CASE WHEN dia = 7 THEN soma_acumulada ELSE 0 END) AS "dia_7",
+              SUM(CASE WHEN dia = 8 THEN soma_acumulada ELSE 0 END) AS "dia_8",
+              SUM(CASE WHEN dia = 9 THEN soma_acumulada ELSE 0 END) AS "dia_9",
+              SUM(CASE WHEN dia = 10 THEN soma_acumulada ELSE 0 END) AS "dia_10",
+              SUM(CASE WHEN dia = 11 THEN soma_acumulada ELSE 0 END) AS "dia_11",
+              SUM(CASE WHEN dia = 12 THEN soma_acumulada ELSE 0 END) AS "dia_12",
+              SUM(CASE WHEN dia = 13 THEN soma_acumulada ELSE 0 END) AS "dia_13",
+              SUM(CASE WHEN dia = 14 THEN soma_acumulada ELSE 0 END) AS "dia_14",
+              SUM(CASE WHEN dia = 15 THEN soma_acumulada ELSE 0 END) AS "dia_15",
+              SUM(CASE WHEN dia = 16 THEN soma_acumulada ELSE 0 END) AS "dia_16",
+              SUM(CASE WHEN dia = 17 THEN soma_acumulada ELSE 0 END) AS "dia_17",
+              SUM(CASE WHEN dia = 18 THEN soma_acumulada ELSE 0 END) AS "dia_18",
+              SUM(CASE WHEN dia = 19 THEN soma_acumulada ELSE 0 END) AS "dia_19",
+              SUM(CASE WHEN dia = 20 THEN soma_acumulada ELSE 0 END) AS "dia_20",
+              SUM(CASE WHEN dia = 21 THEN soma_acumulada ELSE 0 END) AS "dia_21",
+              SUM(CASE WHEN dia = 22 THEN soma_acumulada ELSE 0 END) AS "dia_22",
+              SUM(CASE WHEN dia = 23 THEN soma_acumulada ELSE 0 END) AS "dia_23",
+              SUM(CASE WHEN dia = 24 THEN soma_acumulada ELSE 0 END) AS "dia_24",
+              SUM(CASE WHEN dia = 25 THEN soma_acumulada ELSE 0 END) AS "dia_25",
+              SUM(CASE WHEN dia = 26 THEN soma_acumulada ELSE 0 END) AS "dia_26",
+              SUM(CASE WHEN dia = 27 THEN soma_acumulada ELSE 0 END) AS "dia_27",
+              SUM(CASE WHEN dia = 28 THEN soma_acumulada ELSE 0 END) AS "dia_28",
+              SUM(CASE WHEN dia = 29 THEN soma_acumulada ELSE 0 END) AS "dia_29",
+              SUM(CASE WHEN dia = 30 THEN soma_acumulada ELSE 0 END) AS "dia_30",
+              SUM(CASE WHEN dia = 31 THEN soma_acumulada ELSE 0 END) AS "dia_31"
             FROM
-              public."V_CUSTOMER"
-            WHERE
-              EXTRACT(YEAR FROM "data ativo") = EXTRACT(YEAR FROM CURRENT_DATE)
+              daily_cumulative_counts
             GROUP BY
-              "mes"
+              mes
             ORDER BY
-              "mes";
+              mes;
         """
         grafico_mes = execute_query(query_grafico_mes)
         data['grafico_ativacoes_mes'] = grafico_mes

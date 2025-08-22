@@ -31,52 +31,107 @@ document.addEventListener('DOMContentLoaded', function() {
         return { text: `${sign}${percentage.toFixed(2)}%`, className: className };
     }
 
-    // Renderiza o gráfico de ativações mensais
+    // Renderiza o gráfico de ativações mensais (por dia, múltiplos meses)
     function renderChart(data) {
         const meses = [
             'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
             'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
         ];
         
-        // CORRIGIDO: Mapeia dados de lista de listas para rótulos e valores
-        const labels = data.map(item => meses[item.mes - 1] || `${item.mes}/${item.ano}` ); // Fallback para ano
-        const values = data.map(item => item.quantidade);
+        const labels = Array.from({ length: 31 }, (_, i) => i + 1);
+
+        // Ordena por ano e mês, do mais antigo para o mais recente
+        const sortedData = [...data].sort((a, b) => {
+            if (a.ano !== b.ano) return a.ano - b.ano;
+            return a.mes - b.mes;
+        });
+
+        // Pega apenas os últimos 6 meses
+        const last6 = sortedData.slice(-6);
+
+        const datasets = last6.map(row => {
+            const mesIndex = row.mes - 1;
+            const color = `hsl(${mesIndex * 30}, 70%, 50%)`;
+            const dataValues = [];
+            for (let i = 1; i <= 31; i++) {
+                const diaKey = `dia_${i}`;
+                const value = row[diaKey];
+                dataValues.push(value > 0 ? value : NaN); // Substitui 0 por NaN
+            }
+            return {
+                label: meses[mesIndex],
+                data: dataValues,
+                borderColor: color,
+                backgroundColor: 'transparent',
+                tension: 0.1,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                pointHitRadius: 0
+            };
+        });
         
         const ctx = document.getElementById('ativacoesMensalChart').getContext('2d');
         
         if (chartInstance) {
-            chartInstance.destroy(); // Destrói a instância anterior para evitar duplicidade
+            chartInstance.destroy();
         }
+
+        Chart.register(ChartDataLabels);
 
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Ativações',
-                    data: values,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    fill: true,
-                    tension: 0.1
-                }]
+                datasets: datasets
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true, // Alterado para true
-                aspectRatio: 2, // Define a proporção largura/altura (2 significa que a largura será 2x a altura)
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                layout: {
+                    padding: {
+                        right: 40
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: { color: '#e0e0e0' }
                     },
                     x: {
+                        title: {
+                            display: true,
+                            text: 'Dias do Mês',
+                            color: '#e0e0e0'
+                        },
                         ticks: { color: '#e0e0e0' }
                     }
                 },
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    datalabels: {
+                        display: true,
+                        color: (context) => context.dataset.borderColor,
+                        align: 'right',
+                        anchor: 'end',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        },
+                        formatter: (value, context) => {
+                            const dataArr = context.dataset.data;
+                            let lastValidIndex = dataArr.length - 1;
+                            while (lastValidIndex >= 0 && (isNaN(dataArr[lastValidIndex]) || dataArr[lastValidIndex] === null)) {
+                                lastValidIndex--;
+                            }
+                            if (context.dataIndex === lastValidIndex) {
+                                return context.dataset.label;
+                            } else {
+                                return '';
+                            }
+                        }
                     }
                 }
             }
@@ -86,11 +141,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Preenche a tabela com os dados fornecidos
     function populateTable(elementId, data) {
         const tbody = document.getElementById(elementId);
-        tbody.innerHTML = ''; // Limpa o conteúdo
+        tbody.innerHTML = '';
         if (data && data.length > 0) {
             data.forEach(item => {
                 const row = document.createElement('tr');
-                // Acessa os dados por chave (nome do campo)
                 row.innerHTML = `
                     <td>${item.fornecedora || item.região}</td>
                     <td>${formatNumber(item.quantidade_registros)}</td>
@@ -100,6 +154,26 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         } else {
             tbody.innerHTML = `<tr><td colspan="3" class="loading-text">Nenhum dado encontrado.</td></tr>`;
+        }
+    }
+
+    // NOVO: Função para preencher a tabela de licenciados (com UF)
+    function populateLicenciadoTable(elementId, data) {
+        const tbody = document.getElementById(elementId);
+        tbody.innerHTML = ''; // Limpa o conteúdo
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.licenciado}</td>
+                    <td>${item.uf}</td>
+                    <td>${formatNumber(item.quantidade_registros)}</td>
+                    <td>${formatNumber(item.soma_consumo)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="4" class="loading-text">Nenhum dado encontrado.</td></tr>`;
         }
     }
 
@@ -145,10 +219,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 5. Gráfico
                 renderChart(data.grafico_ativacoes_mes);
                 
+                // --- NOVO: Top 5 Licenciados ---
+                populateLicenciadoTable('top-licenciados-table', data.top_licenciados);
+                // --- FIM NOVO ---
+
             } else {
                 console.error('Erro na API:', result.message);
             }
-
         } catch (error) {
             console.error('Erro ao buscar dados:', error);
             // Mostrar mensagem de erro na interface
