@@ -47,19 +47,49 @@
                 <div class="main-number-container">
                     <span id="ativacoes-mes" class="main-number loading-pulse">...</span>
                 </div>
-                <p class="sub-text">Variação Mensal: <span id="ativacoes-percentual" class="percent-text loading-pulse">...</span></p>
+                <p class="sub-text">
+                    Variação Mensal: <span id="ativacoes-percentual" class="percent-text loading-pulse">...</span>
+                    <span class="mes-anterior-label">Mês anterior:</span>
+                    <span id="ativacoes-mes-anterior" class="mes-anterior-valor loading-pulse">...</span>
+                </p>
             </div>
 
-            {# Card 2: Total de kWh #}
+            {# Card 2: NOVO - Total de kWh Ativados - AGORA EM SEGUNDO #}
             <div class="tv-card-small">
-                <h3 class="card-title">Consumo Total (kWh)</h3>
+                <h3 class="card-title">Total de kWh Ativados</h3>
                 <div class="main-number-container">
                     <span id="kwh-mes" class="main-number loading-pulse">...</span>
                 </div>
-                <p class="sub-text">Variação Mensal: <span id="kwh-percentual" class="percent-text loading-pulse">...</span></p>
+                <p class="sub-text">
+                    Variação Mensal: <span id="kwh-percentual" class="percent-text loading-pulse">...</span>
+                    <span class="mes-anterior-label">Mês anterior:</span>
+                    <span id="kwh-mes-anterior" class="mes-anterior-valor loading-pulse">...</span>
+                </p>
             </div>
 
-            {# Card 3: Gráfico de Ativações por Mês #}
+            {# Card 3: NOVO - Cadastros, Validados e Cancelados - AGORA EM TERCEIRO #}
+            <div class="tv-card-small wide-card">
+                <h3 class="card-title">Cadastros, Validados e Cancelados</h3>
+                <div class="kpi-group">
+                    <div class="kpi-item">
+                        <span id="cadastrados-quantidade" class="kpi-number loading-pulse">...</span>
+                        <span id="cadastrados-soma-consumo" class="kpi-subnumber loading-pulse">...</span>
+                        <p class="kpi-label">Cadastrados</p>
+                    </div>
+                    <div class="kpi-item">
+                        <span id="validados-quantidade" class="kpi-number loading-pulse">...</span>
+                        <span id="validados-soma-consumo" class="kpi-subnumber loading-pulse">...</span>
+                        <p class="kpi-label">Validados</p>
+                    </div>
+                    <div class="kpi-item">
+                        <span id="cancelados-quantidade" class="kpi-number loading-pulse">...</span>
+                        <span id="cancelados-soma-consumo" class="kpi-subnumber loading-pulse">...</span>
+                        <p class="kpi-label">Cancelados</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Card 4: Gráfico de Ativações por Mês #}
             <div class="tv-card-chart">
                 <h3 class="card-title">Ativações por Mês (Ano Atual)</h3>
                 <canvas id="ativacoesMensalChart"></canvas>

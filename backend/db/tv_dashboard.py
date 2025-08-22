@@ -59,6 +59,64 @@ def get_tv_dashboard_data():
         kwh = execute_query_one(query_kwh)
         data['kwh'] = kwh
 
+        # --- NOVO: Cadastros, Validados e Cancelados ---
+        query_cadastros = """
+            SELECT
+              (
+                SELECT
+                  COUNT(*)
+                FROM
+                  public."V_CUSTOMER"
+                WHERE
+                  DATE_TRUNC('month', "data cadastro") = DATE_TRUNC('month', CURRENT_DATE)
+              ) AS "cadastrados_quantidade",
+              (
+                SELECT
+                  SUM("média consumo")
+                FROM
+                  public."V_CUSTOMER"
+                WHERE
+                  DATE_TRUNC('month', "data cadastro") = DATE_TRUNC('month', CURRENT_DATE)
+              ) AS "cadastrados_soma_consumo",
+              (
+                SELECT
+                  COUNT(*)
+                FROM
+                  public."V_CUSTOMER"
+                WHERE
+                  "validado sucesso" = 'S'
+                  AND DATE_TRUNC('month', "data ativo") = DATE_TRUNC('month', CURRENT_DATE)
+              ) AS "validados_quantidade",
+              (
+                SELECT
+                  SUM("média consumo")
+                FROM
+                  public."V_CUSTOMER"
+                WHERE
+                  "validado sucesso" = 'S'
+                  AND DATE_TRUNC('month', "data ativo") = DATE_TRUNC('month', CURRENT_DATE)
+              ) AS "validados_soma_consumo",
+              (
+                SELECT
+                  COUNT(*)
+                FROM
+                  public."V_CUSTOMER"
+                WHERE
+                  DATE_TRUNC('month', "data cancelamento") = DATE_TRUNC('month', CURRENT_DATE)
+              ) AS "cancelados_quantidade",
+              (
+                SELECT
+                  SUM("média consumo")
+                FROM
+                  public."V_CUSTOMER"
+                WHERE
+                  DATE_TRUNC('month', "data cancelamento") = DATE_TRUNC('month', CURRENT_DATE)
+              ) AS "cancelados_soma_consumo";
+        """
+        cadastros = execute_query_one(query_cadastros)
+        data['cadastros'] = cadastros
+        # --- FIM NOVO ---
+
         # 3. Top 5 Regiões
         query_regioes = """
             SELECT

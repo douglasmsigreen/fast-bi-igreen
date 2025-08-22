@@ -196,9 +196,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const percentElement = document.getElementById('ativacoes-percentual');
                     percentElement.textContent = percentualAtivacoes.text;
                     percentElement.className = `percent-text ${percentualAtivacoes.className}`;
+                    // NOVO: valor do mês anterior
+                    document.getElementById('ativacoes-mes-anterior').textContent = formatNumber(contagemAnterior);
                 }
 
-                // 2. kWh
                 const kwh = data.kwh;
                 if (kwh) {
                     const somaAtual = kwh.soma_consumo_mes_atual;
@@ -208,7 +209,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     const percentElement = document.getElementById('kwh-percentual');
                     percentElement.textContent = percentualKwh.text;
                     percentElement.className = `percent-text ${percentualKwh.className}`;
+                    // NOVO: valor do mês anterior
+                    document.getElementById('kwh-mes-anterior').textContent = `${formatNumber(somaAnterior)} kWh`;
                 }
+
+                // --- NOVO: Card de Cadastros ---
+                const cadastros = data.cadastros;
+                if (cadastros) {
+                    document.getElementById('cadastrados-quantidade').textContent = formatNumber(cadastros.cadastrados_quantidade);
+                    document.getElementById('cadastrados-soma-consumo').textContent = `${formatNumber(cadastros.cadastrados_soma_consumo)} kWh`;
+
+                    document.getElementById('validados-quantidade').textContent = formatNumber(cadastros.validados_quantidade);
+                    document.getElementById('validados-soma-consumo').textContent = `${formatNumber(cadastros.validados_soma_consumo)} kWh`;
+
+                    document.getElementById('cancelados-quantidade').textContent = formatNumber(cadastros.cancelados_quantidade);
+                    document.getElementById('cancelados-soma-consumo').textContent = `${formatNumber(cadastros.cancelados_soma_consumo)} kWh`;
+                }
+                // --- FIM NOVO ---
 
                 // 3. Top 5 Regiões
                 populateTable('top-regioes-table', data.top_regioes);

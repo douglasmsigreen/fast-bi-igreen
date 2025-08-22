@@ -115,6 +115,11 @@ body.tv-dashboard-body {
     flex-direction: column;
 }
 
+/* NOVO: Estilo para cards que ocupam 2 colunas */
+.wide-card {
+    grid-column: span 2;
+}
+
 /* Estilos de texto */
 .card-title {
     font-size: 1.2rem;
@@ -197,4 +202,55 @@ body.tv-dashboard-body {
 
 #ativacoesMensalChart {
     max-height: 300px; /* Ajuste este valor conforme necessário */
+}
+
+/* NOVOS ESTILOS PARA O CARD DE CADASTROS */
+.kpi-group {
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch; /* Alinha os itens para ocupar toda a altura */
+    flex-grow: 1;
+    text-align: center;
+    height: 100%; /* Garante altura total do card */
+}
+
+.kpi-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* Centraliza verticalmente */
+    flex: 1; /* Ocupa espaço igual */
+    height: 100%;
+}
+
+.kpi-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--highlight-number-color);
+}
+
+.kpi-label {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-light);
+    margin: 0;
+}
+
+.kpi-subnumber {
+    font-size: 1.1rem;
+    color: #aaa;
+    font-weight: 500;
+    margin-top: -8px;
+    margin-bottom: 2px;
+}
+
+.mes-anterior-label {
+    margin-left: 10px;
+    color: #aaa;
+    font-size: 0.95em;
+}
+.mes-anterior-valor {
+    color: #fff;
+    font-weight: 500;
+    margin-left: 4px;
 }
