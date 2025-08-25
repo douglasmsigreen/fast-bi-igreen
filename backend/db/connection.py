@@ -56,17 +56,21 @@ def get_db():
 def close_db(e=None):
     """Fecha a conexão (devolve ao pool) ao final da requisição Flask."""
     db = g.pop('db_conn', None)
-    pool = g.pop('db_pool', None)
+    # Obtém o pool da extensão do app, não do objeto g.
+    pool = current_app.extensions.get('db_pool')
+    
     if db is not None and pool is not None:
         try:
             pool.putconn(db)
         except Exception as e:
             logger.error(f"Falha ao devolver conexão ao pool: {e}", exc_info=True)
+            # Em caso de falha, tentar fechar a conexão diretamente
             try: db.close()
             except: pass
     elif db is not None:
-         try: db.close()
-         except: pass
+        # Se o pool não estiver disponível, fechar a conexão diretamente
+        try: db.close()
+        except: pass
 
 def close_pool(app):
     """Fecha todas as conexões no pool (útil no desligamento da app)."""

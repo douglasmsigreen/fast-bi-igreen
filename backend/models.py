@@ -59,15 +59,19 @@ class User(UserMixin):
         """Busca um utilizador no banco de dados pelo seu ID ('codigo'). Usado pelo user_loader."""
         if not user_id: return None
         # Seleciona as colunas necessárias, incluindo 'nome'
-        # Use aspas duplas em "password" se for palavra reservada ou case-sensitive
         query = 'SELECT codigo, email, "password", nome FROM public."USUARIOS" WHERE codigo = %s;'
         logger.debug(f"Buscando utilizador por ID (codigo): {user_id}")
         try:
-            result = database.execute_query(query, (user_id,), fetch_one=True)
+            # CORREÇÃO: Usando execute_query_one e removendo 'fetch_one=True'
+            result = database.execute_query_one(query, (user_id,))
             if result:
-                # Cria o objeto User passando todos os valores na ordem correta
-                # result[0]=codigo, result[1]=email, result[2]=password, result[3]=nome
-                user = User(user_id=result[0], email=result[1], password_hash_from_db=result[2], nome=result[3])
+                # CORREÇÃO: Acessando os resultados por chave (dicionário)
+                user = User(
+                    user_id=result['codigo'], 
+                    email=result['email'], 
+                    password_hash_from_db=result['password'], 
+                    nome=result['nome']
+                )
                 logger.debug(f"Utilizador encontrado por ID: {user.email}, Nome: {user.nome}")
                 return user
             else:
@@ -76,9 +80,6 @@ class User(UserMixin):
         except (RuntimeError, ConnectionError) as e:
             logger.error(f"Erro de banco ao buscar utilizador por ID (codigo={user_id}): {e}")
             return None
-        except IndexError:
-             logger.error(f"Erro ao desempacotar resultado para ID {user_id}. Query SQL retornou colunas inesperadas?")
-             return None
         except Exception as e:
             logger.error(f"Erro inesperado em get_by_id para ID {user_id}: {e}", exc_info=True)
             return None
@@ -91,10 +92,16 @@ class User(UserMixin):
         query = 'SELECT codigo, email, "password", nome FROM public."USUARIOS" WHERE email = %s;'
         logger.debug(f"Buscando utilizador por email: {email}")
         try:
-            result = database.execute_query(query, (email,), fetch_one=True)
+            # CORREÇÃO: Usando execute_query_one e removendo 'fetch_one=True'
+            result = database.execute_query_one(query, (email,))
             if result:
-                # Cria o objeto User passando todos os valores na ordem correta
-                user = User(user_id=result[0], email=result[1], password_hash_from_db=result[2], nome=result[3])
+                # CORREÇÃO: Acessando os resultados por chave (dicionário)
+                user = User(
+                    user_id=result['codigo'], 
+                    email=result['email'], 
+                    password_hash_from_db=result['password'], 
+                    nome=result['nome']
+                )
                 logger.debug(f"Utilizador encontrado por email: {user.email} (ID: {user.id}, Nome: {user.nome})")
                 return user
             else:
@@ -103,9 +110,6 @@ class User(UserMixin):
         except (RuntimeError, ConnectionError) as e:
             logger.error(f"Erro de banco ao buscar utilizador por email {email}: {e}")
             return None
-        except IndexError:
-             logger.error(f"Erro ao desempacotar resultado para email {email}. Query SQL retornou colunas inesperadas?")
-             return None
         except Exception as e:
             logger.error(f"Erro inesperado em get_by_email para email {email}: {e}", exc_info=True)
             return None

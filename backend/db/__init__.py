@@ -14,6 +14,9 @@ from .reports_base import (
     get_client_details_by_ids,
     build_query,
     count_query,
+    _get_query_fields,
+    get_fornecedoras,
+    get_headers
 )
 
 # Importações do reports_specific.py
@@ -22,16 +25,16 @@ from .reports_specific import (
     count_clientes_por_licenciado,
     get_rateio_rzk_base_nova_ids,
     get_rateio_rzk_base_enviada_ids,
+    _get_rateio_rzk_fields,
     get_rateio_rzk_client_details_by_ids,
     get_rateio_rzk_data,
     count_rateio_rzk,
+    _get_recebiveis_clientes_fields,
     get_recebiveis_clientes_data,
-    count_recebiveis_clientes,
-    get_graduacao_licenciado_data,
-    count_graduacao_licenciado
+    count_recebiveis_clientes
 )
 
-# Bloco de importação para o arquivo de boletos
+# Importações do reports_boletos.py (ADICIONADO)
 from .reports_boletos import (
     get_boletos_por_cliente_data,
     count_boletos_por_cliente
@@ -52,7 +55,18 @@ from .dashboard import (
     get_overdue_payments_by_fornecedora,
     get_green_score_by_fornecedora,
     get_overdue_clients_by_state_for_map,
+    get_total_consumo_medio_consolidado,
+    count_clientes_ativos_consolidado,
+    count_clientes_registrados_consolidado,
+    count_overdue_injection_clients,
+    count_overdue_injection_clients_up_to_30_days,
+    count_overdue_injection_clients_over_30_days
 )
 
-# Importa a função do novo dashboard da TV
-from .tv_dashboard import get_tv_dashboard_data
+# Importações do tv_dashboard.py (ADICIONADO)
+from .tv_dashboard import (
+    get_tv_dashboard_data
+)
+
+logger = logging.getLogger(__name__)
+logger.info("Módulo backend.db inicializado.")

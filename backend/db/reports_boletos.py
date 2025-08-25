@@ -3,8 +3,8 @@ import logging
 import os
 import pandas as pd
 import numpy as np
-from typing import List, Tuple, Optional
-from .executor import execute_query
+from typing import List, Tuple, Optional, Union, Dict, Any
+from .executor import execute_query, execute_query_one
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,9 @@ BaseQuery AS (
             ELSE 'SIM'
         END AS status_pro,
         TO_CHAR(cp.dtgraduacao, 'DD/MM/YYYY') AS data_graduacao_pro,
-        COUNT(rcb.numinstalacao) AS quantidade_boletos
+        COUNT(rcb.numinstalacao) AS quantidade_boletos,
+        -- Adicionando campos da nova lógica de 'Retorno Fornecedora'
+        (SELECT obs FROM public."DEVOLUTIVAS" WHERE idcliente=c.idcliente AND corrigida = false ORDER BY updated_at DESC LIMIT 1) AS obs_devolutiva_nao_corrigida
     FROM 
         public."CLIENTES" c
     LEFT JOIN 
@@ -157,7 +159,7 @@ def calcular_colunas_atraso(df: pd.DataFrame) -> pd.DataFrame:
     df['dias_em_atraso'] = np.where(df['atraso_na_injecao'] == 'SIM', dias_em_atraso_calculado, np.nan)
     return df
 
-def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, fornecedora: Optional[str] = None, export_mode: bool = False) -> List[tuple]:
+def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, fornecedora: Optional[str] = None, export_mode: bool = False) -> List[Union[Dict[str, Any], Tuple]]:
     """
     Busca dados, junta com CSVs e calcula as colunas 'Atraso na Injeção' e 'Dias em Atraso'.
     Modularizado para facilitar manutenção e testes.
@@ -185,24 +187,17 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
         logger.error(f"Erro ao buscar dados de boletos (SQL): {e}", exc_info=True)
         return []
 
-    # 2. Carrega os arquivos CSV usando funções auxiliares
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    df_prazos = load_csv_prazos(project_root)
-    df_devolutivas = load_csv_devolutivas(project_root)
-
-    # 3. Converte os resultados do SQL para um DataFrame
-    cte_columns_from_base_query = [
-        "codigo", "nome", "instalacao", "numero_cliente", "cpf_cnpj", "cidade",
-        "ufconsumo", "concessionaria", "fornecedora", "consumomedio", "data_ativo", "dias_desde_ativacao",
-        "validado_sucesso", "devolutiva", "id_licenciado", "licenciado", "status_pro",
-        "data_graduacao_pro", "quantidade_boletos"
-    ]
-    df_sql = pd.DataFrame(results_sql, columns=cte_columns_from_base_query)
+    # 2. Converte os resultados do SQL para um DataFrame
+    df_sql = pd.DataFrame(results_sql)
     for col in ['ufconsumo', 'concessionaria', 'fornecedora']:
         if col in df_sql.columns:
             df_sql[col] = df_sql[col].astype(str).str.strip().str.upper()
 
-    # 4. Faz o merge dos DataFrames
+    # 3. Carrega os arquivos CSV e faz o merge
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    df_prazos = load_csv_prazos(project_root)
+    df_devolutivas = load_csv_devolutivas(project_root)
+
     df_merged = pd.merge(df_sql, df_prazos, on=['ufconsumo', 'concessionaria', 'fornecedora'], how='left')
     if not df_devolutivas.empty:
         df_merged = pd.merge(df_merged, df_devolutivas, on='codigo', how='left')
@@ -211,10 +206,10 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
     df_merged['retorno_fornecedora'] = df_merged['retorno_fornecedora'].fillna('')
     df_merged['injecao'] = df_merged['injecao'].fillna('')
 
-    # 5. Calcula as colunas de atraso usando função utilitária
+    # 4. Calcula as colunas de atraso usando função utilitária
     df_merged = calcular_colunas_atraso(df_merged)
 
-    # 6. Define a ordem final das colunas
+    # 5. Define a ordem final das colunas
     df_final = df_merged.reindex(columns=final_columns_order, fill_value='')
     for col in ['injecao', 'atraso_na_injecao', 'dias_em_atraso', 'retorno_fornecedora']:
         if col in df_final.columns:
@@ -225,12 +220,14 @@ def get_boletos_por_cliente_data(offset: int = 0, limit: Optional[int] = None, f
                 df_final[col] = df_final[col].apply(lambda x: f"{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if pd.notna(x) else '')
     if not export_mode and 'dias_desde_ativacao' in df_final.columns:
         df_final['dias_desde_ativacao'] = df_final['dias_desde_ativacao'].astype('Int64').astype(str).replace('<NA>', '')
-    return [tuple(x) for x in df_final.to_numpy()]
+    
+    # CORREÇÃO: Altera o retorno para lista de dicionários para compatibilidade
+    return df_final.to_dict('records')
 
 
 def count_boletos_por_cliente(fornecedora: Optional[str] = None) -> int:
     """Conta o total de clientes. Esta função não é alterada."""
-    query_final = "SELECT COUNT(*) FROM BaseQuery"
+    query_final = "SELECT COUNT(*) AS total_boletos FROM BaseQuery"
     params = ['CANCELADO%']
 
     if fornecedora and fornecedora.lower() != 'consolidado':
@@ -240,8 +237,9 @@ def count_boletos_por_cliente(fornecedora: Optional[str] = None) -> int:
     full_query = CTE_BASE + query_final + ";"
 
     try: 
-        result = execute_query(full_query, tuple(params), fetch_one=True)
-        return result[0] if result and result[0] is not None else 0
+        # CORREÇÃO: Usando execute_query_one e acessando por chave
+        result = execute_query_one(full_query, tuple(params))
+        return int(result['total_boletos']) if result and result['total_boletos'] is not None else 0
     except Exception as e: 
         logger.error(f"Erro ao contar boletos por cliente: {e}", exc_info=True)
         return 0

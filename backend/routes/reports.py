@@ -59,8 +59,9 @@ def relatorios():
                     data_query, data_params = db.build_query(selected_report_type, selected_fornecedora, offset, items_per_page)
                     dados = db.execute_query(data_query, data_params) or []
                     count_q, count_p = db.count_query(selected_report_type, selected_fornecedora)
-                    total_items_result = db.execute_query(count_q, count_p, fetch_one=True)
-                    total_items = total_items_result[0] if total_items_result else 0
+                    # CORREÇÃO: Usando execute_query_one e acessando por chave
+                    total_items_result = db.execute_query_one(count_q, count_p)
+                    total_items = total_items_result.get('count', 0) if total_items_result else 0
 
                 elif selected_report_type == 'rateio_rzk':
                     total_items = db.count_rateio_rzk()
@@ -105,28 +106,22 @@ def relatorios():
         # --- REMOÇÃO DE DUPLICATAS PELA COLUNA 'idcliente' ANTES DE EXIBIR NA PÁGINA ---
         if dados and headers:
             try:
-                lower_headers = [h.lower() for h in headers]
-                id_column_name = None
-                if 'idcliente' in lower_headers:
-                    id_column_name = 'idcliente'
-                elif 'código' in lower_headers:
-                    id_column_name = 'código'
+                # CORREÇÃO: Altera a busca pela coluna de ID para ser mais flexível
+                id_column_name_found = next((h for h in ['codigo', 'idcliente', 'código'] if h in [ch.lower() for ch in headers]), None)
                 
-                if id_column_name:
-                    id_column_index = lower_headers.index(id_column_name)
+                if id_column_name_found:
                     seen_ids = set()
                     dados_unicos = []
                     for linha in dados:
-                        client_id = linha[id_column_index]
-                        if client_id not in seen_ids:
+                        # CORREÇÃO: Usa o método .get() para evitar KeyError e aceita dicionários
+                        client_id = linha.get(id_column_name_found)
+                        if client_id is not None and client_id not in seen_ids:
                             seen_ids.add(client_id)
                             dados_unicos.append(linha)
                     
                     if len(dados_unicos) < len(dados):
-                        logger.info(f"Removidas {len(dados) - len(dados_unicos)} linhas duplicadas por '{id_column_name}' para a exibição do relatório '{selected_report_type}'.")
+                        logger.info(f"Removidas {len(dados) - len(dados_unicos)} linhas duplicadas por '{id_column_name_found}' para a exibição do relatório '{selected_report_type}'.")
                         dados = dados_unicos
-                        # ATENÇÃO: A contagem total de itens (total_items) pode não refletir a remoção de duplicados na página atual.
-                        # Isso é um comportamento esperado para manter a paginação consistente com o banco de dados.
                 else:
                     raise ValueError("Coluna de ID não encontrada")
 
@@ -252,7 +247,8 @@ def exportar_excel_route():
 
             elif selected_report_type == 'graduacao_licenciado':
                  filename = f"PRO_Graduacao_{timestamp}.xlsx" # <-- NOME DO ARQUIVO ALTERADO
-                 dados_completos = db.get_graduacao_licenciado_data(limit=None) # limit=None para todos os dados
+                 # Passa as datas para a função de exportação
+                 dados_completos = db.get_graduacao_licenciado_data(limit=None)
                  sheet_title = "PRO - Graduação" # <-- NOME DA ABA ALTERADO
 
             elif selected_report_type == 'clientes_por_licenciado':
@@ -282,12 +278,12 @@ def exportar_excel_route():
                         id_column_name = 'código'
                     
                     if id_column_name:
-                        id_column_index = lower_headers.index(id_column_name)
                         seen_ids = set()
                         dados_unicos = []
                         for linha in dados_completos:
-                            client_id = linha[id_column_index]
-                            if client_id not in seen_ids:
+                            # CORREÇÃO: Usa o método .get() para evitar KeyError e aceita dicionários
+                            client_id = linha.get(id_column_name)
+                            if client_id is not None and client_id not in seen_ids:
                                 seen_ids.add(client_id)
                                 dados_unicos.append(linha)
                         
@@ -309,8 +305,9 @@ def exportar_excel_route():
                  flash(f"Nenhum dado encontrado para exportar o relatório '{sheet_title}'.", "warning")
                  return redirect(url_for('reports_bp.relatorios', **request.args))
 
-            # Gera o Excel de aba única
-            excel_bytes = excel_exp.export_to_excel_bytes(dados_completos, headers, sheet_name=sheet_title)
+            # CORREÇÃO: Ajusta a estrutura dos dados para a função de exportação
+            dados_para_exportar = [[row.get(col.replace(' ', '_').lower()) for col in headers] for row in dados_completos]
+            excel_bytes = excel_exp.export_to_excel_bytes(dados_para_exportar, headers, sheet_name=sheet_title)
         else:
              # Tipo de relatório inválido para exportação
              logger.warning(f"Tentativa de exportação de tipo inválido: '{selected_report_type}'.")

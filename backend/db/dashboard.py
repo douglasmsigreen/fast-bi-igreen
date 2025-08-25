@@ -2,7 +2,7 @@
 import logging
 from typing import List, Tuple, Optional, Union
 from datetime import datetime
-from .executor import execute_query
+from .executor import execute_query, execute_query_one
 from collections import defaultdict
 from . import reports_boletos
 import pandas as pd
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def get_total_consumo_medio_by_month(month_str: Optional[str] = None, fornecedora: Optional[str] = None) -> float:
     """Calcula a soma total de 'consumomedio' para clientes ativos no mês (data_ativo), opcionalmente filtrado por fornecedora."""
     base_query = """
-        SELECT SUM(COALESCE(c.consumomedio, 0)) FROM public."CLIENTES" c
+        SELECT SUM(COALESCE(c.consumomedio, 0)) AS total_consumo FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND {date_filter}
         {fornecedora_filter};
@@ -36,14 +36,16 @@ def get_total_consumo_medio_by_month(month_str: Optional[str] = None, fornecedor
 
     final_query = base_query.format(date_filter=date_filter_sql, fornecedora_filter=fornecedora_filter_sql)
     try:
-        result = execute_query(final_query, tuple(params), fetch_one=True)
-        return float(result[0]) if result and result[0] is not None else 0.0
-    except Exception as e: logger.error(f"Erro get_total_consumo_medio_by_month ({month_str}, {fornecedora}): {e}", exc_info=True); return 0.0
+        result = execute_query_one(final_query, tuple(params))
+        return float(result.get('total_consumo', 0.0)) if result else 0.0
+    except Exception as e:
+        logger.error(f"Erro get_total_consumo_medio_by_month ({month_str}, {fornecedora}): {e}", exc_info=True)
+        return 0.0
 
 def count_clientes_ativos_by_month(month_str: Optional[str] = None, fornecedora: Optional[str] = None) -> int:
     """Conta clientes ativos no mês (data_ativo)."""
     base_query = """
-        SELECT COUNT(DISTINCT c.idcliente)
+        SELECT COUNT(DISTINCT c.idcliente) AS total_clientes
         FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND {date_filter} {fornecedora_filter};
@@ -65,14 +67,16 @@ def count_clientes_ativos_by_month(month_str: Optional[str] = None, fornecedora:
 
     final_query = base_query.format(date_filter=date_filter_sql, fornecedora_filter=fornecedora_filter_sql)
     try:
-        result = execute_query(final_query, tuple(params), fetch_one=True)
-        return int(result[0]) if result and result[0] is not None else 0
-    except Exception as e: logger.error(f"Erro count_clientes_ativos_by_month ({month_str}, {fornecedora}): {e}", exc_info=True); return 0
+        result = execute_query_one(final_query, tuple(params))
+        return int(result.get('total_clientes', 0)) if result else 0
+    except Exception as e:
+        logger.error(f"Erro count_clientes_ativos_by_month ({month_str}, {fornecedora}): {e}", exc_info=True)
+        return 0
 
 def count_clientes_registrados_by_month(month_str: Optional[str] = None, fornecedora: Optional[str] = None) -> int:
     """Conta clientes registrados no mês (dtcad)."""
     base_query = """
-        SELECT COUNT(DISTINCT c.idcliente)
+        SELECT COUNT(DISTINCT c.idcliente) AS total_clientes
         FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND {date_filter} {fornecedora_filter};
@@ -94,9 +98,11 @@ def count_clientes_registrados_by_month(month_str: Optional[str] = None, fornece
 
     final_query = base_query.format(date_filter=date_filter_sql, fornecedora_filter=fornecedora_filter_sql)
     try:
-        result = execute_query(final_query, tuple(params), fetch_one=True)
-        return int(result[0]) if result and result[0] is not None else 0
-    except Exception as e: logger.error(f"Erro count_clientes_registrados_by_month ({month_str}, {fornecedora}): {e}", exc_info=True); return 0
+        result = execute_query_one(final_query, tuple(params))
+        return int(result.get('total_clientes', 0)) if result else 0
+    except Exception as e:
+        logger.error(f"Erro count_clientes_registrados_by_month ({month_str}, {fornecedora}): {e}", exc_info=True)
+        return 0
 
 def get_fornecedora_summary(month_str: Optional[str] = None) -> Union[List[Tuple[str, int, float]], None]:
     """Busca resumo (qtd, consumo) por fornecedora para clientes ativos no mês (data_ativo)."""
@@ -120,9 +126,13 @@ def get_fornecedora_summary(month_str: Optional[str] = None) -> Union[List[Tuple
     final_query = base_query.format(date_filter=date_filter_sql)
     try:
         results = execute_query(final_query, tuple(params))
-        if results: return [(str(row[0]), int(row[1]), float(row[2]) if row[2] is not None else 0.0) for row in results]
-        else: return []
-    except Exception as e: logger.error(f"Erro get_fornecedora_summary ({month_str}): {e}", exc_info=True); return None
+        if results:
+            return [(str(row['fornecedora_tratada']), int(row['qtd_clientes']), float(row['soma_consumo_medio_por_fornecedora']) if row['soma_consumo_medio_por_fornecedora'] is not None else 0.0) for row in results]
+        else:
+            return []
+    except Exception as e:
+        logger.error(f"Erro get_fornecedora_summary ({month_str}): {e}", exc_info=True)
+        return None
 
 def get_concessionaria_summary(month_str: Optional[str] = None) -> Union[List[Tuple[str, int, float]], None]:
     """Busca resumo (qtd, consumo) por CONCESSIONÁRIA para clientes ativos no mês (data_ativo)."""
@@ -150,9 +160,13 @@ def get_concessionaria_summary(month_str: Optional[str] = None) -> Union[List[Tu
     final_query = base_query.format(date_filter=date_filter_sql)
     try:
         results = execute_query(final_query, tuple(params))
-        if results: return [(str(row[0]), int(row[1]), float(row[2]) if row[2] is not None else 0.0) for row in results]
-        else: return []
-    except Exception as e: logger.error(f"Erro get_concessionaria_summary ({month_str}): {e}", exc_info=True); return None
+        if results:
+            return [(str(row['regiao_concessionaria']), int(row['qtd_clientes']), float(row['soma_consumo_medio']) if row['soma_consumo_medio'] is not None else 0.0) for row in results]
+        else:
+            return []
+    except Exception as e:
+        logger.error(f"Erro get_concessionaria_summary ({month_str}): {e}", exc_info=True)
+        return None
 
 def get_monthly_active_clients_by_year(year: int, fornecedora: Optional[str] = None) -> List[int]:
     """Busca contagem mensal de clientes ativados por ano (data_ativo) para gráfico."""
@@ -177,10 +191,13 @@ def get_monthly_active_clients_by_year(year: int, fornecedora: Optional[str] = N
         results = execute_query(final_query, tuple(params))
         if results:
             for row in results:
-                month_index = row[0] - 1
-                if 0 <= month_index < 12: monthly_counts[month_index] = int(row[1])
+                month_index = row['mes'] - 1
+                if 0 <= month_index < 12:
+                    monthly_counts[month_index] = int(row['contagem'])
         return monthly_counts
-    except Exception as e: logger.error(f"Erro get_monthly_active_clients_by_year ({year}): {e}", exc_info=True); return [0] * 12
+    except Exception as e:
+        logger.error(f"Erro get_monthly_active_clients_by_year ({year}): {e}", exc_info=True)
+        return [0] * 12
 
 # --- FUNÇÕES PARA GRÁFICOS PIZZA/BARRAS DO DASHBOARD ---
 def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = None) -> Union[List[Tuple[str, int]], None]:
@@ -219,11 +236,10 @@ def get_active_clients_count_by_fornecedora_month(month_str: Optional[str] = Non
 
     final_query = base_query.format(date_filter=date_filter_sql)
     logger.debug(f"Executando query para gráfico pizza fornecedora (Mês: {month_str or 'Todos'}): {final_query} com params: {params}")
-
     try:
         results = execute_query(final_query, tuple(params))
         if results:
-            formatted_results = [(str(row[0]), int(row[1])) for row in results]
+            formatted_results = [(str(row['fornecedora_tratada']), int(row['qtd_clientes'])) for row in results]
             logger.info(f"[PIE CHART] Dados por fornecedora (Mês: {month_str or 'Todos'}) encontrados: {len(formatted_results)} registros.")
             return formatted_results
         else:
@@ -274,7 +290,7 @@ def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = 
     try:
         results = execute_query(final_query, tuple(params))
         if results:
-            formatted_results = [(str(row[0]), int(row[1])) for row in results]
+            formatted_results = [(str(row['regiao_concessionaria']), int(row['qtd_clientes'])) for row in results]
             logger.debug(f"Contagem por concessionária (Mês: {month_str or 'Todos'}) encontrada: {len(formatted_results)} registros.")
             return formatted_results
         else:
@@ -283,10 +299,8 @@ def get_active_clients_count_by_concessionaria_month(month_str: Optional[str] = 
     except Exception as e:
         logger.error(f"Erro ao buscar contagem por concessionária (Mês: {month_str or 'Todos'}): {e}", exc_info=True)
         return None
-# --- FIM DA FUNÇÃO ---
 
-# --- Função para buscar DADOS AGREGADOS POR ESTADO para o MAPA ---
-def get_state_map_data() -> List[Tuple[str, int, float]]: # Retorna UF, CONTAGEM, SOMA
+def get_state_map_data() -> List[Tuple[str, int, float]]:
     """
     Busca a CONTAGEM de clientes ativos e a SOMA de 'consumomedio' desses clientes,
     agrupado por estado (UF).
@@ -311,21 +325,19 @@ def get_state_map_data() -> List[Tuple[str, int, float]]: # Retorna UF, CONTAGEM
         results = execute_query(query)
         formatted_results = [
             (
-                str(row[0]),
-                int(row[1]) if row[1] is not None else 0,
-                float(row[2]) if row[2] is not None else 0.0
+                str(row['estado_uf']),
+                int(row['total_clientes']) if row['total_clientes'] is not None else 0,
+                float(row['total_consumo_medio']) if row['total_consumo_medio'] is not None else 0.0
             )
-            for row in results if row and len(row) > 2
+            for row in results if row and row.get('estado_uf')
         ]
         logger.info(f"Dados de contagem e soma por estado encontrados: {len(formatted_results)} estados.")
         return formatted_results or []
     except Exception as e:
         logger.error(f"Erro ao buscar dados agregados por estado para o mapa: {e}", exc_info=True)
         return []
-# --- FIM FUNÇÃO MAPA ---
 
-# --- FUNÇÃO MODIFICADA (2ª Vez) PARA O CARD ---
-def get_fornecedora_summary_no_rcb() -> List[Tuple[str, int, float]] or None:
+def get_fornecedora_summary_no_rcb() -> Union[List[Tuple[str, int, float]], None]:
     """
     Busca resumo (qtd clientes, soma consumo) por fornecedora para clientes
     cujo 'numinstalacao' não aparece na tabela RCB_CLIENTES E cujo 'data_ativo'
@@ -362,8 +374,7 @@ def get_fornecedora_summary_no_rcb() -> List[Tuple[str, int, float]] or None:
         )
         -- Query final: Agrupa, filtra (contagem zero E data < 100 dias atrás), conta e soma
         SELECT
-            ccc.fornecedora,
-            -- Mantendo aliases antigos para compatibilidade com API/JS
+            ccc.fornecedora AS nome_fornecedora,
             COUNT(ccc.idcliente) AS numero_clientes,
             SUM(COALESCE(ccc.consumomedio, 0)) AS soma_consumomedio
         FROM
@@ -388,12 +399,11 @@ def get_fornecedora_summary_no_rcb() -> List[Tuple[str, int, float]] or None:
     try:
         results = execute_query(query)
         if results:
-            # Formatação (continua funcionando)
             formatted_results = [
                 (
-                    str(row[0]) if row[0] else 'N/A', # Fornecedora
-                    int(row[1]) if row[1] is not None else 0, # numero_clientes
-                    float(row[2]) if row[2] is not None else 0.0 # soma_consumomedio
+                    str(row['nome_fornecedora']) if row['nome_fornecedora'] else 'N/A',
+                    int(row['numero_clientes']) if row['numero_clientes'] is not None else 0,
+                    float(row['soma_consumomedio']) if row['soma_consumomedio'] is not None else 0.0
                 )
                 for row in results
             ]
@@ -403,15 +413,10 @@ def get_fornecedora_summary_no_rcb() -> List[Tuple[str, int, float]] or None:
             logger.info("Nenhum dado encontrado para 'Fornecedoras s/ RCB (Clientes > 100d)'.")
             return []
     except Exception as e:
-        # Mensagem de erro atualizada
         logger.error(f"Erro ao buscar dados para 'Fornecedoras s/ RCB (Clientes > 100d)': {e}", exc_info=True)
         return None
 
-# --- FIM DA FUNÇÃO MODIFICADA (2ª Vez) ---
-
-
-# --- INÍCIO DA NOVA FUNÇÃO (COM AJUSTE PARA 120 DIAS) ---
-def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[str, int]] or None:
+def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> Union[List[Tuple[str, int]], None]:
     """
     Busca a contagem de instalações com pagamentos vencidos há X dias (sem pagamento),
     agrupados por fornecedora.
@@ -448,12 +453,11 @@ def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[st
             fornecedora_tratada;
     """
     params = (days_overdue,) # Passa o valor como parâmetro
-
     logger.info(f"Buscando pagamentos vencidos há {days_overdue} dias por fornecedora...")
     try:
         results = execute_query(query, params)
         if results:
-            formatted_results = [(str(row[0]), int(row[1])) for row in results]
+            formatted_results = [(str(row['fornecedora_tratada']), int(row['quantidade_vencido_sem_pgto'])) for row in results]
             logger.info(f"Dados de vencidos ({days_overdue} dias) encontrados: {len(formatted_results)} fornecedoras.")
             return formatted_results
         else:
@@ -462,11 +466,9 @@ def get_overdue_payments_by_fornecedora(days_overdue: int = 30) -> List[Tuple[st
     except Exception as e:
         logger.error(f"Erro ao buscar pagamentos vencidos ({days_overdue} dias) por fornecedora: {e}", exc_info=True)
         return None
-# --- FIM DA NOVA FUNÇÃO ---
-
 
 # --- INÍCIO DA NOVA FUNÇÃO PARA GREEN SCORE ---
-def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> List[Tuple[str, float]] or None:
+def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> Union[List[Tuple[str, float]], None]:
     """
     Calcula o "Green Score" para cada fornecedora baseado na pontualidade de injeção,
     aplicando pesos diferentes para clientes "Críticos" (dias_em_atraso > 30, peso 2)
@@ -499,17 +501,6 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
             logger.warning("Nenhum dado retornado do relatório de boletos para calcular o Green Score.")
             return []
 
-        # 2. ATENÇÃO: A lógica abaixo depende da ordem das colunas definida em `reports_boletos.py`.
-        # Nomes das colunas esperadas para garantir robustez, mesmo que a ordem mude
-        try:
-            fornecedora_idx = reports_boletos_columns_order.index('fornecedora')
-            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
-            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso') # Adicionado: Novo índice para dias_em_atraso
-            codigo_cliente_idx = reports_boletos_columns_order.index('codigo') # Adicionado: Para garantir unicidade do cliente
-        except ValueError as e:
-            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem definida. O cálculo do score falhará.")
-            return None
-
         # 3. Processar os dados em Python para calcular o score por fornecedora
         # Usaremos defaultdicts para acumular os contadores necessários
         total_unique_clients_by_supplier = defaultdict(int)
@@ -520,10 +511,10 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
 
         for row in all_clients_data:
             try:
-                fornecedora_raw = row[fornecedora_idx]
-                atraso_status = row[atraso_idx]
-                dias_atraso_raw = row[dias_atraso_idx]
-                codigo_cliente = row[codigo_cliente_idx]
+                fornecedora_raw = row['fornecedora']
+                atraso_status = row['atraso_na_injecao']
+                dias_atraso_raw = row['dias_em_atraso']
+                codigo_cliente = row['codigo']
 
                 # Limpeza e padronização da fornecedora
                 if not fornecedora_raw or (isinstance(fornecedora_raw, str) and fornecedora_raw.strip() == '') or pd.isna(fornecedora_raw):
@@ -551,8 +542,8 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
                         # Se não conseguir parsear, não adiciona pontos de deterioração
                 # Se atraso_status == 'NÃO', não adiciona pontos de deterioração
 
-            except IndexError as ie:
-                logger.error(f"Erro de índice ao processar linha: {ie}. Linha de dados: {row}")
+            except (KeyError, IndexError) as e:
+                logger.error(f"Erro de chave/índice ao processar linha: {e}. Linha de dados: {row}")
                 continue # Pula para a próxima linha para evitar quebrar o loop
 
         # 4. Calcular o score final para cada fornecedora
@@ -589,8 +580,6 @@ def get_green_score_by_fornecedora(fornecedora_filter: Optional[str] = None) -> 
     except Exception as e:
         logger.error(f"Erro inesperado ao calcular o Green Score (Atraso Injeção) com pesos: {e}", exc_info=True)
         return None
-# --- FIM DA NOVA FUNÇÃO ---
-
 
 def get_overdue_clients_by_state_for_map() -> List[Tuple[str, int]]:
     """
@@ -610,29 +599,21 @@ def get_overdue_clients_by_state_for_map() -> List[Tuple[str, int]]:
             logger.warning("Nenhum dado retornado do relatório de boletos para calcular atraso por estado.")
             return []
 
-        try:
-            codigo_idx = reports_boletos_columns_order.index('codigo')
-            uf_idx = reports_boletos_columns_order.index('ufconsumo')
-            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
-        except ValueError as e:
-            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada do relatório de boletos. Não é possível calcular o atraso por estado.")
-            return []
-
         overdue_counts_by_uf = defaultdict(int)
         seen_codigos = set()
 
         for row in all_clients_data:
-            codigo_cliente = row[codigo_idx]
-            if codigo_cliente not in seen_codigos:
+            codigo_cliente = row.get('codigo')
+            if codigo_cliente and codigo_cliente not in seen_codigos:
                 seen_codigos.add(codigo_cliente)
                 
-                if row[atraso_idx] == 'SIM':
-                    uf = row[uf_idx]
+                if row.get('atraso_na_injecao') == 'SIM':
+                    uf = row.get('ufconsumo')
                     if uf and isinstance(uf, str) and uf.strip() != '':
                         uf_cleaned = uf.strip().upper()
                         overdue_counts_by_uf[uf_cleaned] += 1
                     else:
-                        logger.debug(f"UF inválida ou vazia encontrada no registro: {uf}")
+                        logger.debug(f"UF inválida ou vazia encontrada no registro para o cliente {codigo_cliente}")
 
         formatted_results = sorted(overdue_counts_by_uf.items(), key=lambda item: item[0])
 
@@ -642,7 +623,6 @@ def get_overdue_clients_by_state_for_map() -> List[Tuple[str, int]]:
     except Exception as e:
         logger.error(f"Erro ao buscar clientes com atraso por estado para o mapa: {e}", exc_info=True)
         return []
-# --- FIM DA FUNÇÃO ---
 
 # --- NOVA FUNÇÃO: get_total_consumo_medio_consolidado ---
 def get_total_consumo_medio_consolidado(fornecedora: Optional[str] = None) -> float:
@@ -651,7 +631,7 @@ def get_total_consumo_medio_consolidado(fornecedora: Optional[str] = None) -> fl
     opcionalmente filtrado por fornecedora, SEM filtro de mês.
     """
     base_query = """
-        SELECT SUM(COALESCE(c.consumomedio, 0)) FROM public."CLIENTES" c
+        SELECT SUM(COALESCE(c.consumomedio, 0)) AS total_consumo FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND c.data_ativo IS NOT NULL
         {fornecedora_filter};
@@ -665,8 +645,8 @@ def get_total_consumo_medio_consolidado(fornecedora: Optional[str] = None) -> fl
     final_query = base_query.format(fornecedora_filter=fornecedora_filter_sql)
     logger.info(f"Buscando consumo médio consolidado (Forn: {fornecedora or 'Todos'}): {final_query}")
     try:
-        result = execute_query(final_query, tuple(params), fetch_one=True)
-        return float(result[0]) if result and result[0] is not None else 0.0
+        result = execute_query_one(final_query, tuple(params))
+        return float(result.get('total_consumo', 0.0)) if result else 0.0
     except Exception as e:
         logger.error(f"Erro get_total_consumo_medio_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
         return 0.0
@@ -678,7 +658,7 @@ def count_clientes_ativos_consolidado(fornecedora: Optional[str] = None) -> int:
     opcionalmente filtrado por fornecedora, SEM filtro de mês.
     """
     base_query = """
-        SELECT COUNT(DISTINCT c.idcliente) FROM public."CLIENTES" c
+        SELECT COUNT(DISTINCT c.idcliente) AS total_clientes FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND c.data_ativo IS NOT NULL
         {fornecedora_filter};
@@ -692,8 +672,8 @@ def count_clientes_ativos_consolidado(fornecedora: Optional[str] = None) -> int:
     final_query = base_query.format(fornecedora_filter=fornecedora_filter_sql)
     logger.info(f"Contando clientes ativos consolidados (Forn: {fornecedora or 'Todos'}): {final_query}")
     try:
-        result = execute_query(final_query, tuple(params), fetch_one=True)
-        return int(result[0]) if result and result[0] is not None else 0
+        result = execute_query_one(final_query, tuple(params))
+        return int(result.get('total_clientes', 0)) if result else 0
     except Exception as e:
         logger.error(f"Erro count_clientes_ativos_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
         return 0
@@ -705,7 +685,7 @@ def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) ->
     opcionalmente filtrado por fornecedora, SEM filtro de mês.
     """
     base_query = """
-        SELECT COUNT(DISTINCT c.idcliente) FROM public."CLIENTES" c
+        SELECT COUNT(DISTINCT c.idcliente) AS total_clientes FROM public."CLIENTES" c
         WHERE (c.origem IS NULL OR c.origem IN ('', 'WEB', 'BACKOFFICE', 'APP'))
         AND c.dtcad IS NOT NULL
         {fornecedora_filter};
@@ -719,8 +699,8 @@ def count_clientes_registrados_consolidado(fornecedora: Optional[str] = None) ->
     final_query = base_query.format(fornecedora_filter=fornecedora_filter_sql)
     logger.info(f"Contando clientes registrados consolidados (Forn: {fornecedora or 'Todos'}): {final_query}")
     try:
-        result = execute_query(final_query, tuple(params), fetch_one=True)
-        return int(result[0]) if result and result[0] is not None else 0
+        result = execute_query_one(final_query, tuple(params))
+        return int(result.get('total_clientes', 0)) if result else 0
     except Exception as e:
         logger.error(f"Erro count_clientes_registrados_consolidado (Forn: {fornecedora}): {e}", exc_info=True)
         return 0
@@ -757,16 +737,6 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> dict:
             logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção.")
             return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
 
-        # Buscar índices das colunas necessárias
-        try:
-            codigo_idx = reports_boletos_columns_order.index('codigo')
-            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
-            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso')
-            consumo_medio_idx = reports_boletos_columns_order.index('consumomedio')
-        except ValueError as e:
-            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível processar clientes com atraso.")
-            return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
-
         # Processar dados únicos por cliente
         seen_codigos = set()
         unique_overdue_count = 0
@@ -775,16 +745,17 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> dict:
         clientes_com_dias_validos = 0
 
         for row in all_clients_data:
-            codigo_cliente = row[codigo_idx]
-            if codigo_cliente not in seen_codigos:
+            codigo_cliente = row.get('codigo')
+            if codigo_cliente and codigo_cliente not in seen_codigos:
                 seen_codigos.add(codigo_cliente)
-                if row[atraso_idx] == 'SIM':
+                if row.get('atraso_na_injecao') == 'SIM':
                     unique_overdue_count += 1
                     
                     # Processar dias em atraso
                     try:
-                        dias_atraso = float(row[dias_atraso_idx]) if row[dias_atraso_idx] not in [None, '', 'N/A'] else 0
-                        if dias_atraso > 0:
+                        dias_atraso_raw = row.get('dias_em_atraso')
+                        dias_atraso = float(dias_atraso_raw) if dias_atraso_raw not in [None, '', 'N/A'] else 0
+                        if dias_atraso > 0: # Considera apenas se dias_atraso > 0
                             total_dias_atraso += dias_atraso
                             clientes_com_dias_validos += 1
                     except (ValueError, TypeError):
@@ -792,7 +763,8 @@ def count_overdue_injection_clients(fornecedora: Optional[str] = None) -> dict:
                     
                     # Processar consumo médio
                     try:
-                        consumo_medio = float(row[consumo_medio_idx]) if row[consumo_medio_idx] not in [None, '', 'N/A'] else 0
+                        consumo_medio_raw = row.get('consumomedio')
+                        consumo_medio = float(consumo_medio_raw) if consumo_medio_raw not in [None, '', 'N/A'] else 0
                         total_consumo_medio += consumo_medio
                     except (ValueError, TypeError):
                         pass  # Ignora valores inválidos
@@ -854,16 +826,6 @@ def count_overdue_injection_clients_up_to_30_days(fornecedora: Optional[str] = N
             logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção <= 30 dias.")
             return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
 
-        # Buscar índices das colunas necessárias usando reports_boletos_columns_order
-        try:
-            codigo_idx = reports_boletos_columns_order.index('codigo')
-            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
-            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso')
-            consumo_medio_idx = reports_boletos_columns_order.index('consumomedio')
-        except ValueError as e:
-            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível processar clientes com atraso <= 30 dias.")
-            return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
-
         # Processar dados únicos por cliente com a nova condição de 30 dias
         seen_codigos = set()
         unique_overdue_count = 0
@@ -872,15 +834,16 @@ def count_overdue_injection_clients_up_to_30_days(fornecedora: Optional[str] = N
         clientes_com_dias_validos = 0
 
         for row in all_clients_data:
-            codigo_cliente = row[codigo_idx]
-            if codigo_cliente not in seen_codigos:
+            codigo_cliente = row.get('codigo')
+            if codigo_cliente and codigo_cliente not in seen_codigos:
                 seen_codigos.add(codigo_cliente)
                 
                 # Verifica a condição principal de atraso na injeção
-                if row[atraso_idx] == 'SIM':
+                if row.get('atraso_na_injecao') == 'SIM':
                     # Nova condição: Dias em Atraso <= 30
                     try:
-                        dias_atraso = float(row[dias_atraso_idx]) if row[dias_atraso_idx] not in [None, '', 'N/A'] else 0
+                        dias_atraso_raw = row.get('dias_em_atraso')
+                        dias_atraso = float(dias_atraso_raw) if dias_atraso_raw not in [None, '', 'N/A'] else 0
                         
                         if dias_atraso > 0 and dias_atraso <= 30: # Aplica o filtro de 30 dias
                             unique_overdue_count += 1
@@ -889,7 +852,8 @@ def count_overdue_injection_clients_up_to_30_days(fornecedora: Optional[str] = N
                             
                             # Processar consumo médio para os clientes filtrados
                             try:
-                                consumo_medio = float(row[consumo_medio_idx]) if row[consumo_medio_idx] not in [None, '', 'N/A'] else 0
+                                consumo_medio_raw = row.get('consumomedio')
+                                consumo_medio = float(consumo_medio_raw) if consumo_medio_raw not in [None, '', 'N/A'] else 0
                                 total_consumo_medio += consumo_medio
                             except (ValueError, TypeError):
                                 pass  # Ignora valores inválidos
@@ -951,16 +915,6 @@ def count_overdue_injection_clients_over_30_days(fornecedora: Optional[str] = No
             logger.warning("Nenhum dado retornado do relatório de boletos para contar clientes com atraso na injeção > 30 dias.")
             return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
 
-        # Buscar índices das colunas necessárias usando reports_boletos_columns_order
-        try:
-            codigo_idx = reports_boletos_columns_order.index('codigo')
-            atraso_idx = reports_boletos_columns_order.index('atraso_na_injecao')
-            dias_atraso_idx = reports_boletos_columns_order.index('dias_em_atraso')
-            consumo_medio_idx = reports_boletos_columns_order.index('consumomedio')
-        except ValueError as e:
-            logger.error(f"Erro Crítico: Coluna '{e}' não encontrada na ordem esperada. Não é possível processar clientes com atraso > 30 dias.")
-            return {'count': 0, 'average_delay_days': 0, 'pending_kwh': 0}
-
         # Processar dados únicos por cliente com a nova condição de > 30 dias
         seen_codigos = set()
         unique_overdue_count = 0
@@ -969,15 +923,16 @@ def count_overdue_injection_clients_over_30_days(fornecedora: Optional[str] = No
         clientes_com_dias_validos = 0
 
         for row in all_clients_data:
-            codigo_cliente = row[codigo_idx]
-            if codigo_cliente not in seen_codigos:
+            codigo_cliente = row.get('codigo')
+            if codigo_cliente and codigo_cliente not in seen_codigos:
                 seen_codigos.add(codigo_cliente)
                 
                 # Verifica a condição principal de atraso na injeção
-                if row[atraso_idx] == 'SIM':
+                if row.get('atraso_na_injecao') == 'SIM':
                     # Nova condição: Dias em Atraso > 30
                     try:
-                        dias_atraso = float(row[dias_atraso_idx]) if row[dias_atraso_idx] not in [None, '', 'N/A'] else 0
+                        dias_atraso_raw = row.get('dias_em_atraso')
+                        dias_atraso = float(dias_atraso_raw) if dias_atraso_raw not in [None, '', 'N/A'] else 0
                         
                         if dias_atraso > 30: # Aplica o filtro de > 30 dias
                             unique_overdue_count += 1
@@ -986,7 +941,8 @@ def count_overdue_injection_clients_over_30_days(fornecedora: Optional[str] = No
                             
                             # Processar consumo médio para os clientes filtrados
                             try:
-                                consumo_medio = float(row[consumo_medio_idx]) if row[consumo_medio_idx] not in [None, '', 'N/A'] else 0
+                                consumo_medio_raw = row.get('consumomedio')
+                                consumo_medio = float(consumo_medio_raw) if consumo_medio_raw not in [None, '', 'N/A'] else 0
                                 total_consumo_medio += consumo_medio
                             except (ValueError, TypeError):
                                 pass  # Ignora valores inválidos
