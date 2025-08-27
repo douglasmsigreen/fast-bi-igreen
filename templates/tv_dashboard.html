@@ -9,7 +9,7 @@
     {# --- Google Font (Inter) --- #}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     {# --- Font Awesome (Para ícones) --- #}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -33,7 +33,15 @@
         </a>
         {# --- FIM DA CORREÇÃO --- #}
         <h1 class="tv-title">TV Conexão Green - Atualização em Tempo Real</h1>
-        <div id="relogio" class="tv-clock"></div>
+        
+        <div class="tv-clock">
+            {# --- Indicador AO VIVO --- #}
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                <span>AO VIVO</span>
+            </div>
+            <div id="relogio"></div>
+        </div>
     </div>
 
     <div class="tv-dashboard-grid">
@@ -43,7 +51,10 @@
             
             {# Card 1: Total de Ativações #}
             <div class="tv-card-small">
-                <h3 class="card-title">Ativações no Mês</h3>
+                <h3 class="card-title">
+                    <i class="fas fa-plug" style="margin-right: 8px;"></i>
+                    Ativações no Mês
+                </h3>
                 <div class="main-number-container">
                     <span id="ativacoes-mes" class="main-number loading-pulse">...</span>
                 </div>
@@ -56,7 +67,10 @@
 
             {# Card 2: NOVO - Total de kWh Ativados - AGORA EM SEGUNDO #}
             <div class="tv-card-small">
-                <h3 class="card-title">Total de kWh Ativados</h3>
+                <h3 class="card-title">
+                    <i class="fas fa-bolt" style="margin-right: 8px;"></i>
+                    Total de kWh Ativados
+                </h3>
                 <div class="main-number-container">
                     <span id="kwh-mes" class="main-number loading-pulse">...</span>
                 </div>
@@ -69,7 +83,10 @@
 
             {# Card 3: NOVO - Cadastros, Validados e Cancelados - AGORA EM TERCEIRO #}
             <div class="tv-card-small wide-card">
-                <h3 class="card-title">Cadastros, Validados e Cancelados</h3>
+                <h3 class="card-title">
+                    <i class="fas fa-users" style="margin-right: 8px;"></i>
+                    Status dos Cadastros
+                </h3>
                 <div class="kpi-group">
                     <div class="kpi-item">
                         <span id="cadastrados-quantidade" class="kpi-number loading-pulse">...</span>
@@ -91,7 +108,10 @@
 
             {# Card 4: Gráfico de Ativações por Mês #}
             <div class="tv-card-chart">
-                <h3 class="card-title">Ativações por Mês (Ano Atual)</h3>
+                <h3 class="card-title">
+                    <i class="fas fa-chart-line" style="margin-right: 8px;"></i>
+                    Ativações por Mês (Últimos 6 Meses)
+                </h3>
                 <canvas id="ativacoesMensalChart"></canvas>
             </div>
         </div>
@@ -101,7 +121,10 @@
             
             {# Card 4: Top 5 Regiões #}
             <div class="tv-card-small">
-                <h3 class="card-title">Top 5 Regiões</h3>
+                <h3 class="card-title">
+                    <i class="fas fa-trophy" style="margin-right: 8px; color: #F59E0B;"></i>
+                    Top 5 Regiões
+                </h3>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -118,7 +141,10 @@
 
             {# Card 5: Top 5 Fornecedoras #}
             <div class="tv-card-small">
-                <h3 class="card-title">Top 5 Fornecedoras</h3>
+                <h3 class="card-title">
+                    <i class="fas fa-industry" style="margin-right: 8px; color: #3B82F6;"></i>
+                    Top 5 Fornecedoras
+                </h3>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -135,13 +161,16 @@
 
             {# Card 6: Top 5 Licenciados #}
             <div class="tv-card-small">
-                <h3 class="card-title">Top 5 Licenciados</h3>
+                <h3 class="card-title">
+                    <i class="fas fa-star" style="margin-right: 8px; color: #F59E0B;"></i>
+                    Top 5 Licenciados
+                </h3>
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Licenciado</th>
                             <th>UF</th>
-                            <th>Ativações</th>
+                            <th>Ativ.</th>
                             <th>kWh</th>
                         </tr>
                     </thead>
