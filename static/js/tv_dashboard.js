@@ -401,6 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (cadastros) {
                     const cadastrosData = [
                         { id: 'cadastrados', qtd: cadastros.cadastrados_quantidade, consumo: cadastros.cadastrados_soma_consumo },
+                        { id: 'a-validar', qtd: cadastros.a_validar_quantidade, consumo: cadastros.a_validar_soma_consumo },
                         { id: 'validados', qtd: cadastros.validados_quantidade, consumo: cadastros.validados_soma_consumo },
                         { id: 'cancelados', qtd: cadastros.cancelados_quantidade, consumo: cadastros.cancelados_soma_consumo }
                     ];
@@ -457,6 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'ativacoes-mes',
             'kwh-mes',
             'cadastrados-quantidade',
+            'a-validar-quantidade',
             'validados-quantidade', 
             'cancelados-quantidade'
         ];

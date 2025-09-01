@@ -114,6 +114,25 @@ def get_tv_dashboard_data():
               ) AS "cancelados_soma_consumo";
         """
         cadastros = execute_query_one(query_cadastros)
+        
+        if cadastros and ativacoes and kwh:
+            # Converte para dict para poder adicionar novas chaves
+            cadastros = dict(cadastros)
+            
+            # Garante que valores nulos sejam tratados como 0 para o cálculo
+            ativacoes_qtd = ativacoes.get('contagem_mes_atual', 0) or 0
+            kwh_ativado = kwh.get('soma_consumo_mes_atual', 0) or 0
+            
+            validados_qtd = cadastros.get('validados_quantidade', 0) or 0
+            cancelados_qtd = cadastros.get('cancelados_quantidade', 0) or 0
+            
+            validados_kwh = cadastros.get('validados_soma_consumo', 0) or 0
+            cancelados_kwh = cadastros.get('cancelados_soma_consumo', 0) or 0
+
+            # Calcula "A Validar" usando Ativações como base
+            cadastros['a_validar_quantidade'] = ativacoes_qtd - validados_qtd - cancelados_qtd
+            cadastros['a_validar_soma_consumo'] = kwh_ativado - validados_kwh - cancelados_kwh
+
         data['cadastros'] = cadastros
         # --- FIM NOVO ---
 

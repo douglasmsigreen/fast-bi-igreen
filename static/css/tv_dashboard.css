@@ -161,7 +161,7 @@ body.tv-dashboard-body::before {
     flex: 2;
     grid-template-columns: repeat(2, 1fr);
     /* Aumentar espaço reservado para os dois cards superiores para destacá-los mais */
-    grid-template-rows: minmax(240px, auto) minmax(240px, auto) 1fr;
+    grid-template-rows: minmax(280px, auto) minmax(180px, auto) 1fr;
 }
 
 .grid-right-column {
@@ -381,6 +381,34 @@ body.tv-dashboard-body::before {
     font-weight: 700;
     color: var(--green-primary);
     margin-bottom: 5px;
+}
+
+/* Ajuste para 4 itens no card de status */
+.wide-card .kpi-item {
+    padding: 10px;
+}
+
+.wide-card .kpi-number {
+    font-size: 1.8rem;
+}
+
+.wide-card .kpi-subnumber {
+    font-size: 0.85rem;
+}
+
+.kpi-item-danger .kpi-number,
+.kpi-item-danger .kpi-label {
+    color: var(--danger);
+}
+
+.kpi-item-info .kpi-number,
+.kpi-item-info .kpi-label {
+    color: var(--info);
+}
+
+.kpi-item-purple .kpi-number,
+.kpi-item-purple .kpi-label {
+    color: #8B5CF6; /* Roxo/Violeta */
 }
 
 .kpi-label {
@@ -711,7 +739,7 @@ canvas {
 /* Aumentar um pouco o min-height dos dois cards de destaque (Ativações no Mês e Total de kWh Ativados) */
 .grid-left-column > .tv-card-small:nth-child(1),
 .grid-left-column > .tv-card-small:nth-child(2) {
-    min-height: 260px;
+    min-height: 280px;
     padding: 30px;
     border-color: rgba(34, 197, 94, 0.45);
     box-shadow: 0 30px 60px rgba(34, 197, 94, 0.08);
