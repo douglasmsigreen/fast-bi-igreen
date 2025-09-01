@@ -258,15 +258,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.style.animationDelay = `${index * 100}ms`;
                 row.style.animation = 'fadeInUp 0.5s ease forwards';
                 
-                row.innerHTML = `
-                    <td>${item.fornecedora || item.região}</td>
-                    <td>${formatNumber(item.quantidade_registros)}</td>
-                    <td>${formatLargeNumber(item.soma_consumo)}</td>
-                `;
+                const nome = item.fornecedora || item.região;
+                const ativacoes = formatNumber(item.quantidade_registros);
+                const kwh = formatLargeNumber(item.soma_consumo);
+                const validados = item.registros_validados !== undefined ? formatNumber(item.registros_validados) : '';
+                const kwhValidados = item.consumo_validados !== undefined ? formatLargeNumber(item.consumo_validados) : '';
+
+                // Se a tabela tiver 5 colunas (com validados), preencher todas, senão manter 3 colunas
+                const isFiveCols = tbody.parentElement && tbody.parentElement.querySelector('thead th:nth-child(5)');
+                if (isFiveCols) {
+                    row.innerHTML = `
+                        <td>${nome}</td>
+                        <td>${ativacoes}</td>
+                        <td>${kwh}</td>
+                        <td>${validados}</td>
+                        <td>${kwhValidados}</td>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <td>${nome}</td>
+                        <td>${ativacoes}</td>
+                        <td>${kwh}</td>
+                    `;
+                }
                 tbody.appendChild(row);
             });
         } else {
-            tbody.innerHTML = `<tr><td colspan="3" class="loading-text">Nenhum dado encontrado.</td></tr>`;
+            // Descobrir número de colunas para o colspan
+            const thCount = (tbody.parentElement && tbody.parentElement.querySelectorAll('thead th').length) || 3;
+            tbody.innerHTML = `<tr><td colspan="${thCount}" class="loading-text">Nenhum dado encontrado.</td></tr>`;
         }
     }
 

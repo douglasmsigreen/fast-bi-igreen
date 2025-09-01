@@ -160,7 +160,8 @@ body.tv-dashboard-body::before {
 .grid-left-column {
     flex: 2;
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto auto 1fr;
+    /* Aumentar espaço reservado para os dois cards superiores para destacá-los mais */
+    grid-template-rows: minmax(240px, auto) minmax(240px, auto) 1fr;
 }
 
 .grid-right-column {
@@ -217,7 +218,10 @@ body.tv-dashboard-body::before {
 /* Gráfico ocupa a linha inferior na coluna da esquerda */
 .tv-card-chart {
     grid-column: span 2;
-    padding: 20px;
+    /* reduzir a altura mínima do chart para dar mais destaque aos cards superiores */
+    min-height: 200px;
+    max-height: 360px;
+    padding: 16px;
 }
 
 .tv-card-main {
@@ -247,6 +251,31 @@ body.tv-dashboard-body::before {
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-top: 0;
+}
+
+/* Espaçamento do título dos cards Top 5 para alinhar com os demais cards */
+.grid-right-column .tv-card-small .card-title {
+    display: block;
+    padding-top: 10px; /* espaço interno superior para não ficar colado ao topo */
+    margin-top: 0; /* garante comportamento consistente */
+    margin-bottom: 8px; /* espaço abaixo do título */
+    font-size: 0.98rem; /* mantendo o ajuste de tamanho anteriormente aplicado */
+    line-height: 1.2;
+}
+
+/* Uniformizar espaçamento dos títulos em todos os cards pequenos para evitar desalinhamento */
+.tv-card-small .card-title {
+    padding-top: 12px; /* espaço consistente do topo */
+    margin-top: 0;
+    margin-bottom: 12px; /* reduzir para alinhar visualmente */
+    font-size: 1.02rem;
+    line-height: 1.2;
+    display: block;
+}
+
+/* Garantir que o título do card de gráfico e outros mantenham o mesmo alinhamento */
+.tv-card-chart .card-title {
+    padding-top: 12px;
 }
 
 /* Estilos para os números principais */
@@ -404,6 +433,104 @@ body.tv-dashboard-body::before {
     background: rgba(255, 255, 255, 0.02);
 }
 
+/* Por padrão: não quebrar a primeira coluna (mostrar em uma linha com ellipsis) */
+.grid-right-column .tv-card-small .data-table th:first-child,
+.grid-right-column .tv-card-small .data-table td:first-child {
+    white-space: nowrap; /* forçar uma linha */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
+    width: 60%;
+    max-width: 60%;
+    text-align: left;
+    padding-right: 8px;
+}
+
+/* Mantém comportamento truncado para as colunas restantes (valores) */
+.grid-right-column .tv-card-small .data-table th:not(:first-child),
+.grid-right-column .tv-card-small .data-table td:not(:first-child) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 40%;
+    max-width: 40%;
+    text-align: right;
+}
+
+/* Se um card precisar quebrar a primeira coluna (ex.: card com classe .allow-wrap), permite quebra */
+.grid-right-column .tv-card-small.allow-wrap .data-table th:first-child,
+.grid-right-column .tv-card-small.allow-wrap .data-table td:first-child {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+}
+
+/* Ajuste: usar layout de tabela automático para que colunas se dimensionem pelo conteúdo */
+.grid-right-column .tv-card-small .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    display: table; /* permitir colunas com largura automática */
+    table-layout: auto; /* importante: deixa o browser calcular larguras com base no conteúdo */
+    max-height: none; /* remover scroll específico da tabela; se precisar de scroll, envolver no HTML */
+    overflow: visible;
+}
+
+/* Retirar display:block em thead/tbody para manter comportamento padrão de tabela */
+.grid-right-column .tv-card-small .data-table thead,
+.grid-right-column .tv-card-small .data-table tbody {
+    display: table-row-group;
+}
+
+.grid-right-column .tv-card-small .data-table thead tr,
+.grid-right-column .tv-card-small .data-table tbody tr {
+    display: table-row;
+}
+
+/* linhas e células mais compactas para comportar 5 itens */
+.grid-right-column .tv-card-small .data-table td,
+.grid-right-column .tv-card-small .data-table th {
+    font-size: 0.90rem; /* aumentei de 0.82rem para 0.90rem */
+    line-height: 1.18;
+    padding: 7px 10px; /* padding levemente maior para respiração visual */
+    white-space: nowrap; /* por padrão, evitar quebra para preservar alinhamento */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* Permitir que a primeira coluna cresça conforme o conteúdo (sem cortar) */
+.grid-right-column .tv-card-small .data-table th:first-child,
+.grid-right-column .tv-card-small .data-table td:first-child {
+    white-space: normal; /* permite que o texto quebre naturalmente quando necessário */
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word; /* quebra palavras longas quando necessário */
+    text-align: left;
+    padding-right: 8px;
+}
+
+/* ajustes responsivos: reduzir um pouco em viewports menores para caber 5 linhas */
+@media (max-width: 1400px) {
+    .grid-right-column .tv-card-small .data-table td,
+    .grid-right-column .tv-card-small .data-table th {
+        font-size: 0.86rem; /* antes 0.78rem */
+        padding: 6px 8px;
+    }
+    .grid-right-column .tv-card-small .card-title {
+        font-size: 0.98rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    .grid-right-column .tv-card-small .data-table td,
+    .grid-right-column .tv-card-small .data-table th {
+        font-size: 0.82rem; /* antes 0.75rem */
+        padding: 5px 6px;
+    }
+}
+
 /* Efeitos de loading aprimorados */
 @keyframes pulse {
     0% { opacity: 0.5; }
@@ -473,6 +600,91 @@ body.tv-dashboard-body::before {
     }
 }
 
+/* --- Ajustes para os cards Top 5: reduzir fonte/padding e garantir visibilidade das 5 linhas --- */
+.grid-right-column .tv-card-small {
+    /* reduzir um pouco o padding para ganhar espaço interno */
+    padding: 14px;
+    /* permitir que o conteúdo cresça sem forçar corte por overflow do card */
+    min-height: 0;
+}
+
+.grid-right-column .tv-card-small .card-title {
+    font-size: 0.98rem;
+}
+
+/* Espaçamento do título dos cards Top 5 para alinhar com os demais cards */
+.grid-right-column .tv-card-small .card-title {
+    display: block;
+    padding-top: 10px; /* espaço interno superior para não ficar colado ao topo */
+    margin-top: 0; /* garante comportamento consistente */
+    margin-bottom: 8px; /* espaço abaixo do título */
+    font-size: 0.98rem; /* mantendo o ajuste de tamanho anteriormente aplicado */
+    line-height: 1.2;
+}
+
+.grid-right-column .tv-card-small .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    display: table; /* permitir colunas com largura automática */
+    table-layout: auto; /* importante: deixa o browser calcular larguras com base no conteúdo */
+    max-height: none; /* remover scroll específico da tabela; se precisar de scroll, envolver no HTML */
+    overflow: visible;
+}
+
+/* linhas e células mais compactas para comportar 5 itens */
+.grid-right-column .tv-card-small .data-table thead,
+.grid-right-column .tv-card-small .data-table tbody {
+    display: table-row-group;
+}
+
+.grid-right-column .tv-card-small .data-table thead tr,
+.grid-right-column .tv-card-small .data-table tbody tr {
+    display: table-row;
+}
+
+.grid-right-column .tv-card-small .data-table td,
+.grid-right-column .tv-card-small .data-table th {
+    font-size: 0.90rem; /* aumentei de 0.82rem para 0.90rem */
+    line-height: 1.18;
+    padding: 7px 10px; /* padding levemente maior para respiração visual */
+    white-space: nowrap; /* por padrão, evitar quebra para preservar alinhamento */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* ajuste responsivo para telas menores (garante legibilidade) */
+@media (max-width: 1400px) {
+    .grid-right-column .tv-card-small .data-table td,
+    .grid-right-column .tv-card-small .data-table th {
+        font-size: 0.86rem; /* antes 0.78rem */
+        padding: 6px 8px;
+    }
+    .grid-right-column .tv-card-small .card-title {
+        font-size: 0.98rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    .grid-right-column .tv-card-small .data-table td,
+    .grid-right-column .tv-card-small .data-table th {
+        font-size: 0.82rem; /* antes 0.75rem */
+        padding: 5px 6px;
+    }
+}
+
+/* pequenas melhorias visuais: barra de rolagem sutil quando aplicável */
+.grid-right-column .tv-card-small .data-table::-webkit-scrollbar {
+    width: 8px;
+}
+.grid-right-column .tv-card-small .data-table::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.06);
+    border-radius: 8px;
+}
+
+/* fim dos ajustes Top 5 */
+
 /* Efeitos especiais */
 .glow-effect {
     filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.3));
@@ -482,3 +694,103 @@ body.tv-dashboard-body::before {
 canvas {
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
+
+/* Centraliza os números nas colunas (exceto a primeira) */
+.grid-right-column .tv-card-small .data-table th:not(:first-child),
+.grid-right-column .tv-card-small .data-table td:not(:first-child) {
+    text-align: center !important;
+}
+
+/* Garantir que o canvas ocupe todo o espaço disponível dentro do card de gráfico */
+.tv-card-chart canvas {
+    width: 100% !important;
+    height: calc(100% - 28px) !important; /* desconta espaço do título e padding */
+    display: block;
+}
+
+/* Aumentar um pouco o min-height dos dois cards de destaque (Ativações no Mês e Total de kWh Ativados) */
+.grid-left-column > .tv-card-small:nth-child(1),
+.grid-left-column > .tv-card-small:nth-child(2) {
+    min-height: 260px;
+    padding: 30px;
+    border-color: rgba(34, 197, 94, 0.45);
+    box-shadow: 0 30px 60px rgba(34, 197, 94, 0.08);
+}
+
+/* Espaçamento e destaque do título dentro dos cards superiores */
+.grid-left-column > .tv-card-small:nth-child(1) .card-title,
+.grid-left-column > .tv-card-small:nth-child(2) .card-title {
+    padding-top: 16px;
+    margin-bottom: 12px;
+    font-size: 1.05rem;
+}
+
+/* Aumentar o tamanho do número principal nesses dois cards */
+.grid-left-column > .tv-card-small:nth-child(1) .main-number,
+.grid-left-column > .tv-card-small:nth-child(2) .main-number {
+    font-size: 4.8rem; /* destaque maior */
+    font-weight: 800;
+    line-height: 1;
+}
+
+/* Ajuste para subtítulos e percentuais para manter hierarquia visual */
+.grid-left-column > .tv-card-small:nth-child(1) .sub-text,
+.grid-left-column > .tv-card-small:nth-child(2) .sub-text {
+    font-size: 0.98rem;
+    margin-top: 10px;
+}
+
+/* Garantir que o gráfico não ocupe espaço excessivo após aumento dos cards */
+.tv-card-chart {
+    grid-column: span 2;
+    min-height: 200px;
+    max-height: 360px;
+    padding: 16px;
+}
+
+/* Correção final: uniformizar espaçamento superior e alinhar títulos no topo em todos os cards pequenos */
+/* Aplica padding consistente ao container e zera padding-top do título para que todos os títulos comecem na mesma posição */
+.tv-card-small {
+    /* padding uniforme para todos os cards pequenos (override de valores anteriores) */
+    padding: 24px !important;
+}
+
+/* Garantir que cards que ocupam duas colunas também respeitem o mesmo padding */
+.wide-card,
+.tv-card-chart,
+.tv-card-main,
+.tv-card-side {
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+}
+
+/* Títulos alinhados: sem padding-top interno, mesma margem inferior */
+.tv-card-small .card-title,
+.tv-card-chart .card-title,
+.tv-card-main .card-title,
+.tv-card-side .card-title {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+}
+
+/* Remover regras específicas que deslocavam apenas alguns títulos (override) */
+.grid-left-column > .tv-card-small:nth-child(1) .card-title,
+.grid-left-column > .tv-card-small:nth-child(2) .card-title,
+.grid-left-column > .tv-card-small.wide-card .card-title {
+    padding-top: 0 !important;
+}
+
+/* Manter destaque dos números, sem alterar alinhamento do título */
+.grid-left-column > .tv-card-small:nth-child(1) .main-number,
+.grid-left-column > .tv-card-small:nth-child(2) .main-number {
+    /* mantém tamanho aumentado definido anteriormente */
+    font-size: 4.8rem;
+}
+
+/* Pequeno ajuste para garantir que o título do gráfico também fique alinhado */
+.tv-card-chart .card-title {
+    padding-top: 0 !important;
+}
+
+/* Fim das correções de alinhamento de título */

@@ -122,7 +122,9 @@ def get_tv_dashboard_data():
             SELECT
               "região",
               COUNT(*) AS "quantidade_registros",
-              SUM("média consumo") AS "soma_consumo"
+              SUM("média consumo") AS "soma_consumo",
+              COUNT(CASE WHEN "validado sucesso" = 'S' THEN 1 END) AS "registros_validados",
+              SUM(CASE WHEN "validado sucesso" = 'S' THEN "média consumo" ELSE 0 END) AS "consumo_validados"
             FROM
               public."V_CUSTOMER"
             WHERE
@@ -141,7 +143,9 @@ def get_tv_dashboard_data():
             SELECT
               "fornecedora",
               COUNT(*) AS "quantidade_registros",
-              SUM("média consumo") AS "soma_consumo"
+              SUM("média consumo") AS "soma_consumo",
+              COUNT(CASE WHEN "validado sucesso" = 'S' THEN 1 END) AS "registros_validados",
+              SUM(CASE WHEN "validado sucesso" = 'S' THEN "média consumo" ELSE 0 END) AS "consumo_validados"
             FROM
               public."V_CUSTOMER"
             WHERE
