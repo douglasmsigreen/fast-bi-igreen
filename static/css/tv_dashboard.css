@@ -9,7 +9,7 @@
     
     /* Verde principal com variações */
     --green-primary: #22C55E;
-    --green-light: #4ADE80;
+    --green-light: #34D399; /* verde claro para gradientes */
     --green-dark: #16A34A;
     --green-glow: rgba(34, 197, 94, 0.4);
     
@@ -99,11 +99,19 @@ body.tv-dashboard-body::before {
 .tv-title {
     font-size: 2.2rem;
     font-weight: 700;
-    background: linear-gradient(45deg, var(--green-primary), var(--green-light));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    /* Fallback: cor sólida caso o browser não suporte clip de texto/variáveis */
+    color: var(--green-primary);
     text-shadow: none;
+}
+
+/* Aplicar gradiente apenas quando suportado, evitando texto invisível em TVs/browsers antigos */
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+    .tv-title {
+        background: linear-gradient(45deg, var(--green-primary), var(--green-light));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
 }
 
 .tv-clock {
@@ -399,6 +407,13 @@ body.tv-dashboard-body::before {
 .kpi-item-danger .kpi-number,
 .kpi-item-danger .kpi-label {
     color: var(--danger);
+}
+
+.kpi-item-warning .kpi-number,
+.kpi-item-warning .kpi-label {
+    /* Fallback primeiro para TVs antigas; variável por cima quando suportada */
+    color: #F59E0B;
+    color: var(--warning);
 }
 
 .kpi-item-info .kpi-number,

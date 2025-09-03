@@ -399,29 +399,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 3. Card de Cadastros com animações escalonadas
                 const cadastros = data.cadastros;
                 if (cadastros) {
-                    const cadastrosData = [
-                        { id: 'cadastrados', qtd: cadastros.cadastrados_quantidade, consumo: cadastros.cadastrados_soma_consumo },
-                        { id: 'a-validar', qtd: cadastros.a_validar_quantidade, consumo: cadastros.a_validar_soma_consumo },
-                        { id: 'validados', qtd: cadastros.validados_quantidade, consumo: cadastros.validados_soma_consumo },
-                        { id: 'cancelados', qtd: cadastros.cancelados_quantidade, consumo: cadastros.cancelados_soma_consumo }
-                    ];
+                    const duration = 1500;
+                    // Cadastrados
+                    animateValue(document.getElementById('cadastrados-quantidade'), 0, cadastros.cadastrados_quantidade || 0, duration);
+                    animateValue(document.getElementById('cadastrados-soma-consumo'), 0, cadastros.cadastrados_soma_consumo || 0, duration, ' kWh', formatLargeNumber);
+                    
+                    // NOVO: Backlog A Validar
+                    animateValue(document.getElementById('backlog-a-validar-quantidade'), 0, cadastros.backlog_a_validar_quantidade || 0, duration);
+                    animateValue(document.getElementById('backlog-a-validar-soma-consumo'), 0, cadastros.backlog_a_validar_soma_consumo || 0, duration, ' kWh', formatLargeNumber);
 
-                    cadastrosData.forEach((item, index) => {
-                        setTimeout(() => {
-                            const qtdElement = document.getElementById(`${item.id}-quantidade`);
-                            const consumoElement = document.getElementById(`${item.id}-soma-consumo`);
-                            
-                            if (qtdElement) {
-                                qtdElement.classList.remove('loading-pulse');
-                                animateValue(qtdElement, 0, item.qtd, 1500);
-                            }
-                            
-                            if (consumoElement) {
-                                consumoElement.classList.remove('loading-pulse');
-                                animateValue(consumoElement, 0, item.consumo, 1500, ' kWh', formatLargeNumber);
-                            }
-                        }, 1000 + (index * 300));
-                    });
+                    // Mês Atual - A Validar
+                    animateValue(document.getElementById('a-validar-quantidade'), 0, cadastros.a_validar_quantidade || 0, duration);
+                    animateValue(document.getElementById('a-validar-soma-consumo'), 0, cadastros.a_validar_soma_consumo || 0, duration, ' kWh', formatLargeNumber);
+                    
+                    // Validados
+                    animateValue(document.getElementById('validados-quantidade'), 0, cadastros.validados_quantidade || 0, duration);
+                    animateValue(document.getElementById('validados-soma-consumo'), 0, cadastros.validados_soma_consumo || 0, duration, ' kWh', formatLargeNumber);
+                    
+                    // Cancelados
+                    animateValue(document.getElementById('cancelados-quantidade'), 0, cadastros.cancelados_quantidade || 0, duration);
+                    animateValue(document.getElementById('cancelados-soma-consumo'), 0, cadastros.cancelados_soma_consumo || 0, duration, ' kWh', formatLargeNumber);
+
+                    // Remove loading
+                    removeLoadingState('cadastrados-quantidade');
+                    removeLoadingState('cadastrados-soma-consumo');
+                    removeLoadingState('backlog-a-validar-quantidade');
+                    removeLoadingState('backlog-a-validar-soma-consumo');
+                    removeLoadingState('a-validar-quantidade');
+                    removeLoadingState('a-validar-soma-consumo');
+                    removeLoadingState('validados-quantidade');
+                    removeLoadingState('validados-soma-consumo');
+                    removeLoadingState('cancelados-quantidade');
+                    removeLoadingState('cancelados-soma-consumo');
                 }
 
                 // 4. Tabelas com delay

@@ -59,7 +59,7 @@ def get_tv_dashboard_data():
         kwh = execute_query_one(query_kwh)
         data['kwh'] = kwh
 
-        # --- NOVO: Cadastros, Validados e Cancelados ---
+                # --- NOVO: Cadastros, Validados e Cancelados ---
         query_cadastros = """
             SELECT
               (
@@ -114,24 +114,58 @@ def get_tv_dashboard_data():
               ) AS "cancelados_soma_consumo";
         """
         cadastros = execute_query_one(query_cadastros)
+
+        # Query para "Backlog - A Validar"
+        query_backlog_a_validar = """
+            SELECT
+                COUNT(*) AS a_validar_quantidade,
+                SUM(c.consumomedio)::bigint AS a_validar_soma_consumo
+            FROM "CLIENTES" c
+                LEFT JOIN "MV_DEVOLUTIVAS" d ON d.idcliente = c.idcliente
+            WHERE
+                c.data_ativo >= DATE_TRUNC('year', CURRENT_DATE)
+                AND c.data_ativo < DATE_TRUNC('month', CURRENT_DATE)
+                AND (c.status IS NULL OR c.status = '')
+                AND (d.msgdevolutiva IS NULL OR d.msgdevolutiva = '')
+                AND c.validadosucesso = 'N'
+                AND (c.fornecedora IS NOT NULL OR c.fornecedora <> '');
+        """
+        backlog_a_validar = execute_query_one(query_backlog_a_validar)
+
+        # Query para "Mês Atual - A Validar"
+        query_mes_atual_a_validar = """
+            SELECT
+                COUNT(*) AS a_validar_quantidade,
+                SUM(c.consumomedio)::bigint AS a_validar_soma_consumo
+            FROM "CLIENTES" c
+                LEFT JOIN "MV_DEVOLUTIVAS" d ON d.idcliente = c.idcliente
+            WHERE
+                c.data_ativo >= DATE_TRUNC('month', CURRENT_DATE)
+                AND c.data_ativo <= CURRENT_DATE
+                AND (c.status IS NULL OR c.status = '')
+                AND (d.msgdevolutiva IS NULL OR d.msgdevolutiva = '')
+                AND c.validadosucesso = 'N'
+                AND (c.fornecedora IS NOT NULL OR c.fornecedora <> '');
+        """
+        mes_atual_a_validar = execute_query_one(query_mes_atual_a_validar)
         
-        if cadastros and ativacoes and kwh:
+        if cadastros:
             # Converte para dict para poder adicionar novas chaves
             cadastros = dict(cadastros)
             
-            # Garante que valores nulos sejam tratados como 0 para o cálculo
-            ativacoes_qtd = ativacoes.get('contagem_mes_atual', 0) or 0
-            kwh_ativado = kwh.get('soma_consumo_mes_atual', 0) or 0
-            
-            validados_qtd = cadastros.get('validados_quantidade', 0) or 0
-            cancelados_qtd = cadastros.get('cancelados_quantidade', 0) or 0
-            
-            validados_kwh = cadastros.get('validados_soma_consumo', 0) or 0
-            cancelados_kwh = cadastros.get('cancelados_soma_consumo', 0) or 0
+            if backlog_a_validar:
+                cadastros['backlog_a_validar_quantidade'] = backlog_a_validar.get('a_validar_quantidade', 0)
+                cadastros['backlog_a_validar_soma_consumo'] = backlog_a_validar.get('a_validar_soma_consumo', 0)
+            else:
+                cadastros['backlog_a_validar_quantidade'] = 0
+                cadastros['backlog_a_validar_soma_consumo'] = 0
 
-            # Calcula "A Validar" usando Ativações como base
-            cadastros['a_validar_quantidade'] = ativacoes_qtd - validados_qtd - cancelados_qtd
-            cadastros['a_validar_soma_consumo'] = kwh_ativado - validados_kwh - cancelados_kwh
+            if mes_atual_a_validar:
+                cadastros['a_validar_quantidade'] = mes_atual_a_validar.get('a_validar_quantidade', 0)
+                cadastros['a_validar_soma_consumo'] = mes_atual_a_validar.get('a_validar_soma_consumo', 0)
+            else:
+                cadastros['a_validar_quantidade'] = 0
+                cadastros['a_validar_soma_consumo'] = 0
 
         data['cadastros'] = cadastros
         # --- FIM NOVO ---
